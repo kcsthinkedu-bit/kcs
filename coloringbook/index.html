@@ -4673,14 +4673,20 @@ body { margin: 0; font-family: var(--project-font-family); background: #eef3f8; 
       strip = document.createElement('div');
       strip.id = 'kcsModeStrip';
       strip.className = 'kcs-mode-strip';
-      strip.innerHTML = `
-        <div class="kcs-mode-strip-head">
-          <span class="kcs-mode-pill">학생 쉬운 모드</span>
-          <button type="button" class="kcs-advanced-toggle" id="kcsAdvancedToggleBtn">교사용 상세 설정 열기</button>
-        </div>
-        <div class="kcs-mode-sub">학생은 그림 크기와 위치만 먼저 조절하면 되고, 교사는 필요할 때만 상세 설정을 열어 쓰면 됩니다.</div>
-        <div class="kcs-advanced-panel" id="kcsAdvancedPanel"></div>
-      `;
+     if (!strip) {
+  strip = document.createElement('div');
+  strip.id = 'kcsModeStrip';
+  strip.className = 'kcs-mode-strip';
+  strip.innerHTML = `
+    <div class="kcs-mode-strip-head">
+      <span class="kcs-mode-pill">학생 쉬운 모드</span>
+      <button type="button" class="kcs-advanced-toggle" id="kcsAdvancedToggleBtn">교사용 상세 설정 열기</button>
+    </div>
+    <div class="kcs-mode-sub">학생은 그림 크기와 위치만 먼저 조절하면 되고, 교사는 필요할 때만 상세 설정을 열어 쓰면 됩니다.</div>
+    <div class="kcs-advanced-panel" id="kcsAdvancedPanel"></div>
+  `;
+}
+
       typebar.insertAdjacentElement('afterend', strip);
       panel = document.getElementById('kcsAdvancedPanel');
       btn = document.getElementById('kcsAdvancedToggleBtn');

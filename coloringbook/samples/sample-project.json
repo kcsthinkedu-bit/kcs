@@ -1,0 +1,24 @@
+{
+  "title": "컬러링북 샘플 프로젝트",
+  "paper": "A4",
+  "pages": [
+    {
+      "id": "page_001",
+      "name": "1페이지",
+      "imageSrc": "",
+      "imageScale": 1,
+      "imageX": 0,
+      "imageY": 0,
+      "paper": "A4"
+    },
+    {
+      "id": "page_002",
+      "name": "2페이지",
+      "imageSrc": "",
+      "imageScale": 1,
+      "imageX": 0,
+      "imageY": 0,
+      "paper": "A4"
+    }
+  ]
+}

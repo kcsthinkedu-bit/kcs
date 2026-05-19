@@ -1,0 +1,12 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/"
+  to = "/coloringbook/"
+  status = 302
+
+[[redirects]]
+  from = "/index.html"
+  to = "/coloringbook/"
+  status = 302

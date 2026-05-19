@@ -1,5 +1,9 @@
 {
-  "name": "kcseduplay-site-vercel",
+  "name": "coloringbook-netlify-mvp",
   "private": true,
-  "type": "module"
+  "version": "1.0.0",
+  "description": "Netlify-ready static MVP for coloringbook editor",
+  "scripts": {
+    "start": "npx serve ."
+  }
 }

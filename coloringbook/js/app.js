@@ -1,12 +1,15 @@
 const BOOK_FORMAT_VERSION = 'kcs-book-v1';
 const BOOK_DOWNLOAD_FILE_NAME = 'kcs-book-project.json';
 const SUBMISSION_ENDPOINT = '/api/submissions/upload';
+const REVIEW_SAVE_ENDPOINT = '/api/submissions/review-save';
 
 const state = {
   mode: 'student',
   active: { type: 'cover', id: 'cover' },
-  book: createInitialBook()
+  book: createInitialBook(),
+  loadedFromUrl: ''
 };
+
 
 const dom = {
   studentModeBtn: document.getElementById('studentModeBtn'),
@@ -14,6 +17,7 @@ const dom = {
   modeBadge: document.getElementById('modeBadge'),
   addSpreadBtn: document.getElementById('addSpreadBtn'),
   saveJsonBtn: document.getElementById('saveJsonBtn'),
+  saveReviewBtn: document.getElementById('saveReviewBtn'),
   jsonFileInput: document.getElementById('jsonFileInput'),
   printBookBtn: document.getElementById('printBookBtn'),
   submitWorkBtn: document.getElementById('submitWorkBtn'),
@@ -104,7 +108,91 @@ function setMode(mode) {
   dom.teacherOnlySidebar.hidden = state.mode !== 'teacher';
   dom.teacherPreviewReport.hidden = state.mode !== 'teacher';
   renderTeacherPanels();
+  updateReviewSaveButton();
 }
+function updateReviewSaveButton() {
+  if (!dom.saveReviewBtn) return;
+  const canShow = state.mode === 'teacher' && !!state.loadedFromUrl;
+  dom.saveReviewBtn.hidden = !canShow;
+}
+
+function buildReviewSubmissionInfo() {
+  const source = state.book && state.book.submission ? state.book.submission : {};
+  return {
+    schoolName: normalizeString(source.schoolName, '').trim(),
+    className: normalizeString(source.className, '').trim(),
+    studentName: normalizeString(source.studentName, '').trim(),
+    studentNumber: normalizeString(source.studentNumber, '').trim(),
+    bookTitle: normalizeString(state.book.title || source.bookTitle, '').trim(),
+    paper: normalizePaper(state.book.paper || source.paper),
+    submittedAt: source.submittedAt || ''
+  };
+}
+
+async function saveTeacherReview() {
+  if (state.mode !== 'teacher') {
+    alert('선생님 모드에서만 수정본을 저장할 수 있습니다.');
+    return;
+  }
+
+  if (!state.loadedFromUrl) {
+    alert('학생 제출본을 먼저 불러온 뒤 저장해 주세요.');
+    return;
+  }
+
+  const submission = buildReviewSubmissionInfo();
+
+  if (!submission.className || !submission.studentName) {
+    alert('이 제출본의 학생 정보가 부족하여 저장할 수 없습니다.');
+    return;
+  }
+
+  if (dom.saveReviewBtn) {
+    dom.saveReviewBtn.disabled = true;
+  }
+
+  try {
+    const payload = {
+      sourceUrl: state.loadedFromUrl,
+      submission,
+      book: {
+        ...createExportPayload(state.book),
+        submission
+      }
+    };
+
+    const response = await fetch(REVIEW_SAVE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await response.text();
+    let result = {};
+    try {
+      result = JSON.parse(text);
+    } catch (error) {
+      result = { error: text };
+    }
+
+    if (!response.ok) {
+      throw new Error(result && result.error ? result.error : '선생님 수정본 저장에 실패했습니다.');
+    }
+
+    alert('선생님 수정본이 저장되었습니다.\n\n새 탭에서 저장된 수정본을 엽니다.');
+    window.open(result.editUrl || result.url, '_blank', 'noopener');
+  } catch (error) {
+    console.error(error);
+    alert(error && error.message ? error.message : '선생님 수정본 저장에 실패했습니다.');
+  } finally {
+    if (dom.saveReviewBtn) {
+      dom.saveReviewBtn.disabled = false;
+    }
+  }
+}
+
 
 function renderNavigation() {
   dom.coverNavBtn.classList.toggle('active', state.active.type === 'cover');
@@ -707,16 +795,20 @@ function validateSubmissionInfo(info) {
   }
 }
 
-async function submitCurrentBook() {
-  const submission = buildSubmissionInfo();
-  validateSubmissionInfo(submission);
+async function loadBookFromRemoteUrl(url) {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error('제출된 JSON을 불러오지 못했습니다. 링크가 올바른지 확인해 주세요.');
+  }
 
-  const payload = {
-    submission,
-    book: {
-      ...createExportPayload(state.book),
-      submission
-    }
+  const data = await response.json();
+  state.book = normalizeBook(data);
+  state.loadedFromUrl = url;
+  state.active = { type: 'cover', id: 'cover' };
+  renderAll();
+  updateReviewSaveButton();
+}
+
   };
 
   setSubmitStatus('제출 중입니다. 잠시만 기다려 주세요.', 'pending');
@@ -820,9 +912,14 @@ function bindTopEvents() {
     downloadJson();
   });
 
+  dom.saveReviewBtn.addEventListener('click', async () => {
+    await saveTeacherReview();
+  });
+
   dom.submitWorkBtn.addEventListener('click', () => {
     openSubmitModal();
   });
+
 
   dom.closeSubmitModalBtn.addEventListener('click', () => {
     closeSubmitModal();
@@ -846,11 +943,13 @@ function bindTopEvents() {
     if (!file) return;
 
     try {
-      const text = await file.text();
+            const text = await file.text();
       const data = JSON.parse(text);
       state.book = normalizeBook(data);
+      state.loadedFromUrl = '';
       state.active = { type: 'cover', id: 'cover' };
       renderAll();
+      updateReviewSaveButton();
       alert('현재 KCS JSON 형식 파일을 정상적으로 불러왔습니다.');
     } catch (error) {
       console.error(error);
@@ -981,7 +1080,9 @@ function normalizeBook(raw) {
     title: normalizeString(raw.title, '불러온 책'),
     paper: normalizePaper(raw.paper),
     cover: normalizeCover(raw.cover),
-    spreads: raw.spreads.map((item, index) => normalizeSpread(item, index))
+    spreads: raw.spreads.map((item, index) => normalizeSpread(item, index)),
+    submission: isPlainObject(raw.submission) ? { ...raw.submission } : null,
+    review: isPlainObject(raw.review) ? { ...raw.review } : null
   };
 }
 

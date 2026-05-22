@@ -25,6 +25,15 @@ const dom = {
   currentPreview: document.getElementById('currentPreview'),
   bookPreviewList: document.getElementById('bookPreviewList'),
   teacherOnlySidebar: document.getElementById('teacherOnlySidebar'),
+  teacherSummaryCards: document.getElementById('teacherSummaryCards'),
+  teacherReadinessBox: document.getElementById('teacherReadinessBox'),
+  teacherIssueList: document.getElementById('teacherIssueList'),
+  jumpFirstIssueBtn: document.getElementById('jumpFirstIssueBtn'),
+  centerAllImagesBtn: document.getElementById('centerAllImagesBtn'),
+  resetAllImagesBtn: document.getElementById('resetAllImagesBtn'),
+  setAllTextNormalBtn: document.getElementById('setAllTextNormalBtn'),
+  setAllTextLargeBtn: document.getElementById('setAllTextLargeBtn'),
+  teacherPreviewReport: document.getElementById('teacherPreviewReport'),
   coverEditorTemplate: document.getElementById('coverEditorTemplate'),
   spreadEditorTemplate: document.getElementById('spreadEditorTemplate')
 };
@@ -82,6 +91,8 @@ function setMode(mode) {
   dom.modeBadge.textContent = state.mode === 'student' ? '현재 모드: 학생' : '현재 모드: 선생님';
   dom.modeBadge.className = state.mode === 'student' ? 'badge student' : 'badge teacher';
   dom.teacherOnlySidebar.hidden = state.mode !== 'teacher';
+  dom.teacherPreviewReport.hidden = state.mode !== 'teacher';
+  renderTeacherPanels();
 }
 
 function renderNavigation() {
@@ -135,14 +146,13 @@ function renderEditor() {
 
     coverTitleInput.addEventListener('input', () => {
       state.book.cover.title = coverTitleInput.value;
-      renderPreview();
-      renderBookPreviewList();
-      renderNavigation();
+      renderAll();
     });
 
     coverSubtitleInput.addEventListener('input', () => {
       state.book.cover.subtitle = coverSubtitleInput.value;
       renderPreview();
+      renderTeacherPanels();
       syncCoverMeta();
     });
 
@@ -150,8 +160,7 @@ function renderEditor() {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
       state.book.cover.imageSrc = await fileToDataUrl(file);
-      renderPreview();
-      syncCoverMeta();
+      renderAll();
       event.target.value = '';
     });
 
@@ -159,14 +168,12 @@ function renderEditor() {
       const pasted = await getImageFromPaste(event);
       if (!pasted) return;
       state.book.cover.imageSrc = pasted;
-      renderPreview();
-      syncCoverMeta();
+      renderAll();
     });
 
     removeCoverImageBtn.addEventListener('click', () => {
       state.book.cover.imageSrc = '';
-      renderPreview();
-      syncCoverMeta();
+      renderAll();
     });
 
     syncCoverMeta();
@@ -227,22 +234,19 @@ function renderEditor() {
 
   spreadTitleInput.addEventListener('input', () => {
     spread.leftTitle = spreadTitleInput.value;
-    renderPreview();
-    renderBookPreviewList();
-    renderNavigation();
+    renderAll();
   });
 
   spreadBodyInput.addEventListener('input', () => {
     spread.leftBody = spreadBodyInput.value;
-    renderPreview();
-    renderBookPreviewList();
-    renderNavigation();
-    syncSpreadMeta();
+    renderAll();
   });
 
   fontSizeInput.addEventListener('input', () => {
     spread.leftFontSize = toNumber(fontSizeInput.value, 24);
     renderPreview();
+    renderTeacherPanels();
+    syncSpreadMeta();
   });
 
   fontWeightInput.addEventListener('change', () => {
@@ -254,10 +258,7 @@ function renderEditor() {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
     spread.rightImage = await fileToDataUrl(file);
-    renderPreview();
-    renderBookPreviewList();
-    renderNavigation();
-    syncSpreadMeta();
+    renderAll();
     event.target.value = '';
   });
 
@@ -265,35 +266,32 @@ function renderEditor() {
     const pasted = await getImageFromPaste(event);
     if (!pasted) return;
     spread.rightImage = pasted;
-    renderPreview();
-    renderBookPreviewList();
-    renderNavigation();
-    syncSpreadMeta();
+    renderAll();
   });
 
   removeSpreadImageBtn.addEventListener('click', () => {
     spread.rightImage = '';
-    renderPreview();
-    renderBookPreviewList();
-    renderNavigation();
-    syncSpreadMeta();
+    renderAll();
   });
 
   imageScaleInput.addEventListener('input', () => {
     spread.rightImageScale = toNumber(imageScaleInput.value, 1);
     renderPreview();
+    renderTeacherPanels();
     syncSpreadMeta();
   });
 
   imageXInput.addEventListener('input', () => {
     spread.rightImageX = toNumber(imageXInput.value, 0);
     renderPreview();
+    renderTeacherPanels();
     syncSpreadMeta();
   });
 
   imageYInput.addEventListener('input', () => {
     spread.rightImageY = toNumber(imageYInput.value, 0);
     renderPreview();
+    renderTeacherPanels();
     syncSpreadMeta();
   });
 
@@ -303,6 +301,7 @@ function renderEditor() {
     imageXInput.value = 0;
     imageYInput.value = 0;
     renderPreview();
+    renderTeacherPanels();
     syncSpreadMeta();
   });
 
@@ -314,6 +313,7 @@ function renderEditor() {
     imageXInput.value = 0;
     imageYInput.value = 0;
     renderPreview();
+    renderTeacherPanels();
     syncSpreadMeta();
   });
 
@@ -413,6 +413,175 @@ function renderBookPreviewList() {
   });
 }
 
+function renderTeacherPanels() {
+  if (!dom.teacherSummaryCards || !dom.teacherIssueList || !dom.teacherReadinessBox || !dom.teacherPreviewReport) return;
+
+  const report = buildTeacherReport();
+
+  dom.teacherSummaryCards.innerHTML = `
+    <div class="teacher-stat-card">
+      <div class="teacher-card-title">전체 펼침</div>
+      <div class="teacher-card-value">${report.totalSpreads}</div>
+      <div class="teacher-card-sub">표지를 제외한 내부 펼침 수</div>
+    </div>
+    <div class="teacher-stat-card">
+      <div class="teacher-card-title">이미지 준비</div>
+      <div class="teacher-card-value">${report.imageReadyCount}</div>
+      <div class="teacher-card-sub">이미지가 들어간 펼침 수</div>
+    </div>
+    <div class="teacher-stat-card">
+      <div class="teacher-card-title">문제 페이지</div>
+      <div class="teacher-card-value">${report.issues.length}</div>
+      <div class="teacher-card-sub">보완이 필요한 항목 수</div>
+    </div>
+    <div class="teacher-stat-card">
+      <div class="teacher-card-title">인쇄 시트</div>
+      <div class="teacher-card-value">${report.sheetCount}</div>
+      <div class="teacher-card-sub">현재 배열 기준 예상 시트 수</div>
+    </div>
+  `;
+
+  dom.teacherReadinessBox.className = 'tip-box teacher-readiness-box ' + (report.ready ? 'good' : 'warn');
+  dom.teacherReadinessBox.innerHTML = report.ready
+    ? `인쇄 전 점검 완료 상태입니다. 표지와 모든 펼침의 핵심 요소가 들어가 있습니다. 총 ${report.sheetCount}시트로 인쇄됩니다.`
+    : `아직 ${report.issues.length}개의 보완 항목이 있습니다. 아래 목록에서 바로 이동해 수정한 뒤 인쇄 배열을 다시 확인하세요.`;
+
+  dom.jumpFirstIssueBtn.disabled = !report.issues.length;
+  dom.centerAllImagesBtn.disabled = report.imageReadyCount === 0;
+  dom.resetAllImagesBtn.disabled = report.imageReadyCount === 0;
+  dom.setAllTextNormalBtn.disabled = !state.book.spreads.length;
+  dom.setAllTextLargeBtn.disabled = !state.book.spreads.length;
+
+  dom.teacherIssueList.innerHTML = '';
+  if (!report.issues.length) {
+    const empty = document.createElement('div');
+    empty.className = 'issue-empty';
+    empty.textContent = '현재 기준으로는 바로 인쇄 점검을 진행해도 좋습니다. 그래도 인쇄 배열 화면에서 마지막으로 여백을 확인해 주세요.';
+    dom.teacherIssueList.appendChild(empty);
+  } else {
+    report.issues.forEach((issue) => {
+      const item = document.createElement('div');
+      item.className = 'issue-item';
+      item.innerHTML = `
+        <div class="issue-title">${escapeHtml(issue.title)}</div>
+        <div class="issue-sub">${escapeHtml(issue.description)}</div>
+      `;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'issue-jump-btn';
+      button.textContent = '이 페이지로 이동';
+      button.addEventListener('click', () => goToIssue(issue));
+      item.appendChild(button);
+      dom.teacherIssueList.appendChild(item);
+    });
+  }
+
+  dom.teacherPreviewReport.innerHTML = `
+    <h3>선생님 인쇄 리포트</h3>
+    <ul>
+      <li>현재 책 제목: ${escapeHtml(state.book.title || '제목 없음')}</li>
+      <li>용지: ${escapeHtml(state.book.paper || 'A4')} · 예상 인쇄 시트 ${report.sheetCount}장</li>
+      <li>표지 이미지: ${report.coverHasImage ? '있음' : '없음'}</li>
+      <li>본문 준비 완료 펼침: ${report.completeSpreadCount} / ${report.totalSpreads}</li>
+      <li>바로 수정할 문제 항목: ${report.issues.length}개</li>
+    </ul>
+  `;
+}
+
+function buildTeacherReport() {
+  const issues = [];
+  const totalSpreads = state.book.spreads.length;
+  let imageReadyCount = 0;
+  let completeSpreadCount = 0;
+
+  const coverTitle = normalizeString(state.book.cover.title, '').trim();
+  const coverSubtitle = normalizeString(state.book.cover.subtitle, '').trim();
+  const coverHasImage = !!state.book.cover.imageSrc;
+
+  if (!coverTitle) {
+    issues.push({
+      targetType: 'cover',
+      targetId: 'cover',
+      title: '표지 제목이 비어 있습니다',
+      description: '표지에서 제목을 입력해야 책 미리보기와 인쇄 구성이 더 명확해집니다.'
+    });
+  }
+
+  if (!coverSubtitle) {
+    issues.push({
+      targetType: 'cover',
+      targetId: 'cover',
+      title: '표지 부제가 비어 있습니다',
+      description: '부제나 간단한 설명을 넣으면 표지가 훨씬 완성도 있게 보입니다.'
+    });
+  }
+
+  state.book.spreads.forEach((spread, index) => {
+    const title = normalizeString(spread.leftTitle, '').trim();
+    const body = normalizeString(spread.leftBody, '').trim();
+    const hasImage = !!spread.rightImage;
+    if (hasImage) imageReadyCount += 1;
+
+    const bodyStats = getTextStats(body);
+    if (!title) {
+      issues.push({
+        targetType: 'spread',
+        targetId: spread.id,
+        title: `펼침 ${index + 1} 제목이 비어 있습니다`,
+        description: '왼쪽 페이지 제목을 넣어야 책 순서 목록과 인쇄 페이지 구분이 쉬워집니다.'
+      });
+    }
+
+    if (bodyStats.chars < 10) {
+      issues.push({
+        targetType: 'spread',
+        targetId: spread.id,
+        title: `펼침 ${index + 1} 본문이 짧습니다`,
+        description: '본문 글이 10자 미만입니다. 인쇄 전 문장을 더 채워 주세요.'
+      });
+    }
+
+    if (!hasImage) {
+      issues.push({
+        targetType: 'spread',
+        targetId: spread.id,
+        title: `펼침 ${index + 1} 이미지가 비어 있습니다`,
+        description: '오른쪽 페이지에 그림이 없으면 책 흐름이 끊겨 보일 수 있습니다.'
+      });
+    }
+
+    if (title && bodyStats.chars >= 10 && hasImage) {
+      completeSpreadCount += 1;
+    }
+  });
+
+  const sheetCount = buildBookletSheets(buildLogicalPages()).length;
+
+  return {
+    totalSpreads,
+    imageReadyCount,
+    completeSpreadCount,
+    coverHasImage,
+    sheetCount,
+    issues,
+    ready: issues.length === 0
+  };
+}
+
+function goToIssue(issue) {
+  if (!issue) return;
+  if (issue.targetType === 'cover') {
+    state.active = { type: 'cover', id: 'cover' };
+    renderAll();
+    return;
+  }
+
+  const spread = state.book.spreads.find((item) => item.id === issue.targetId);
+  if (!spread) return;
+  state.active = { type: 'spread', id: spread.id };
+  renderAll();
+}
+
 function renderTopFields() {
   dom.bookTitleInput.value = state.book.title;
   dom.paperSelect.value = state.book.paper;
@@ -424,6 +593,7 @@ function renderAll() {
   renderEditor();
   renderPreview();
   renderBookPreviewList();
+  renderTeacherPanels();
 }
 
 function bindTopEvents() {
@@ -442,10 +612,12 @@ function bindTopEvents() {
 
   dom.bookTitleInput.addEventListener('input', () => {
     state.book.title = dom.bookTitleInput.value;
+    renderTeacherPanels();
   });
 
   dom.paperSelect.addEventListener('change', () => {
     state.book.paper = dom.paperSelect.value === 'B4' ? 'B4' : 'A4';
+    renderTeacherPanels();
   });
 
   dom.addSpreadBtn.addEventListener('click', () => {
@@ -480,6 +652,40 @@ function bindTopEvents() {
 
   dom.printBookBtn.addEventListener('click', () => {
     openPrintWindow();
+  });
+
+  dom.jumpFirstIssueBtn.addEventListener('click', () => {
+    const report = buildTeacherReport();
+    if (!report.issues.length) return;
+    goToIssue(report.issues[0]);
+  });
+
+  dom.centerAllImagesBtn.addEventListener('click', () => {
+    const count = centerAllImages();
+    if (count) {
+      renderAll();
+      alert(`${count}개의 이미지 페이지를 중앙 정렬했습니다.`);
+    }
+  });
+
+  dom.resetAllImagesBtn.addEventListener('click', () => {
+    const count = resetAllImages();
+    if (count) {
+      renderAll();
+      alert(`${count}개의 이미지 배율과 위치를 초기화했습니다.`);
+    }
+  });
+
+  dom.setAllTextNormalBtn.addEventListener('click', () => {
+    applyTextSizeToAllSpreads(24);
+    renderAll();
+    alert('모든 펼침의 기본 글자 크기를 24로 맞췄습니다.');
+  });
+
+  dom.setAllTextLargeBtn.addEventListener('click', () => {
+    applyTextSizeToAllSpreads(28);
+    renderAll();
+    alert('모든 펼침의 글자 크기를 28로 키웠습니다.');
   });
 
   bindGlobalShortcuts();
@@ -1007,6 +1213,35 @@ function deleteActiveSpread() {
   const fallbackIndex = Math.max(0, currentIndex - 1);
   state.active = { type: 'spread', id: state.book.spreads[fallbackIndex].id };
   renderAll();
+}
+
+function centerAllImages() {
+  let count = 0;
+  state.book.spreads.forEach((spread) => {
+    if (!spread.rightImage) return;
+    spread.rightImageX = 0;
+    spread.rightImageY = 0;
+    count += 1;
+  });
+  return count;
+}
+
+function resetAllImages() {
+  let count = 0;
+  state.book.spreads.forEach((spread) => {
+    if (!spread.rightImage) return;
+    spread.rightImageScale = 1;
+    spread.rightImageX = 0;
+    spread.rightImageY = 0;
+    count += 1;
+  });
+  return count;
+}
+
+function applyTextSizeToAllSpreads(size) {
+  state.book.spreads.forEach((spread) => {
+    spread.leftFontSize = size;
+  });
 }
 
 function bindGlobalShortcuts() {

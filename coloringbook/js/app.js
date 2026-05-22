@@ -912,9 +912,12 @@ function bindTopEvents() {
     downloadJson();
   });
 
+  if (dom.saveReviewBtn) {
   dom.saveReviewBtn.addEventListener('click', async () => {
     await saveTeacherReview();
   });
+}
+
 
   dom.submitWorkBtn.addEventListener('click', () => {
     openSubmitModal();

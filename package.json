@@ -1,9 +1,12 @@
 {
   "name": "kcs-coloringbook-vercel-mvp",
   "private": true,
-  "version": "1.0.0",
-  "description": "Vercel-ready static MVP for KCS coloringbook editor",
+  "version": "1.1.0",
+  "description": "Vercel-ready MVP for KCS coloringbook editor with student submission flow",
   "scripts": {
     "start": "npx serve ."
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.4.0"
   }
 }

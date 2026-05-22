@@ -61,6 +61,18 @@ function getActiveSpread() {
   return state.book.spreads.find((item) => item.id === state.active.id) || null;
 }
 
+function getActiveSpreadIndex() {
+  if (state.active.type !== 'spread') return -1;
+  return state.book.spreads.findIndex((item) => item.id === state.active.id);
+}
+
+function setActiveSpreadByIndex(index) {
+  const spread = state.book.spreads[index];
+  if (!spread) return;
+  state.active = { type: 'spread', id: spread.id };
+  renderAll();
+}
+
 function setMode(mode) {
   state.mode = mode === 'teacher' ? 'teacher' : 'student';
   document.body.classList.toggle('teacher-mode', state.mode === 'teacher');
@@ -80,7 +92,10 @@ function renderNavigation() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'nav-btn' + (state.active.id === spread.id ? ' active' : '');
-    button.textContent = `펼침 ${index + 1}`;
+    button.innerHTML = `
+      <span class="nav-main">펼침 ${index + 1}</span>
+      <span class="nav-sub">${escapeHtml(buildSpreadSummary(spread))}</span>
+    `;
     button.addEventListener('click', () => {
       state.active = { type: 'spread', id: spread.id };
       renderAll();
@@ -100,21 +115,35 @@ function renderEditor() {
 
     const coverTitleInput = document.getElementById('coverTitleInput');
     const coverSubtitleInput = document.getElementById('coverSubtitleInput');
+    const coverSubtitleMeta = document.getElementById('coverSubtitleMeta');
     const coverImageInput = document.getElementById('coverImageInput');
+    const coverImageMeta = document.getElementById('coverImageMeta');
     const coverPasteZone = document.getElementById('coverPasteZone');
     const removeCoverImageBtn = document.getElementById('removeCoverImageBtn');
 
     coverTitleInput.value = state.book.cover.title;
     coverSubtitleInput.value = state.book.cover.subtitle;
 
+    const syncCoverMeta = () => {
+      const subtitleStats = getTextStats(state.book.cover.subtitle);
+      coverSubtitleMeta.textContent = `부제 ${subtitleStats.chars}자 · ${Math.max(subtitleStats.lines, state.book.cover.subtitle ? 1 : 0)}줄`;
+      coverImageMeta.textContent = state.book.cover.imageSrc
+        ? '표지 이미지가 들어가 있습니다. 새 파일을 넣으면 교체됩니다.'
+        : '표지 이미지는 선택 사항입니다. 없으면 텍스트 중심 표지로 출력됩니다.';
+      removeCoverImageBtn.disabled = !state.book.cover.imageSrc;
+    };
+
     coverTitleInput.addEventListener('input', () => {
       state.book.cover.title = coverTitleInput.value;
       renderPreview();
+      renderBookPreviewList();
+      renderNavigation();
     });
 
     coverSubtitleInput.addEventListener('input', () => {
       state.book.cover.subtitle = coverSubtitleInput.value;
       renderPreview();
+      syncCoverMeta();
     });
 
     coverImageInput.addEventListener('change', async (event) => {
@@ -122,6 +151,7 @@ function renderEditor() {
       if (!file) return;
       state.book.cover.imageSrc = await fileToDataUrl(file);
       renderPreview();
+      syncCoverMeta();
       event.target.value = '';
     });
 
@@ -130,34 +160,48 @@ function renderEditor() {
       if (!pasted) return;
       state.book.cover.imageSrc = pasted;
       renderPreview();
+      syncCoverMeta();
     });
 
     removeCoverImageBtn.addEventListener('click', () => {
       state.book.cover.imageSrc = '';
       renderPreview();
+      syncCoverMeta();
     });
 
+    syncCoverMeta();
     return;
   }
 
   const spread = getActiveSpread();
-  if (!spread) return;
+  const spreadIndex = getActiveSpreadIndex();
+  if (!spread || spreadIndex < 0) return;
 
-  dom.editorTitle.textContent = '펼침 편집';
+  dom.editorTitle.textContent = `펼침 ${spreadIndex + 1} 편집`;
   dom.editorHelp.textContent = '왼쪽에는 글, 오른쪽에는 이미지를 넣는 2페이지 구조입니다.';
   const node = dom.spreadEditorTemplate.content.cloneNode(true);
   dom.editorRoot.appendChild(node);
 
+  const prevSpreadBtn = document.getElementById('prevSpreadBtn');
+  const nextSpreadBtn = document.getElementById('nextSpreadBtn');
+  const moveSpreadUpBtn = document.getElementById('moveSpreadUpBtn');
+  const moveSpreadDownBtn = document.getElementById('moveSpreadDownBtn');
+  const duplicateSpreadBtn = document.getElementById('duplicateSpreadBtn');
+  const deleteSpreadBtn = document.getElementById('deleteSpreadBtn');
   const spreadTitleInput = document.getElementById('spreadTitleInput');
   const spreadBodyInput = document.getElementById('spreadBodyInput');
+  const spreadBodyMeta = document.getElementById('spreadBodyMeta');
   const fontSizeInput = document.getElementById('fontSizeInput');
   const fontWeightInput = document.getElementById('fontWeightInput');
   const spreadImageInput = document.getElementById('spreadImageInput');
   const spreadPasteZone = document.getElementById('spreadPasteZone');
   const removeSpreadImageBtn = document.getElementById('removeSpreadImageBtn');
+  const spreadImageMeta = document.getElementById('spreadImageMeta');
   const imageScaleInput = document.getElementById('imageScaleInput');
   const imageXInput = document.getElementById('imageXInput');
   const imageYInput = document.getElementById('imageYInput');
+  const centerImageBtn = document.getElementById('centerImageBtn');
+  const resetImageBtn = document.getElementById('resetImageBtn');
 
   spreadTitleInput.value = spread.leftTitle;
   spreadBodyInput.value = spread.leftBody;
@@ -167,15 +211,33 @@ function renderEditor() {
   imageXInput.value = spread.rightImageX;
   imageYInput.value = spread.rightImageY;
 
+  const syncSpreadMeta = () => {
+    const bodyStats = getTextStats(spread.leftBody);
+    spreadBodyMeta.textContent = `본문 ${bodyStats.chars}자 · ${Math.max(bodyStats.lines, spread.leftBody ? 1 : 0)}줄`;
+    spreadImageMeta.textContent = buildImageStatusText(spread.rightImage, spread.rightImageScale, spread.rightImageX, spread.rightImageY);
+    prevSpreadBtn.disabled = spreadIndex <= 0;
+    nextSpreadBtn.disabled = spreadIndex >= state.book.spreads.length - 1;
+    moveSpreadUpBtn.disabled = spreadIndex <= 0;
+    moveSpreadDownBtn.disabled = spreadIndex >= state.book.spreads.length - 1;
+    removeSpreadImageBtn.disabled = !spread.rightImage;
+    centerImageBtn.disabled = !spread.rightImage;
+    resetImageBtn.disabled = !spread.rightImage;
+    deleteSpreadBtn.disabled = state.book.spreads.length <= 1;
+  };
+
   spreadTitleInput.addEventListener('input', () => {
     spread.leftTitle = spreadTitleInput.value;
     renderPreview();
     renderBookPreviewList();
+    renderNavigation();
   });
 
   spreadBodyInput.addEventListener('input', () => {
     spread.leftBody = spreadBodyInput.value;
     renderPreview();
+    renderBookPreviewList();
+    renderNavigation();
+    syncSpreadMeta();
   });
 
   fontSizeInput.addEventListener('input', () => {
@@ -193,6 +255,9 @@ function renderEditor() {
     if (!file) return;
     spread.rightImage = await fileToDataUrl(file);
     renderPreview();
+    renderBookPreviewList();
+    renderNavigation();
+    syncSpreadMeta();
     event.target.value = '';
   });
 
@@ -201,27 +266,65 @@ function renderEditor() {
     if (!pasted) return;
     spread.rightImage = pasted;
     renderPreview();
+    renderBookPreviewList();
+    renderNavigation();
+    syncSpreadMeta();
   });
 
   removeSpreadImageBtn.addEventListener('click', () => {
     spread.rightImage = '';
     renderPreview();
+    renderBookPreviewList();
+    renderNavigation();
+    syncSpreadMeta();
   });
 
   imageScaleInput.addEventListener('input', () => {
     spread.rightImageScale = toNumber(imageScaleInput.value, 1);
     renderPreview();
+    syncSpreadMeta();
   });
 
   imageXInput.addEventListener('input', () => {
     spread.rightImageX = toNumber(imageXInput.value, 0);
     renderPreview();
+    syncSpreadMeta();
   });
 
   imageYInput.addEventListener('input', () => {
     spread.rightImageY = toNumber(imageYInput.value, 0);
     renderPreview();
+    syncSpreadMeta();
   });
+
+  centerImageBtn.addEventListener('click', () => {
+    spread.rightImageX = 0;
+    spread.rightImageY = 0;
+    imageXInput.value = 0;
+    imageYInput.value = 0;
+    renderPreview();
+    syncSpreadMeta();
+  });
+
+  resetImageBtn.addEventListener('click', () => {
+    spread.rightImageScale = 1;
+    spread.rightImageX = 0;
+    spread.rightImageY = 0;
+    imageScaleInput.value = 1;
+    imageXInput.value = 0;
+    imageYInput.value = 0;
+    renderPreview();
+    syncSpreadMeta();
+  });
+
+  prevSpreadBtn.addEventListener('click', () => setActiveSpreadByIndex(spreadIndex - 1));
+  nextSpreadBtn.addEventListener('click', () => setActiveSpreadByIndex(spreadIndex + 1));
+  moveSpreadUpBtn.addEventListener('click', () => moveActiveSpread(-1));
+  moveSpreadDownBtn.addEventListener('click', () => moveActiveSpread(1));
+  duplicateSpreadBtn.addEventListener('click', () => duplicateActiveSpread());
+  deleteSpreadBtn.addEventListener('click', () => deleteActiveSpread());
+
+  syncSpreadMeta();
 }
 
 function renderPreview() {
@@ -231,6 +334,7 @@ function renderPreview() {
     const wrap = document.createElement('div');
     wrap.className = 'preview-cover';
     wrap.innerHTML = `
+      <div class="preview-caption">표지 · ${state.book.cover.imageSrc ? '이미지 있음' : '텍스트 중심 표지'}</div>
       <div class="preview-cover-page">
         <div class="preview-cover-image" style="background-image:url('${escapeAttr(state.book.cover.imageSrc)}')"></div>
         <div class="preview-cover-text">
@@ -244,11 +348,14 @@ function renderPreview() {
   }
 
   const spread = getActiveSpread();
+  const spreadIndex = getActiveSpreadIndex();
   if (!spread) return;
 
+  const bodyStats = getTextStats(spread.leftBody);
   const wrap = document.createElement('div');
   wrap.className = 'preview-spread';
   wrap.innerHTML = `
+    <div class="preview-caption">펼침 ${spreadIndex + 1} · 본문 ${bodyStats.chars}자 · ${spread.rightImage ? '이미지 있음' : '이미지 없음'}</div>
     <div class="preview-spread-pages">
       <div class="preview-page">
         <div class="preview-left-inner">
@@ -268,14 +375,40 @@ function renderPreview() {
 
 function renderBookPreviewList() {
   dom.bookPreviewList.innerHTML = '';
-  const items = [
-    `표지: ${state.book.cover.title || '제목 없음'}`,
-    ...state.book.spreads.map((spread, index) => `펼침 ${index + 1}: ${spread.leftTitle || '제목 없음'} / ${spread.rightImage ? '이미지 있음' : '이미지 없음'}`)
-  ];
 
-  items.forEach((text) => {
+  const coverItem = document.createElement('li');
+  coverItem.className = 'book-preview-item';
+  const coverButton = document.createElement('button');
+  coverButton.type = 'button';
+  coverButton.className = 'book-preview-btn' + (state.active.type === 'cover' ? ' active' : '');
+  coverButton.innerHTML = `
+    <span class="nav-main">표지</span>
+    <span class="nav-sub">${escapeHtml(state.book.cover.title || '제목 없음')}</span>
+  `;
+  coverButton.addEventListener('click', () => {
+    state.active = { type: 'cover', id: 'cover' };
+    renderAll();
+  });
+  coverItem.appendChild(coverButton);
+  dom.bookPreviewList.appendChild(coverItem);
+
+  state.book.spreads.forEach((spread, index) => {
     const li = document.createElement('li');
-    li.textContent = text;
+    li.className = 'book-preview-item';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'book-preview-btn' + (state.active.id === spread.id ? ' active' : '');
+    button.innerHTML = `
+      <span class="nav-main">펼침 ${index + 1}</span>
+      <span class="nav-sub">${escapeHtml(buildSpreadSummary(spread))}</span>
+    `;
+    button.addEventListener('click', () => {
+      state.active = { type: 'spread', id: spread.id };
+      renderAll();
+    });
+
+    li.appendChild(button);
     dom.bookPreviewList.appendChild(li);
   });
 }
@@ -348,6 +481,8 @@ function bindTopEvents() {
   dom.printBookBtn.addEventListener('click', () => {
     openPrintWindow();
   });
+
+  bindGlobalShortcuts();
 }
 
 function isPlainObject(value) {
@@ -810,6 +945,88 @@ async function getImageFromPaste(event) {
 function toNumber(value, fallback) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function getTextStats(text) {
+  const safeText = normalizeString(text, '');
+  const chars = safeText.length;
+  const lines = safeText ? safeText.split(/\n/).length : 0;
+  return { chars, lines };
+}
+
+function buildSpreadSummary(spread) {
+  const title = normalizeString(spread.leftTitle, '제목 없음').trim() || '제목 없음';
+  const bodyStats = getTextStats(spread.leftBody);
+  const imageLabel = spread.rightImage ? '이미지 있음' : '이미지 없음';
+  return `${title} · 본문 ${bodyStats.chars}자 · ${imageLabel}`;
+}
+
+function buildImageStatusText(imageSrc, scale, x, y) {
+  if (!imageSrc) {
+    return '이미지가 아직 없습니다. 파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.';
+  }
+  return `이미지 준비됨 · 배율 ${Number(scale || 1).toFixed(1)} · X ${Number(x || 0)} · Y ${Number(y || 0)}`;
+}
+
+function moveActiveSpread(delta) {
+  const currentIndex = getActiveSpreadIndex();
+  const nextIndex = currentIndex + delta;
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= state.book.spreads.length) return;
+
+  const [item] = state.book.spreads.splice(currentIndex, 1);
+  state.book.spreads.splice(nextIndex, 0, item);
+  state.active = { type: 'spread', id: item.id };
+  renderAll();
+}
+
+function duplicateActiveSpread() {
+  const spread = getActiveSpread();
+  const currentIndex = getActiveSpreadIndex();
+  if (!spread || currentIndex < 0) return;
+
+  const clone = {
+    ...normalizeSpread(spread, currentIndex),
+    id: 'spread_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    leftTitle: normalizeString(spread.leftTitle, `펼침 ${currentIndex + 1}`) + ' 복사본'
+  };
+
+  state.book.spreads.splice(currentIndex + 1, 0, clone);
+  state.active = { type: 'spread', id: clone.id };
+  renderAll();
+}
+
+function deleteActiveSpread() {
+  const currentIndex = getActiveSpreadIndex();
+  if (currentIndex < 0) return;
+  if (state.book.spreads.length <= 1) {
+    alert('최소 1개의 펼침은 남아 있어야 합니다.');
+    return;
+  }
+
+  state.book.spreads.splice(currentIndex, 1);
+  const fallbackIndex = Math.max(0, currentIndex - 1);
+  state.active = { type: 'spread', id: state.book.spreads[fallbackIndex].id };
+  renderAll();
+}
+
+function bindGlobalShortcuts() {
+  document.addEventListener('keydown', (event) => {
+    const key = String(event.key || '').toLowerCase();
+
+    if ((event.ctrlKey || event.metaKey) && key === 's') {
+      event.preventDefault();
+      downloadJson();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === 'n') {
+      event.preventDefault();
+      const spread = createSpread(state.book.spreads.length + 1);
+      state.book.spreads.push(spread);
+      state.active = { type: 'spread', id: spread.id };
+      renderAll();
+    }
+  });
 }
 
 function escapeHtml(value) {

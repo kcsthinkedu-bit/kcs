@@ -3,14 +3,167 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>선생님 안내</title>
-  <style>body{font-family:"Noto Sans KR",sans-serif;background:#f7f8fc;margin:0;display:grid;place-items:center;min-height:100vh}.card{background:#fff;padding:24px;border:1px solid #dde3ee;border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.08);max-width:640px}a{color:#2563eb;text-decoration:none;font-weight:700}</style>
+  <title>KCS 선생님 제출함</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --line: #d8e1f0;
+      --text: #1f2937;
+      --muted: #667085;
+      --primary: #2563eb;
+      --teacher: #7c3aed;
+      --teacher-soft: #ede9fe;
+      --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: "Noto Sans KR", sans-serif; }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 24px 18px 60px; }
+    .hero, .panel, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
+    .hero { padding: 24px; margin-bottom: 18px; display: grid; gap: 16px; }
+    .hero h1 { margin: 0; font-size: 32px; }
+    .hero p, .muted, .meta { color: var(--muted); line-height: 1.8; }
+    .top-row, .actions, .stats { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .badge { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--teacher-soft); color: #5b21b6; }
+    .btn { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--text); font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .panel { padding: 20px; }
+    .stats { margin-bottom: 16px; }
+    .stat { min-width: 160px; padding: 16px; border: 1px solid #e6edf8; border-radius: 18px; background: #fbfdff; }
+    .stat strong { display: block; font-size: 24px; margin-bottom: 6px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .card { padding: 18px; display: grid; gap: 12px; }
+    .card h3 { margin: 0; font-size: 20px; }
+    .meta-list { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+    .links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .empty { padding: 22px; border: 1px dashed var(--line); border-radius: 18px; background: #f8fbff; color: var(--muted); }
+    .loading { color: var(--primary); }
+    .error { color: #991b1b; }
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 26px; }
+      .shell { padding: 14px 12px 40px; }
+    }
+  </style>
 </head>
 <body>
-  <div class="card">
-    <h1>선생님 안내</h1>
-    <p>현재 MVP에서는 선생님 기능이 컬러링북 메인 페이지 안에 함께 들어 있습니다.</p>
-    <p><a href="/coloringbook/">컬러링북 편집기로 이동</a></p>
+  <div class="shell">
+    <section class="hero">
+      <div class="top-row">
+        <span class="badge">선생님 전용 제출함</span>
+        <a class="btn" href="/">시작 페이지</a>
+        <a class="btn" href="/coloringbook/">편집기로 이동</a>
+      </div>
+      <div>
+        <h1>KCS 학생 작품 제출 목록</h1>
+        <p>학생이 편집기에서 <strong>학생 작품 제출</strong> 버튼을 누르면 이 페이지에 작품이 쌓입니다. 각 카드에서 바로 JSON 원본을 열거나, 선생님 모드 편집기로 불러와 검토할 수 있습니다.</p>
+      </div>
+      <div class="actions">
+        <button id="refreshBtn" class="btn primary" type="button">목록 새로고침</button>
+        <span id="statusText" class="muted">제출 목록을 불러오는 중입니다.</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div id="statsRow" class="stats"></div>
+      <div id="submissionList" class="grid"></div>
+    </section>
   </div>
+
+  <script>
+    const refreshBtn = document.getElementById('refreshBtn');
+    const statusText = document.getElementById('statusText');
+    const statsRow = document.getElementById('statsRow');
+    const submissionList = document.getElementById('submissionList');
+
+    function fmt(value) {
+      if (!value) return '-';
+      try {
+        return new Date(value).toLocaleString('ko-KR');
+      } catch (error) {
+        return value;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderStats(items) {
+      const total = items.length;
+      const classes = new Set(items.map((item) => item.className).filter(Boolean)).size;
+      const students = new Set(items.map((item) => `${item.className}::${item.studentName}::${item.studentNumber}`).filter(Boolean)).size;
+      const withImages = items.filter((item) => Number(item.spreadCount) > 0).length;
+
+      statsRow.innerHTML = [
+        { label: '총 제출 수', value: total },
+        { label: '학급 수', value: classes },
+        { label: '학생 수', value: students },
+        { label: '책 데이터 포함', value: withImages }
+      ].map((item) => `
+        <div class="stat">
+          <strong>${item.value}</strong>
+          <div class="meta">${item.label}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderList(items) {
+      renderStats(items);
+      if (!items.length) {
+        submissionList.innerHTML = '<div class="empty">아직 제출된 작품이 없습니다. 학생 편집기에서 <strong>학생 작품 제출</strong> 버튼을 눌러 첫 작품을 보내 보세요.</div>';
+        return;
+      }
+
+      submissionList.innerHTML = items.map((item) => `
+        <article class="card">
+          <div>
+            <h3>${escapeHtml(item.title || '제목 없는 책')}</h3>
+            <div class="meta">${escapeHtml(item.schoolName || '학교 미입력')} · ${escapeHtml(item.className || '학급 미입력')} · ${escapeHtml(item.studentName || '이름 미입력')} ${item.studentNumber ? '(' + escapeHtml(item.studentNumber) + ')' : ''}</div>
+          </div>
+          <div class="meta-list">
+            <div>제출 시각: ${escapeHtml(fmt(item.submittedAt || item.uploadedAt))}</div>
+            <div>용지: ${escapeHtml(item.paper || 'A4')} · 펼침 수: ${escapeHtml(String(item.spreadCount || 0))}</div>
+            <div>저장 경로: ${escapeHtml(item.pathname || '')}</div>
+          </div>
+          <div class="links">
+            <a class="btn primary" href="${item.editUrl}" target="_blank" rel="noopener">선생님 모드로 열기</a>
+            <a class="btn" href="${item.url}" target="_blank" rel="noopener">JSON 원본 보기</a>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function loadSubmissions() {
+      statusText.textContent = '제출 목록을 불러오는 중입니다.';
+      statusText.className = 'muted loading';
+      refreshBtn.disabled = true;
+      try {
+        const response = await fetch('/api/submissions/list', { cache: 'no-store' });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result && result.error ? result.error : '제출 목록을 불러오지 못했습니다.');
+        }
+        renderList(Array.isArray(result.items) ? result.items : []);
+        statusText.textContent = `최근 제출 ${result.count || 0}건을 불러왔습니다.`;
+        statusText.className = 'muted';
+      } catch (error) {
+        console.error(error);
+        statsRow.innerHTML = '';
+        submissionList.innerHTML = `<div class="empty error">${escapeHtml(error && error.message ? error.message : '제출 목록을 불러오지 못했습니다.')}</div>`;
+        statusText.textContent = '오류가 발생했습니다.';
+        statusText.className = 'muted error';
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadSubmissions);
+    loadSubmissions();
+  </script>
 </body>
 </html>

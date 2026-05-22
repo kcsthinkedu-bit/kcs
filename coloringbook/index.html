@@ -65,10 +65,24 @@
         </section>
 
         <section class="mini-section teacher-only" id="teacherOnlySidebar" hidden>
-          <h3>선생님 보조 기능</h3>
-          <p class="muted">초안 단계에서는 인쇄 여백 확인과 위치 조정 중심으로만 둡니다.</p>
-          <div class="tip-box">
-            학생 모드에서는 복잡한 값을 숨기고, 선생님 모드에서만 세부 조정을 보여줍니다.
+          <h3>선생님 점검판</h3>
+          <p class="muted">인쇄 전 상태를 한눈에 보고, 부족한 페이지를 바로 찾아 수정할 수 있습니다.</p>
+
+          <div id="teacherSummaryCards" class="teacher-summary-grid"></div>
+
+          <div id="teacherReadinessBox" class="tip-box teacher-readiness-box"></div>
+
+          <div class="teacher-tools">
+            <button id="jumpFirstIssueBtn" class="toolbar-btn" type="button">첫 문제 페이지로 이동</button>
+            <button id="centerAllImagesBtn" class="toolbar-btn" type="button">모든 이미지 중앙 정렬</button>
+            <button id="resetAllImagesBtn" class="toolbar-btn" type="button">모든 이미지 위치 초기화</button>
+            <button id="setAllTextNormalBtn" class="toolbar-btn" type="button">전체 글자 기본 크기</button>
+            <button id="setAllTextLargeBtn" class="toolbar-btn" type="button">전체 글자 크게</button>
+          </div>
+
+          <div class="teacher-issue-box">
+            <h4>보완이 필요한 페이지</h4>
+            <div id="teacherIssueList" class="teacher-issue-list"></div>
           </div>
         </section>
       </aside>
@@ -90,6 +104,7 @@
 
         <div class="preview-root">
           <div id="currentPreview" class="current-preview"></div>
+          <div id="teacherPreviewReport" class="teacher-preview-report teacher-only" hidden></div>
           <div class="booklet-box">
             <h3>책 전체 순서</h3>
             <ol id="bookPreviewList" class="book-preview-list"></ol>

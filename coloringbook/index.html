@@ -111,6 +111,7 @@
           표지 부제
           <textarea id="coverSubtitleInput" rows="4" placeholder="표지 부제 또는 설명 입력"></textarea>
         </label>
+        <div id="coverSubtitleMeta" class="field-meta"></div>
       </section>
 
       <section class="card-block">
@@ -120,6 +121,7 @@
           <input id="coverImageInput" type="file" accept="image/*" />
         </label>
         <button id="removeCoverImageBtn" class="ghost-btn block" type="button">표지 이미지 삭제</button>
+        <div id="coverImageMeta" class="field-meta"></div>
         <div id="coverPasteZone" class="paste-zone" tabindex="0">여기에 클릭 후 Ctrl+V로 표지 이미지를 붙여넣으세요.</div>
       </section>
     </div>
@@ -129,6 +131,14 @@
     <div class="editor-grid double">
       <section class="card-block">
         <h3>왼쪽 페이지 텍스트</h3>
+        <div class="editor-toolbar">
+          <button id="prevSpreadBtn" class="toolbar-btn" type="button">이전 펼침</button>
+          <button id="nextSpreadBtn" class="toolbar-btn" type="button">다음 펼침</button>
+          <button id="moveSpreadUpBtn" class="toolbar-btn teacher-only-control" type="button">위로 이동</button>
+          <button id="moveSpreadDownBtn" class="toolbar-btn teacher-only-control" type="button">아래로 이동</button>
+          <button id="duplicateSpreadBtn" class="toolbar-btn" type="button">복제</button>
+          <button id="deleteSpreadBtn" class="toolbar-btn danger" type="button">삭제</button>
+        </div>
         <label class="field">
           페이지 제목
           <input id="spreadTitleInput" type="text" placeholder="예: 벚꽃 길" />
@@ -137,6 +147,7 @@
           본문 텍스트
           <textarea id="spreadBodyInput" rows="10" placeholder="왼쪽 페이지에 들어갈 글을 입력하거나 붙여넣으세요."></textarea>
         </label>
+        <div id="spreadBodyMeta" class="field-meta"></div>
 
         <div class="inline-fields">
           <label class="field">
@@ -162,6 +173,7 @@
         </label>
         <div id="spreadPasteZone" class="paste-zone" tabindex="0">여기에 클릭 후 Ctrl+V로 이미지를 붙여넣으세요.</div>
         <button id="removeSpreadImageBtn" class="ghost-btn block" type="button">이미지 삭제</button>
+        <div id="spreadImageMeta" class="field-meta"></div>
 
         <div class="inline-fields teacher-only-control">
           <label class="field">
@@ -176,6 +188,11 @@
             Y 위치
             <input id="imageYInput" type="number" min="-400" max="400" step="1" />
           </label>
+        </div>
+
+        <div class="quick-adjust teacher-only-control">
+          <button id="centerImageBtn" class="toolbar-btn" type="button">이미지 중앙 정렬</button>
+          <button id="resetImageBtn" class="toolbar-btn" type="button">배율/위치 초기화</button>
         </div>
       </section>
     </div>

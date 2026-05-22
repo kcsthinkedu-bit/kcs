@@ -1,3 +1,6 @@
+const BOOK_FORMAT_VERSION = 'kcs-book-v1';
+const BOOK_DOWNLOAD_FILE_NAME = 'kcs-book-project.json';
+
 const state = {
   mode: 'student',
   active: { type: 'cover', id: 'cover' },
@@ -326,12 +329,20 @@ function bindTopEvents() {
   dom.jsonFileInput.addEventListener('change', async (event) => {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
-    const text = await file.text();
-    const data = JSON.parse(text);
-    state.book = normalizeBook(data);
-    state.active = { type: 'cover', id: 'cover' };
-    renderAll();
-    event.target.value = '';
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      state.book = normalizeBook(data);
+      state.active = { type: 'cover', id: 'cover' };
+      renderAll();
+      alert('현재 KCS JSON 형식 파일을 정상적으로 불러왔습니다.');
+    } catch (error) {
+      console.error(error);
+      alert(error && error.message ? error.message : 'JSON 불러오기에 실패했습니다. 현재 KCS 형식 파일인지 확인해 주세요.');
+    } finally {
+      event.target.value = '';
+    }
   });
 
   dom.printBookBtn.addEventListener('click', () => {
@@ -339,39 +350,100 @@ function bindTopEvents() {
   });
 }
 
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizePaper(value) {
+  return String(value || 'A4').toUpperCase() === 'B4' ? 'B4' : 'A4';
+}
+
+function normalizeString(value, fallback = '') {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return fallback;
+  return String(value);
+}
+
+function normalizeCover(cover) {
+  const safeCover = isPlainObject(cover) ? cover : {};
+  return {
+    title: normalizeString(safeCover.title, '제목 없음'),
+    subtitle: normalizeString(safeCover.subtitle, ''),
+    imageSrc: typeof safeCover.imageSrc === 'string' ? safeCover.imageSrc : ''
+  };
+}
+
+function normalizeSpread(item, index) {
+  const safeItem = isPlainObject(item) ? item : {};
+  return {
+    id: normalizeString(safeItem.id, 'spread_' + (index + 1)),
+    leftTitle: normalizeString(safeItem.leftTitle, `${index + 1}번째 펼침`),
+    leftBody: normalizeString(safeItem.leftBody, ''),
+    leftFontSize: toNumber(safeItem.leftFontSize, 24),
+    leftFontWeight: normalizeString(safeItem.leftFontWeight, '400'),
+    rightImage: typeof safeItem.rightImage === 'string' ? safeItem.rightImage : '',
+    rightImageScale: toNumber(safeItem.rightImageScale, 1),
+    rightImageX: toNumber(safeItem.rightImageX, 0),
+    rightImageY: toNumber(safeItem.rightImageY, 0)
+  };
+}
+
+function validateCurrentBookFormat(raw) {
+  if (!isPlainObject(raw)) {
+    throw new Error('JSON 루트는 객체여야 합니다.');
+  }
+
+  if (raw.formatVersion && raw.formatVersion !== BOOK_FORMAT_VERSION) {
+    throw new Error(`이 JSON은 현재 편집기 형식(${BOOK_FORMAT_VERSION})이 아닙니다.`);
+  }
+
+  if (!isPlainObject(raw.cover)) {
+    throw new Error('현재 KCS JSON에는 cover 객체가 필요합니다.');
+  }
+
+  if (!Array.isArray(raw.spreads)) {
+    throw new Error('현재 KCS JSON에는 spreads 배열이 필요합니다.');
+  }
+
+  if (!raw.spreads.length) {
+    throw new Error('현재 KCS JSON에는 최소 1개 이상의 spread가 필요합니다.');
+  }
+}
+
+function createExportPayload(book) {
+  return {
+    formatVersion: BOOK_FORMAT_VERSION,
+    savedAt: new Date().toISOString(),
+    title: normalizeString(book.title, '새 책'),
+    paper: normalizePaper(book.paper),
+    cover: normalizeCover(book.cover),
+    spreads: Array.isArray(book.spreads) && book.spreads.length
+      ? book.spreads.map((item, index) => normalizeSpread(item, index))
+      : [createSpread(1)]
+  };
+}
+
 function normalizeBook(raw) {
-  const spreads = Array.isArray(raw.spreads) && raw.spreads.length ? raw.spreads.map((item, index) => ({
-    id: String(item.id || ('spread_' + (index + 1))),
-    leftTitle: String(item.leftTitle || `${index + 1}번째 펼침`),
-    leftBody: String(item.leftBody || ''),
-    leftFontSize: toNumber(item.leftFontSize, 24),
-    leftFontWeight: String(item.leftFontWeight || '400'),
-    rightImage: typeof item.rightImage === 'string' ? item.rightImage : '',
-    rightImageScale: toNumber(item.rightImageScale, 1),
-    rightImageX: toNumber(item.rightImageX, 0),
-    rightImageY: toNumber(item.rightImageY, 0)
-  })) : [createSpread(1)];
+  validateCurrentBookFormat(raw);
 
   return {
-    title: String(raw.title || '불러온 책'),
-    paper: raw.paper === 'B4' ? 'B4' : 'A4',
-    cover: {
-      title: String((raw.cover || {}).title || '제목 없음'),
-      subtitle: String((raw.cover || {}).subtitle || ''),
-      imageSrc: typeof (raw.cover || {}).imageSrc === 'string' ? raw.cover.imageSrc : ''
-    },
-    spreads
+    title: normalizeString(raw.title, '불러온 책'),
+    paper: normalizePaper(raw.paper),
+    cover: normalizeCover(raw.cover),
+    spreads: raw.spreads.map((item, index) => normalizeSpread(item, index))
   };
 }
 
 function downloadJson() {
-  const blob = new Blob([JSON.stringify(state.book, null, 2)], { type: 'application/json' });
+  const payload = createExportPayload(state.book);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'kcs-book-project.json';
+  a.download = BOOK_DOWNLOAD_FILE_NAME;
   a.click();
   URL.revokeObjectURL(url);
+  alert(`현재 형식(${BOOK_FORMAT_VERSION})으로 JSON이 저장되었습니다.`);
 }
 
 function buildLogicalPages() {

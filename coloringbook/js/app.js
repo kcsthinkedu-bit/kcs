@@ -376,17 +376,48 @@ function downloadJson() {
 
 function buildLogicalPages() {
   const pages = [];
-  pages.push({ kind: 'cover', title: state.book.cover.title, subtitle: state.book.cover.subtitle, imageSrc: state.book.cover.imageSrc });
 
-  state.book.spreads.forEach((spread) => {
-    pages.push({ kind: 'text', title: spread.leftTitle, body: spread.leftBody, fontSize: spread.leftFontSize, fontWeight: spread.leftFontWeight });
-    pages.push({ kind: 'image', imageSrc: spread.rightImage, scale: spread.rightImageScale, x: spread.rightImageX, y: spread.rightImageY, title: spread.leftTitle + ' 이미지' });
+  pages.push({
+    pageNo: 1,
+    kind: 'cover',
+    title: state.book.cover.title,
+    subtitle: state.book.cover.subtitle,
+    imageSrc: state.book.cover.imageSrc
   });
 
-  pages.push({ kind: 'blank', title: '뒷표지' });
+  state.book.spreads.forEach((spread) => {
+    pages.push({
+      pageNo: pages.length + 1,
+      kind: 'text',
+      title: spread.leftTitle,
+      body: spread.leftBody,
+      fontSize: spread.leftFontSize,
+      fontWeight: spread.leftFontWeight
+    });
+
+    pages.push({
+      pageNo: pages.length + 1,
+      kind: 'image',
+      imageSrc: spread.rightImage,
+      scale: spread.rightImageScale,
+      x: spread.rightImageX,
+      y: spread.rightImageY,
+      title: spread.leftTitle + ' 이미지'
+    });
+  });
+
+  pages.push({
+    pageNo: pages.length + 1,
+    kind: 'blank',
+    title: '뒷표지'
+  });
 
   while (pages.length % 4 !== 0) {
-    pages.push({ kind: 'blank', title: '빈 페이지' });
+    pages.push({
+      pageNo: pages.length + 1,
+      kind: 'blank',
+      title: '빈 페이지'
+    });
   }
 
   return pages;
@@ -412,6 +443,8 @@ function buildBookletSheets(pages) {
 function openPrintWindow() {
   const logicalPages = buildLogicalPages();
   const sheets = buildBookletSheets(logicalPages);
+  const paper = state.book.paper === 'B4' ? 'B4' : 'A4';
+  const pageSizeCss = `${paper} landscape`;
 
   const html = `<!DOCTYPE html>
   <html lang="ko">
@@ -419,33 +452,185 @@ function openPrintWindow() {
     <meta charset="UTF-8" />
     <title>책 인쇄 배열</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 20px; color: #111827; }
-      h1 { margin: 0 0 12px; }
-      .print-note { margin-bottom: 16px; line-height: 1.7; }
-      .print-sheet { break-after: page; page-break-after: always; margin-bottom: 24px; }
-      .print-face { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-      .print-page { border: 1px solid #cbd5e1; min-height: 420px; background: #fff; padding: 16px; overflow: hidden; position: relative; }
-      .print-page img { position: absolute; top: 50%; left: 50%; max-width: 100%; max-height: 100%; transform-origin: center center; }
-      .label { font-size: 12px; color: #475569; margin-bottom: 8px; font-weight: bold; }
-      .empty { color: #64748b; display: grid; place-items: center; height: calc(100% - 24px); text-align: center; }
-      @media print { body { padding: 0; } }
+      @page { size: ${pageSizeCss}; margin: 10mm; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: #eef2f7; color: #111827; font-family: Arial, sans-serif; }
+      body { padding: 24px; }
+      h1 { margin: 0 0 10px; font-size: 28px; }
+      .screen-toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        background: rgba(255,255,255,0.95);
+        border: 1px solid #dbe5f0;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(8px);
+      }
+      .screen-toolbar button {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #111827;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .screen-toolbar .primary {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+      }
+      .print-note {
+        line-height: 1.7;
+        color: #475569;
+        margin-left: auto;
+      }
+      .sheet-stack {
+        display: grid;
+        gap: 28px;
+      }
+      .sheet-card {
+        background: #fff;
+        border: 1px solid #dbe5f0;
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+        break-after: page;
+        page-break-after: always;
+      }
+      .sheet-card:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+      .sheet-title {
+        margin: 0 0 14px;
+        font-size: 22px;
+      }
+      .sheet-face {
+        width: 100%;
+        aspect-ratio: 1.414 / 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+      .sheet-face:last-child {
+        margin-bottom: 0;
+      }
+      .sheet-slot {
+        min-width: 0;
+        min-height: 0;
+      }
+      .print-page {
+        height: 100%;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        padding: 16px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+      .print-page img {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        max-width: calc(100% - 24px);
+        max-height: calc(100% - 48px);
+        transform-origin: center center;
+      }
+      .slot-label {
+        font-size: 12px;
+        color: #475569;
+        margin-bottom: 10px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+      .page-meta {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+      .print-page h3 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        line-height: 1.3;
+      }
+      .print-page p {
+        margin: 0;
+        line-height: 1.7;
+        white-space: pre-wrap;
+      }
+      .empty {
+        color: #64748b;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        height: 100%;
+      }
+      .cover-page {
+        justify-content: flex-start;
+      }
+      .cover-image-box {
+        margin-top: 10px;
+        flex: 1;
+        position: relative;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        overflow: hidden;
+      }
+      .image-page .image-stage {
+        flex: 1;
+        position: relative;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        overflow: hidden;
+      }
+      .blank-page {
+        align-items: center;
+        justify-content: center;
+      }
+      @media print {
+        html, body { background: #fff; }
+        body { padding: 0; }
+        .screen-toolbar { display: none !important; }
+        .sheet-card {
+          box-shadow: none;
+          border: 0;
+          border-radius: 0;
+          padding: 0;
+          margin: 0;
+        }
+      }
     </style>
   </head>
   <body>
+    <div class="screen-toolbar">
+      <button class="primary" onclick="window.print()">인쇄하기</button>
+      <button onclick="window.close()">닫기</button>
+      <div class="print-note">이 화면은 스크롤 문서형 초안 대신 시트 카드형 미리보기입니다. 화면에서 확인 후 인쇄 버튼을 누르세요.</div>
+    </div>
     <h1>${escapeHtml(state.book.title || '책 인쇄 배열')}</h1>
-    <div class="print-note">이 창은 책 제본용 배열 초안입니다. 각 시트의 앞면/뒷면 순서대로 인쇄해 접으면 책 순서가 맞춰지도록 구성했습니다.</div>
-    ${sheets.map((sheet, index) => `
-      <section class="print-sheet">
-        <h2>인쇄 시트 ${index + 1}</h2>
-        <div class="print-face">
-          ${sheet.front.map((page, pageIndex) => renderPrintPage(page, pageIndex === 0 ? '앞면 왼쪽' : '앞면 오른쪽')).join('')}
-        </div>
-        <div class="print-face">
-          ${sheet.back.map((page, pageIndex) => renderPrintPage(page, pageIndex === 0 ? '뒷면 왼쪽' : '뒷면 오른쪽')).join('')}
-        </div>
-      </section>
-    `).join('')}
-    <script>window.onload = () => window.print();<\/script>
+    <div class="sheet-stack">
+      ${sheets.map((sheet, index) => `
+        <section class="sheet-card">
+          <h2 class="sheet-title">인쇄 시트 ${index + 1}</h2>
+          ${renderPrintFace(sheet.front, '앞면')}
+          ${renderPrintFace(sheet.back, '뒷면')}
+        </section>
+      `).join('')}
+    </div>
   </body>
   </html>`;
 
@@ -459,22 +644,73 @@ function openPrintWindow() {
   win.document.close();
 }
 
-function renderPrintPage(page, label) {
-  if (!page) return `<div class="print-page"><div class="label">${label}</div></div>`;
+function renderPrintFace(facePages, faceLabel) {
+  return `
+    <div class="sheet-face">
+      ${facePages.map((page, pageIndex) => {
+        const slotLabel = `${faceLabel} ${pageIndex === 0 ? '왼쪽' : '오른쪽'}`;
+        return `<div class="sheet-slot">${renderPrintPage(page, slotLabel)}</div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderPrintPage(page, slotLabel) {
+  if (!page) {
+    return `
+      <div class="print-page blank-page">
+        <div class="slot-label">${slotLabel}</div>
+        <div class="empty">페이지 없음</div>
+      </div>
+    `;
+  }
+
+  const pageMeta = page.pageNo ? `책 페이지 ${page.pageNo}` : '보조 페이지';
 
   if (page.kind === 'cover') {
-    return `<div class="print-page"><div class="label">${label}</div><h3>${escapeHtml(page.title || '표지')}</h3><p>${escapeHtml(page.subtitle || '')}</p>${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(-50%, -50%) scale(1);" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}</div>`;
+    return `
+      <div class="print-page cover-page">
+        <div class="slot-label">${slotLabel}</div>
+        <div class="page-meta">${pageMeta} · 표지</div>
+        <h3>${escapeHtml(page.title || '표지')}</h3>
+        <p>${escapeHtml(page.subtitle || '')}</p>
+        <div class="cover-image-box">
+          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(-50%, -50%) scale(1);" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
+        </div>
+      </div>
+    `;
   }
 
   if (page.kind === 'text') {
-    return `<div class="print-page"><div class="label">${label}</div><h3 style="font-size:${Number(page.fontSize || 24)}px; font-weight:${escapeAttr(page.fontWeight || '400')};">${escapeHtml(page.title || '')}</h3><p style="white-space:pre-wrap; line-height:1.7;">${escapeHtml(page.body || '')}</p></div>`;
+    return `
+      <div class="print-page">
+        <div class="slot-label">${slotLabel}</div>
+        <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
+        <h3 style="font-size:${Number(page.fontSize || 24)}px; font-weight:${escapeAttr(page.fontWeight || '400')};">${escapeHtml(page.title || '')}</h3>
+        <p style="font-size:${Math.max(16, Number(page.fontSize || 24) - 4)}px; font-weight:${escapeAttr(page.fontWeight || '400')};">${escapeHtml(page.body || '')}</p>
+      </div>
+    `;
   }
 
   if (page.kind === 'image') {
-    return `<div class="print-page image-page"><div class="label">${label}</div>${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />` : `<div class="empty">이미지 없음</div>`}</div>`;
+    return `
+      <div class="print-page image-page">
+        <div class="slot-label">${slotLabel}</div>
+        <div class="page-meta">${pageMeta} · 이미지 페이지</div>
+        <div class="image-stage">
+          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />` : `<div class="empty">이미지 없음</div>`}
+        </div>
+      </div>
+    `;
   }
 
-  return `<div class="print-page"><div class="label">${label}</div><div class="empty">${escapeHtml(page.title || '빈 페이지')}</div></div>`;
+  return `
+    <div class="print-page blank-page">
+      <div class="slot-label">${slotLabel}</div>
+      <div class="page-meta">${pageMeta}</div>
+      <div class="empty">${escapeHtml(page.title || '빈 페이지')}</div>
+    </div>
+  `;
 }
 
 function fileToDataUrl(file) {

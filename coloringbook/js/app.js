@@ -1,5 +1,6 @@
 const BOOK_FORMAT_VERSION = 'kcs-book-v1';
 const BOOK_DOWNLOAD_FILE_NAME = 'kcs-book-project.json';
+const SUBMISSION_ENDPOINT = '/api/submissions/upload';
 
 const state = {
   mode: 'student',
@@ -15,6 +16,16 @@ const dom = {
   saveJsonBtn: document.getElementById('saveJsonBtn'),
   jsonFileInput: document.getElementById('jsonFileInput'),
   printBookBtn: document.getElementById('printBookBtn'),
+  submitWorkBtn: document.getElementById('submitWorkBtn'),
+  submitModal: document.getElementById('submitModal'),
+  closeSubmitModalBtn: document.getElementById('closeSubmitModalBtn'),
+  cancelSubmitBtn: document.getElementById('cancelSubmitBtn'),
+  confirmSubmitBtn: document.getElementById('confirmSubmitBtn'),
+  submitSchoolInput: document.getElementById('submitSchoolInput'),
+  submitClassInput: document.getElementById('submitClassInput'),
+  submitStudentNameInput: document.getElementById('submitStudentNameInput'),
+  submitStudentNumberInput: document.getElementById('submitStudentNumberInput'),
+  submitStatusBox: document.getElementById('submitStatusBox'),
   bookTitleInput: document.getElementById('bookTitleInput'),
   paperSelect: document.getElementById('paperSelect'),
   coverNavBtn: document.getElementById('coverNavBtn'),
@@ -596,6 +607,123 @@ function renderAll() {
   renderTeacherPanels();
 }
 
+function setSubmitStatus(message = '', tone = '') {
+  if (!dom.submitStatusBox) return;
+  dom.submitStatusBox.textContent = message || '학급명과 학생 이름을 입력한 뒤 제출하면 선생님 제출함에서 바로 확인할 수 있습니다.';
+  dom.submitStatusBox.className = 'submit-status-box' + (tone ? ` ${tone}` : '');
+}
+
+function openSubmitModal() {
+  if (!dom.submitModal) return;
+  setSubmitStatus();
+  dom.submitModal.hidden = false;
+  dom.submitSchoolInput.value = dom.submitSchoolInput.value || '';
+  dom.submitClassInput.focus();
+}
+
+function closeSubmitModal() {
+  if (!dom.submitModal) return;
+  dom.submitModal.hidden = true;
+  setSubmitStatus();
+}
+
+function getSubmissionFormValue(input) {
+  return normalizeString(input && input.value, '').trim();
+}
+
+function buildSubmissionInfo() {
+  return {
+    schoolName: getSubmissionFormValue(dom.submitSchoolInput),
+    className: getSubmissionFormValue(dom.submitClassInput),
+    studentName: getSubmissionFormValue(dom.submitStudentNameInput),
+    studentNumber: getSubmissionFormValue(dom.submitStudentNumberInput),
+    bookTitle: normalizeString(state.book.title, '').trim(),
+    paper: normalizePaper(state.book.paper),
+    submittedAt: new Date().toISOString()
+  };
+}
+
+function validateSubmissionInfo(info) {
+  if (!info.className) {
+    throw new Error('학급명을 입력해 주세요.');
+  }
+  if (!info.studentName) {
+    throw new Error('학생 이름을 입력해 주세요.');
+  }
+}
+
+async function submitCurrentBook() {
+  const submission = buildSubmissionInfo();
+  validateSubmissionInfo(submission);
+
+  const payload = {
+    submission,
+    book: {
+      ...createExportPayload(state.book),
+      submission
+    }
+  };
+
+  setSubmitStatus('제출 중입니다. 잠시만 기다려 주세요.', 'pending');
+  dom.confirmSubmitBtn.disabled = true;
+
+  try {
+    const response = await fetch(SUBMISSION_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result && result.error ? result.error : '작품 제출에 실패했습니다.');
+    }
+
+    setSubmitStatus('제출이 완료되었습니다. 선생님 제출함에서 바로 확인할 수 있습니다.', 'success');
+    alert('학생 작품 제출이 완료되었습니다.\n\n선생님 확인 페이지: /teacher/');
+    closeSubmitModal();
+  } catch (error) {
+    console.error(error);
+    setSubmitStatus(error && error.message ? error.message : '작품 제출에 실패했습니다.', 'error');
+  } finally {
+    dom.confirmSubmitBtn.disabled = false;
+  }
+}
+
+async function loadBookFromRemoteUrl(url) {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error('제출된 JSON을 불러오지 못했습니다. 링크가 올바른지 확인해 주세요.');
+  }
+
+  const data = await response.json();
+  state.book = normalizeBook(data);
+  state.active = { type: 'cover', id: 'cover' };
+  renderAll();
+}
+
+async function handleInitialRemoteLoad() {
+  const params = new URLSearchParams(window.location.search);
+  const loadFrom = params.get('loadFrom');
+  const mode = params.get('mode');
+
+  if (!loadFrom) {
+    if (mode === 'teacher') setMode('teacher');
+    return;
+  }
+
+  try {
+    await loadBookFromRemoteUrl(loadFrom);
+    if (mode === 'teacher') setMode('teacher');
+    alert('제출된 작품을 불러왔습니다. 선생님 모드에서 바로 검토할 수 있습니다.');
+  } catch (error) {
+    console.error(error);
+    alert(error && error.message ? error.message : '제출 작품 불러오기에 실패했습니다.');
+  }
+}
+
 function bindTopEvents() {
   dom.studentModeBtn.addEventListener('click', () => {
     setMode('student');
@@ -629,6 +757,27 @@ function bindTopEvents() {
 
   dom.saveJsonBtn.addEventListener('click', () => {
     downloadJson();
+  });
+
+  dom.submitWorkBtn.addEventListener('click', () => {
+    openSubmitModal();
+  });
+
+  dom.closeSubmitModalBtn.addEventListener('click', () => {
+    closeSubmitModal();
+  });
+
+  dom.cancelSubmitBtn.addEventListener('click', () => {
+    closeSubmitModal();
+  });
+
+  dom.submitModal.addEventListener('click', (event) => {
+    const shouldClose = event.target && event.target.dataset && event.target.dataset.submitClose === 'true';
+    if (shouldClose) closeSubmitModal();
+  });
+
+  dom.confirmSubmitBtn.addEventListener('click', async () => {
+    await submitCurrentBook();
   });
 
   dom.jsonFileInput.addEventListener('change', async (event) => {
@@ -1248,6 +1397,11 @@ function bindGlobalShortcuts() {
   document.addEventListener('keydown', (event) => {
     const key = String(event.key || '').toLowerCase();
 
+    if (key === 'escape' && dom.submitModal && !dom.submitModal.hidden) {
+      closeSubmitModal();
+      return;
+    }
+
     if ((event.ctrlKey || event.metaKey) && key === 's') {
       event.preventDefault();
       downloadJson();
@@ -1277,10 +1431,11 @@ function escapeAttr(value) {
   return escapeHtml(value).replaceAll('\n', ' ');
 }
 
-function init() {
+async function init() {
   setMode('student');
   bindTopEvents();
   renderAll();
+  await handleInitialRemoteLoad();
 }
 
 init();

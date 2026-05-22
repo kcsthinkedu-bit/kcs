@@ -1339,11 +1339,49 @@ function renderPrintPage(page, slotLabel) {
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
+
+    reader.onload = () => {
+      const img = new Image();
+
+      img.onload = () => {
+        const maxSide = 1400;
+        let { width, height } = img;
+
+        if (width > height && width > maxSide) {
+          height = Math.round((height * maxSide) / width);
+          width = maxSide;
+        } else if (height >= width && height > maxSide) {
+          width = Math.round((width * maxSide) / height);
+          height = maxSide;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('이미지 캔버스를 만들지 못했습니다.'));
+          return;
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        resolve(compressed);
+      };
+
+      img.onerror = () => reject(new Error('이미지를 처리하지 못했습니다.'));
+      img.src = reader.result;
+    };
+
     reader.onerror = () => reject(new Error('파일을 읽지 못했습니다.'));
     reader.readAsDataURL(file);
   });
 }
+
 
 async function getImageFromPaste(event) {
   const items = Array.from((event.clipboardData || {}).items || []);

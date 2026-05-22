@@ -155,17 +155,29 @@ function renderEditor() {
       removeCoverImageBtn.disabled = !state.book.cover.imageSrc;
     };
 
-    coverTitleInput.addEventListener('input', () => {
-      state.book.cover.title = coverTitleInput.value;
-      renderAll();
-    });
+    bindImeSafeTextField(
+  coverTitleInput,
+  () => {
+    state.book.cover.title = coverTitleInput.value;
+  },
+  () => {
+    refreshViewsForTyping();
+  }
+);
 
-    coverSubtitleInput.addEventListener('input', () => {
-      state.book.cover.subtitle = coverSubtitleInput.value;
-      renderPreview();
-      renderTeacherPanels();
-      syncCoverMeta();
-    });
+
+    bindImeSafeTextField(
+  coverSubtitleInput,
+  () => {
+    state.book.cover.subtitle = coverSubtitleInput.value;
+  },
+  () => {
+    renderPreview();
+    renderTeacherPanels();
+    syncCoverMeta();
+  }
+);
+
 
     coverImageInput.addEventListener('change', async (event) => {
       const file = event.target.files && event.target.files[0];
@@ -243,15 +255,31 @@ function renderEditor() {
     deleteSpreadBtn.disabled = state.book.spreads.length <= 1;
   };
 
-  spreadTitleInput.addEventListener('input', () => {
+ bindImeSafeTextField(
+  spreadTitleInput,
+  () => {
     spread.leftTitle = spreadTitleInput.value;
-    renderAll();
-  });
+  },
+  () => {
+    refreshViewsForTyping();
+  }
+);
 
-  spreadBodyInput.addEventListener('input', () => {
+
+  bindImeSafeTextField(
+  spreadBodyInput,
+  () => {
     spread.leftBody = spreadBodyInput.value;
-    renderAll();
-  });
+  },
+  () => {
+    renderPreview();
+    renderNavigation();
+    renderBookPreviewList();
+    renderTeacherPanels();
+    syncSpreadMeta();
+  }
+);
+
 
   fontSizeInput.addEventListener('input', () => {
     spread.leftFontSize = toNumber(fontSizeInput.value, 24);
@@ -597,6 +625,33 @@ function renderTopFields() {
   dom.bookTitleInput.value = state.book.title;
   dom.paperSelect.value = state.book.paper;
 }
+function refreshViewsForTyping() {
+  renderNavigation();
+  renderPreview();
+  renderBookPreviewList();
+  renderTeacherPanels();
+}
+
+function bindImeSafeTextField(element, updateState, refresh) {
+  let isComposing = false;
+
+  element.addEventListener('compositionstart', () => {
+    isComposing = true;
+  });
+
+  element.addEventListener('compositionend', () => {
+    isComposing = false;
+    updateState();
+    refresh();
+  });
+
+  element.addEventListener('input', () => {
+    updateState();
+    if (!isComposing) {
+      refresh();
+    }
+  });
+}
 
 function renderAll() {
   renderTopFields();
@@ -738,10 +793,16 @@ function bindTopEvents() {
     renderAll();
   });
 
-  dom.bookTitleInput.addEventListener('input', () => {
+ bindImeSafeTextField(
+  dom.bookTitleInput,
+  () => {
     state.book.title = dom.bookTitleInput.value;
+  },
+  () => {
+    renderBookPreviewList();
     renderTeacherPanels();
-  });
+  }
+);
 
   dom.paperSelect.addEventListener('change', () => {
     state.book.paper = dom.paperSelect.value === 'B4' ? 'B4' : 'A4';

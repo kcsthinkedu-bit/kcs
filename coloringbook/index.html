@@ -3,161 +3,184 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>컬러링북 편집기 MVP</title>
-  <meta name="description" content="학생/선생님 모드를 한 홈페이지 안에서 함께 사용하는 컬러링북 편집기 MVP" />
+  <title>KCS 책 만들기 편집기 MVP</title>
+  <meta name="description" content="학생/선생님 모드를 포함한 2페이지 책 만들기 편집기 MVP" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles/coloringbook.css" />
+  <link rel="stylesheet" href="./styles/app.css" />
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="topbar-head">
-        <div class="title-wrap">
-          <h1>컬러링북 편집기 MVP</h1>
-          <p>학생/선생님이 같은 홈페이지 안에서 함께 사용하는 기본 편집기</p>
-        </div>
-
-        <div class="status-wrap">
-          <span id="modeStatusBadge" class="badge student" aria-live="polite">현재 모드: 학생</span>
-        </div>
+      <div class="title-block">
+        <h1>KCS 책 만들기 편집기 MVP</h1>
+        <p>학생은 쉽게 만들고, 선생님은 자세히 조정하는 Vercel용 새 시작 버전</p>
       </div>
 
-      <div class="topbar-controls">
-        <div class="mode-switch" role="group" aria-label="모드 전환">
-          <button id="studentModeBtn" class="mode-btn student-active" type="button" aria-pressed="true">학생 모드</button>
-          <button id="teacherModeBtn" class="mode-btn" type="button" aria-pressed="false">선생님 모드</button>
+      <div class="top-controls">
+        <div class="mode-switch">
+          <button id="studentModeBtn" class="mode-btn active" type="button">학생 모드</button>
+          <button id="teacherModeBtn" class="mode-btn" type="button">선생님 모드</button>
+          <span id="modeBadge" class="badge student">현재 모드: 학생</span>
         </div>
 
-        <div class="action-row" role="group" aria-label="공통 작업">
-          <button id="addPageBtn" class="action-btn primary" type="button">화면 추가</button>
-
-          <label class="file-label" for="imageInput">
-            이미지 불러오기
-            <input id="imageInput" type="file" accept="image/*" />
+        <div class="action-row">
+          <button id="addSpreadBtn" class="primary-btn" type="button">새 펼침 추가</button>
+          <button id="saveJsonBtn" class="ghost-btn" type="button">저장(JSON)</button>
+          <label class="file-btn">
+            불러오기(JSON)
+            <input id="jsonFileInput" type="file" accept=".json,application/json" />
           </label>
-
-          <label class="file-label" for="jsonInput">
-            JSON 불러오기
-            <input id="jsonInput" type="file" accept=".json,application/json" />
-          </label>
+          <button id="printBookBtn" class="ghost-btn" type="button">책 인쇄 배열</button>
         </div>
       </div>
     </header>
 
     <main class="workspace">
-      <section class="panel" aria-labelledby="pageListTitle">
+      <aside class="panel sidebar-panel">
         <div class="panel-head">
-          <div>
-            <h2 id="pageListTitle">페이지 목록</h2>
-            <p>학생/선생님이 공통으로 보는 프로젝트 페이지</p>
+          <h2>책 구성</h2>
+          <p>표지와 펼침 페이지를 왼쪽 목록에서 선택합니다.</p>
+        </div>
+
+        <section class="mini-section">
+          <label class="field">
+            책 제목
+            <input id="bookTitleInput" type="text" placeholder="예: 우리 반 봄 이야기" />
+          </label>
+
+          <label class="field">
+            용지 크기
+            <select id="paperSelect">
+              <option value="A4">A4</option>
+              <option value="B4">B4</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="mini-section">
+          <button id="coverNavBtn" class="nav-btn active" type="button">표지</button>
+          <div id="spreadList" class="spread-list"></div>
+        </section>
+
+        <section class="mini-section teacher-only" id="teacherOnlySidebar" hidden>
+          <h3>선생님 보조 기능</h3>
+          <p class="muted">초안 단계에서는 인쇄 여백 확인과 위치 조정 중심으로만 둡니다.</p>
+          <div class="tip-box">
+            학생 모드에서는 복잡한 값을 숨기고, 선생님 모드에서만 세부 조정을 보여줍니다.
           </div>
-          <span id="pageCountBadge" class="badge student">1 페이지</span>
-        </div>
-
-        <div class="page-list-wrap">
-          <ul id="pageList" class="page-list"></ul>
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="previewTitle">
-        <div class="panel-head">
-          <div>
-            <h2 id="previewTitle">미리보기</h2>
-            <p>학생과 선생님이 같은 결과물을 함께 확인하는 공통 영역</p>
-          </div>
-        </div>
-
-        <div class="preview-wrap">
-          <div class="preview-stage" id="previewStage">
-            <div class="preview-paper" id="previewPaper">
-              <img id="previewImage" class="preview-image" alt="현재 페이지 미리보기 이미지" />
-              <div id="previewPlaceholder" class="preview-placeholder">
-                <div>
-                  <strong>아직 이미지가 없습니다.</strong><br />
-                  화면을 추가하고 이미지를 불러오면 여기에서 바로 확인할 수 있습니다.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p class="preview-caption" id="previewCaption">현재 선택 페이지: 없음</p>
-        </div>
-      </section>
-
-      <aside class="panel" aria-labelledby="sidePanelTitle">
-        <div class="panel-head">
-          <div>
-            <h2 id="sidePanelTitle">모드 패널</h2>
-            <p>한 홈페이지 안에서 학생/선생님 기능을 분리해 표시</p>
-          </div>
-        </div>
-
-        <div class="side-panel">
-          <section id="studentPanel" class="mode-panel" aria-labelledby="studentPanelTitle">
-            <h3 id="studentPanelTitle">학생 작업 패널</h3>
-            <p class="helper">학생은 기본 작업만 빠르게 사용합니다. 화면 추가, 이미지 불러오기, JSON 불러오기를 우선 제공합니다.</p>
-            <div class="control-group">
-              <div class="mini-card">
-                <strong>현재 할 수 있는 작업</strong><br />
-                화면 추가 · 이미지 불러오기 · JSON 불러오기 · 페이지 선택
-              </div>
-            </div>
-            <div class="control-group">
-              <div class="empty-note">학생 모드에서는 복잡한 설정을 숨기고, 결과 확인과 기본 입력에 집중합니다.</div>
-            </div>
-          </section>
-
-          <section id="teacherPanel" class="mode-panel" aria-labelledby="teacherPanelTitle" hidden>
-            <h3 id="teacherPanelTitle">선생님 작업 패널</h3>
-            <p class="helper">선생님은 같은 페이지 안에서 조금 더 자세한 설정을 조정합니다. MVP에서는 최소한의 항목만 둡니다.</p>
-
-            <div class="control-group">
-              <label for="teacherPageNameInput">
-                페이지 이름
-                <input id="teacherPageNameInput" type="text" value="1페이지" placeholder="페이지 이름 입력" />
-              </label>
-            </div>
-
-            <div class="control-group">
-              <div class="inline-grid">
-                <label for="teacherScaleInput">
-                  이미지 배율
-                  <input id="teacherScaleInput" type="number" value="1" step="0.1" min="0.1" />
-                </label>
-
-                <label for="teacherPaperSelect">
-                  용지 크기
-                  <select id="teacherPaperSelect">
-                    <option value="A4">A4</option>
-                    <option value="B4">B4</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <div class="control-group">
-              <div class="inline-grid">
-                <label for="teacherOffsetXInput">
-                  X 위치
-                  <input id="teacherOffsetXInput" type="number" value="0" step="1" />
-                </label>
-
-                <label for="teacherOffsetYInput">
-                  Y 위치
-                  <input id="teacherOffsetYInput" type="number" value="0" step="1" />
-                </label>
-              </div>
-            </div>
-
-            <div class="footer-note">이 패널은 같은 홈페이지 안에 존재하지만, 학생 패널과 로직을 분리해 관리하는 MVP 뼈대입니다.</div>
-          </section>
-        </div>
+        </section>
       </aside>
+
+      <section class="panel editor-panel">
+        <div class="panel-head">
+          <h2 id="editorTitle">표지 편집</h2>
+          <p id="editorHelp">현재 선택한 항목의 내용을 입력합니다.</p>
+        </div>
+
+        <div id="editorRoot" class="editor-root"></div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="panel-head">
+          <h2>미리보기</h2>
+          <p>현재 선택된 표지/펼침과 책 전체 순서를 함께 확인합니다.</p>
+        </div>
+
+        <div class="preview-root">
+          <div id="currentPreview" class="current-preview"></div>
+          <div class="booklet-box">
+            <h3>책 전체 순서</h3>
+            <ol id="bookPreviewList" class="book-preview-list"></ol>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
-  <script type="module" src="./js/app.js"></script>
+  <template id="coverEditorTemplate">
+    <div class="editor-grid single">
+      <section class="card-block">
+        <h3>표지 텍스트</h3>
+        <label class="field">
+          표지 제목
+          <input id="coverTitleInput" type="text" placeholder="표지 제목 입력" />
+        </label>
+        <label class="field">
+          표지 부제
+          <textarea id="coverSubtitleInput" rows="4" placeholder="표지 부제 또는 설명 입력"></textarea>
+        </label>
+      </section>
+
+      <section class="card-block">
+        <h3>표지 이미지</h3>
+        <label class="file-drop">
+          이미지 파일 넣기
+          <input id="coverImageInput" type="file" accept="image/*" />
+        </label>
+        <button id="removeCoverImageBtn" class="ghost-btn block" type="button">표지 이미지 삭제</button>
+        <div id="coverPasteZone" class="paste-zone" tabindex="0">여기에 클릭 후 Ctrl+V로 표지 이미지를 붙여넣으세요.</div>
+      </section>
+    </div>
+  </template>
+
+  <template id="spreadEditorTemplate">
+    <div class="editor-grid double">
+      <section class="card-block">
+        <h3>왼쪽 페이지 텍스트</h3>
+        <label class="field">
+          페이지 제목
+          <input id="spreadTitleInput" type="text" placeholder="예: 벚꽃 길" />
+        </label>
+        <label class="field">
+          본문 텍스트
+          <textarea id="spreadBodyInput" rows="10" placeholder="왼쪽 페이지에 들어갈 글을 입력하거나 붙여넣으세요."></textarea>
+        </label>
+
+        <div class="inline-fields">
+          <label class="field">
+            글자 크기
+            <input id="fontSizeInput" type="number" min="16" max="64" step="1" />
+          </label>
+          <label class="field">
+            글자 굵기
+            <select id="fontWeightInput">
+              <option value="400">보통</option>
+              <option value="700">굵게</option>
+              <option value="800">아주 굵게</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="card-block">
+        <h3>오른쪽 페이지 이미지</h3>
+        <label class="file-drop">
+          이미지 파일 넣기
+          <input id="spreadImageInput" type="file" accept="image/*" />
+        </label>
+        <div id="spreadPasteZone" class="paste-zone" tabindex="0">여기에 클릭 후 Ctrl+V로 이미지를 붙여넣으세요.</div>
+        <button id="removeSpreadImageBtn" class="ghost-btn block" type="button">이미지 삭제</button>
+
+        <div class="inline-fields teacher-only-control">
+          <label class="field">
+            크기 배율
+            <input id="imageScaleInput" type="number" min="0.2" max="3" step="0.1" />
+          </label>
+          <label class="field">
+            X 위치
+            <input id="imageXInput" type="number" min="-400" max="400" step="1" />
+          </label>
+          <label class="field">
+            Y 위치
+            <input id="imageYInput" type="number" min="-400" max="400" step="1" />
+          </label>
+        </div>
+      </section>
+    </div>
+  </template>
+
+  <script src="./js/app.js"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 {
-  "name": "coloringbook-netlify-mvp",
+  "name": "kcs-coloringbook-vercel-mvp",
   "private": true,
   "version": "1.0.0",
-  "description": "Netlify-ready static MVP for coloringbook editor",
+  "description": "Vercel-ready static MVP for KCS coloringbook editor",
   "scripts": {
     "start": "npx serve ."
   }

@@ -1,0 +1,29 @@
+{
+  "title": "우리 반 책 만들기",
+  "paper": "A4",
+  "cover": {
+    "title": "봄이 왔어요",
+    "subtitle": "우리 반이 함께 만든 작은 책",
+    "imageSrc": ""
+  },
+  "spreads": [
+    {
+      "id": "spread_1",
+      "leftTitle": "벚꽃 길",
+      "leftBody": "학교 가는 길에 벚꽃이 활짝 피었습니다. 우리는 분홍빛 길을 걸으며 봄 냄새를 맡았습니다.",
+      "rightImage": "",
+      "rightImageScale": 1,
+      "rightImageX": 0,
+      "rightImageY": 0
+    },
+    {
+      "id": "spread_2",
+      "leftTitle": "소풍 날",
+      "leftBody": "친구들과 도시락을 나누어 먹고, 나무 그늘 아래에서 그림을 그렸습니다.",
+      "rightImage": "",
+      "rightImageScale": 1,
+      "rightImageX": 0,
+      "rightImageY": 0
+    }
+  ]
+}

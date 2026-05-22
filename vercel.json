@@ -1,0 +1,8 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/coloringbook", "destination": "/coloringbook/index.html" },
+    { "source": "/coloringbook/", "destination": "/coloringbook/index.html" }
+  ]
+}

@@ -1,219 +1,511 @@
 const state = {
   mode: 'student',
-  selectedPageId: null,
-  project: {
-    title: '새 프로젝트',
-    paper: 'A4',
-    pages: []
-  },
-  error: ''
+  active: { type: 'cover', id: 'cover' },
+  book: createInitialBook()
 };
 
 const dom = {
   studentModeBtn: document.getElementById('studentModeBtn'),
   teacherModeBtn: document.getElementById('teacherModeBtn'),
-  modeStatusBadge: document.getElementById('modeStatusBadge'),
-  addPageBtn: document.getElementById('addPageBtn'),
-  imageInput: document.getElementById('imageInput'),
-  jsonInput: document.getElementById('jsonInput'),
-  pageList: document.getElementById('pageList'),
-  pageCountBadge: document.getElementById('pageCountBadge'),
-  previewImage: document.getElementById('previewImage'),
-  previewPlaceholder: document.getElementById('previewPlaceholder'),
-  previewCaption: document.getElementById('previewCaption'),
-  studentPanel: document.getElementById('studentPanel'),
-  teacherPanel: document.getElementById('teacherPanel'),
-  teacherPageNameInput: document.getElementById('teacherPageNameInput'),
-  teacherScaleInput: document.getElementById('teacherScaleInput'),
-  teacherPaperSelect: document.getElementById('teacherPaperSelect'),
-  teacherOffsetXInput: document.getElementById('teacherOffsetXInput'),
-  teacherOffsetYInput: document.getElementById('teacherOffsetYInput')
+  modeBadge: document.getElementById('modeBadge'),
+  addSpreadBtn: document.getElementById('addSpreadBtn'),
+  saveJsonBtn: document.getElementById('saveJsonBtn'),
+  jsonFileInput: document.getElementById('jsonFileInput'),
+  printBookBtn: document.getElementById('printBookBtn'),
+  bookTitleInput: document.getElementById('bookTitleInput'),
+  paperSelect: document.getElementById('paperSelect'),
+  coverNavBtn: document.getElementById('coverNavBtn'),
+  spreadList: document.getElementById('spreadList'),
+  editorTitle: document.getElementById('editorTitle'),
+  editorHelp: document.getElementById('editorHelp'),
+  editorRoot: document.getElementById('editorRoot'),
+  currentPreview: document.getElementById('currentPreview'),
+  bookPreviewList: document.getElementById('bookPreviewList'),
+  teacherOnlySidebar: document.getElementById('teacherOnlySidebar'),
+  coverEditorTemplate: document.getElementById('coverEditorTemplate'),
+  spreadEditorTemplate: document.getElementById('spreadEditorTemplate')
 };
 
-function makePageId() {
-  return 'page_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-}
-
-function createPage(index) {
+function createInitialBook() {
   return {
-    id: makePageId(),
-    name: `${index}페이지`,
-    imageSrc: '',
-    imageScale: 1,
-    imageX: 0,
-    imageY: 0,
-    paper: 'A4'
+    title: '새 책',
+    paper: 'A4',
+    cover: {
+      title: '새 책 제목',
+      subtitle: '여기에 부제를 적으세요.',
+      imageSrc: ''
+    },
+    spreads: [createSpread(1)]
   };
 }
 
-function getSelectedPage() {
-  return state.project.pages.find((page) => page.id === state.selectedPageId) || null;
+function createSpread(index) {
+  return {
+    id: 'spread_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    leftTitle: index + '번째 펼침',
+    leftBody: '여기에 본문 내용을 적거나 붙여넣으세요.',
+    leftFontSize: 24,
+    leftFontWeight: '400',
+    rightImage: '',
+    rightImageScale: 1,
+    rightImageX: 0,
+    rightImageY: 0
+  };
 }
 
-function setError(message) {
-  state.error = message || '';
-  renderError();
-}
-
-function ensureErrorBox() {
-  let box = document.getElementById('errorBox');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'errorBox';
-    box.className = 'error-box';
-    box.hidden = true;
-    dom.studentPanel.appendChild(box);
-  }
-  return box;
-}
-
-function renderError() {
-  const box = ensureErrorBox();
-  box.hidden = !state.error;
-  box.textContent = state.error;
+function getActiveSpread() {
+  if (state.active.type !== 'spread') return null;
+  return state.book.spreads.find((item) => item.id === state.active.id) || null;
 }
 
 function setMode(mode) {
-  const isStudent = mode === 'student';
-  state.mode = isStudent ? 'student' : 'teacher';
-
-  dom.studentModeBtn.setAttribute('aria-pressed', String(isStudent));
-  dom.teacherModeBtn.setAttribute('aria-pressed', String(!isStudent));
-
-  dom.studentModeBtn.classList.toggle('student-active', isStudent);
-  dom.teacherModeBtn.classList.toggle('teacher-active', !isStudent);
-
-  dom.studentPanel.hidden = !isStudent;
-  dom.teacherPanel.hidden = isStudent;
-
-  dom.modeStatusBadge.textContent = isStudent ? '현재 모드: 학생' : '현재 모드: 선생님';
-  dom.modeStatusBadge.className = isStudent ? 'badge student' : 'badge teacher';
+  state.mode = mode === 'teacher' ? 'teacher' : 'student';
+  document.body.classList.toggle('teacher-mode', state.mode === 'teacher');
+  document.body.classList.toggle('student-mode', state.mode === 'student');
+  dom.studentModeBtn.classList.toggle('active', state.mode === 'student');
+  dom.teacherModeBtn.classList.toggle('active', state.mode === 'teacher');
+  dom.modeBadge.textContent = state.mode === 'student' ? '현재 모드: 학생' : '현재 모드: 선생님';
+  dom.modeBadge.className = state.mode === 'student' ? 'badge student' : 'badge teacher';
+  dom.teacherOnlySidebar.hidden = state.mode !== 'teacher';
 }
 
-function renderPageList() {
-  dom.pageList.innerHTML = '';
+function renderNavigation() {
+  dom.coverNavBtn.classList.toggle('active', state.active.type === 'cover');
+  dom.spreadList.innerHTML = '';
 
-  state.project.pages.forEach((page) => {
-    const li = document.createElement('li');
-    li.className = 'page-item' + (page.id === state.selectedPageId ? ' active' : '');
-    li.dataset.pageId = page.id;
-
+  state.book.spreads.forEach((spread, index) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.innerHTML = `
-      <span class="page-name">${escapeHtml(page.name)}</span>
-      <span class="page-meta">${page.id === state.selectedPageId ? '선택됨 · ' : ''}${page.imageSrc ? '이미지 있음' : '이미지 없음'}</span>
-    `;
-
+    button.className = 'nav-btn' + (state.active.id === spread.id ? ' active' : '');
+    button.textContent = `펼침 ${index + 1}`;
     button.addEventListener('click', () => {
-      state.selectedPageId = page.id;
+      state.active = { type: 'spread', id: spread.id };
       renderAll();
     });
-
-    li.appendChild(button);
-    dom.pageList.appendChild(li);
+    dom.spreadList.appendChild(button);
   });
-
-  dom.pageCountBadge.textContent = `${state.project.pages.length} 페이지`;
 }
 
-function renderPreview() {
-  const page = getSelectedPage();
+function renderEditor() {
+  dom.editorRoot.innerHTML = '';
 
-  if (!page) {
-    dom.previewImage.style.display = 'none';
-    dom.previewPlaceholder.style.display = 'grid';
-    dom.previewPlaceholder.innerHTML = '<div><strong>선택된 페이지가 없습니다.</strong><br />왼쪽 목록에서 페이지를 선택하세요.</div>';
-    dom.previewCaption.textContent = '현재 선택 페이지: 없음';
+  if (state.active.type === 'cover') {
+    dom.editorTitle.textContent = '표지 편집';
+    dom.editorHelp.textContent = '표지 제목, 부제, 이미지를 넣습니다.';
+    const node = dom.coverEditorTemplate.content.cloneNode(true);
+    dom.editorRoot.appendChild(node);
+
+    const coverTitleInput = document.getElementById('coverTitleInput');
+    const coverSubtitleInput = document.getElementById('coverSubtitleInput');
+    const coverImageInput = document.getElementById('coverImageInput');
+    const coverPasteZone = document.getElementById('coverPasteZone');
+    const removeCoverImageBtn = document.getElementById('removeCoverImageBtn');
+
+    coverTitleInput.value = state.book.cover.title;
+    coverSubtitleInput.value = state.book.cover.subtitle;
+
+    coverTitleInput.addEventListener('input', () => {
+      state.book.cover.title = coverTitleInput.value;
+      renderPreview();
+    });
+
+    coverSubtitleInput.addEventListener('input', () => {
+      state.book.cover.subtitle = coverSubtitleInput.value;
+      renderPreview();
+    });
+
+    coverImageInput.addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      state.book.cover.imageSrc = await fileToDataUrl(file);
+      renderPreview();
+      event.target.value = '';
+    });
+
+    coverPasteZone.addEventListener('paste', async (event) => {
+      const pasted = await getImageFromPaste(event);
+      if (!pasted) return;
+      state.book.cover.imageSrc = pasted;
+      renderPreview();
+    });
+
+    removeCoverImageBtn.addEventListener('click', () => {
+      state.book.cover.imageSrc = '';
+      renderPreview();
+    });
+
     return;
   }
 
-  dom.previewCaption.textContent = `현재 선택 페이지: ${page.name}`;
+  const spread = getActiveSpread();
+  if (!spread) return;
 
-  if (page.imageSrc) {
-    dom.previewImage.src = page.imageSrc;
-    dom.previewImage.style.display = 'block';
-    dom.previewPlaceholder.style.display = 'none';
-    dom.previewImage.style.transform = `translate(calc(-50% + ${Number(page.imageX || 0)}px), calc(-50% + ${Number(page.imageY || 0)}px)) scale(${Number(page.imageScale || 1)})`;
-  } else {
-    dom.previewImage.removeAttribute('src');
-    dom.previewImage.style.display = 'none';
-    dom.previewPlaceholder.style.display = 'grid';
-    dom.previewPlaceholder.innerHTML = '<div><strong>아직 이미지가 없습니다.</strong><br />이미지 불러오기를 눌러 현재 페이지에 이미지를 넣어주세요.</div>';
-  }
+  dom.editorTitle.textContent = '펼침 편집';
+  dom.editorHelp.textContent = '왼쪽에는 글, 오른쪽에는 이미지를 넣는 2페이지 구조입니다.';
+  const node = dom.spreadEditorTemplate.content.cloneNode(true);
+  dom.editorRoot.appendChild(node);
+
+  const spreadTitleInput = document.getElementById('spreadTitleInput');
+  const spreadBodyInput = document.getElementById('spreadBodyInput');
+  const fontSizeInput = document.getElementById('fontSizeInput');
+  const fontWeightInput = document.getElementById('fontWeightInput');
+  const spreadImageInput = document.getElementById('spreadImageInput');
+  const spreadPasteZone = document.getElementById('spreadPasteZone');
+  const removeSpreadImageBtn = document.getElementById('removeSpreadImageBtn');
+  const imageScaleInput = document.getElementById('imageScaleInput');
+  const imageXInput = document.getElementById('imageXInput');
+  const imageYInput = document.getElementById('imageYInput');
+
+  spreadTitleInput.value = spread.leftTitle;
+  spreadBodyInput.value = spread.leftBody;
+  fontSizeInput.value = spread.leftFontSize;
+  fontWeightInput.value = spread.leftFontWeight;
+  imageScaleInput.value = spread.rightImageScale;
+  imageXInput.value = spread.rightImageX;
+  imageYInput.value = spread.rightImageY;
+
+  spreadTitleInput.addEventListener('input', () => {
+    spread.leftTitle = spreadTitleInput.value;
+    renderPreview();
+    renderBookPreviewList();
+  });
+
+  spreadBodyInput.addEventListener('input', () => {
+    spread.leftBody = spreadBodyInput.value;
+    renderPreview();
+  });
+
+  fontSizeInput.addEventListener('input', () => {
+    spread.leftFontSize = toNumber(fontSizeInput.value, 24);
+    renderPreview();
+  });
+
+  fontWeightInput.addEventListener('change', () => {
+    spread.leftFontWeight = fontWeightInput.value;
+    renderPreview();
+  });
+
+  spreadImageInput.addEventListener('change', async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    spread.rightImage = await fileToDataUrl(file);
+    renderPreview();
+    event.target.value = '';
+  });
+
+  spreadPasteZone.addEventListener('paste', async (event) => {
+    const pasted = await getImageFromPaste(event);
+    if (!pasted) return;
+    spread.rightImage = pasted;
+    renderPreview();
+  });
+
+  removeSpreadImageBtn.addEventListener('click', () => {
+    spread.rightImage = '';
+    renderPreview();
+  });
+
+  imageScaleInput.addEventListener('input', () => {
+    spread.rightImageScale = toNumber(imageScaleInput.value, 1);
+    renderPreview();
+  });
+
+  imageXInput.addEventListener('input', () => {
+    spread.rightImageX = toNumber(imageXInput.value, 0);
+    renderPreview();
+  });
+
+  imageYInput.addEventListener('input', () => {
+    spread.rightImageY = toNumber(imageYInput.value, 0);
+    renderPreview();
+  });
 }
 
-function renderTeacherPanel() {
-  const page = getSelectedPage();
-  if (!page) return;
-  dom.teacherPageNameInput.value = page.name || '';
-  dom.teacherScaleInput.value = page.imageScale ?? 1;
-  dom.teacherPaperSelect.value = page.paper || state.project.paper || 'A4';
-  dom.teacherOffsetXInput.value = page.imageX ?? 0;
-  dom.teacherOffsetYInput.value = page.imageY ?? 0;
+function renderPreview() {
+  dom.currentPreview.innerHTML = '';
+
+  if (state.active.type === 'cover') {
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-cover';
+    wrap.innerHTML = `
+      <div class="preview-cover-page">
+        <div class="preview-cover-image" style="background-image:url('${escapeAttr(state.book.cover.imageSrc)}')"></div>
+        <div class="preview-cover-text">
+          <h3>${escapeHtml(state.book.cover.title || '제목 없음')}</h3>
+          <p>${escapeHtml(state.book.cover.subtitle || '')}</p>
+        </div>
+      </div>
+    `;
+    dom.currentPreview.appendChild(wrap);
+    return;
+  }
+
+  const spread = getActiveSpread();
+  if (!spread) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'preview-spread';
+  wrap.innerHTML = `
+    <div class="preview-spread-pages">
+      <div class="preview-page">
+        <div class="preview-left-inner">
+          <h3 style="font-size:${Number(spread.leftFontSize || 24)}px; font-weight:${escapeAttr(spread.leftFontWeight || '400')};">${escapeHtml(spread.leftTitle || '제목 없음')}</h3>
+          <p style="font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px; font-weight:${escapeAttr(spread.leftFontWeight || '400')};">${escapeHtml(spread.leftBody || '').replace(/\n/g, '<br />')}</p>
+        </div>
+      </div>
+      <div class="preview-page">
+        <div class="preview-image-stage">
+          ${spread.rightImage ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />` : `<div class="preview-empty">오른쪽 페이지 이미지가 아직 없습니다.<br />파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.</div>`}
+        </div>
+      </div>
+    </div>
+  `;
+  dom.currentPreview.appendChild(wrap);
+}
+
+function renderBookPreviewList() {
+  dom.bookPreviewList.innerHTML = '';
+  const items = [
+    `표지: ${state.book.cover.title || '제목 없음'}`,
+    ...state.book.spreads.map((spread, index) => `펼침 ${index + 1}: ${spread.leftTitle || '제목 없음'} / ${spread.rightImage ? '이미지 있음' : '이미지 없음'}`)
+  ];
+
+  items.forEach((text) => {
+    const li = document.createElement('li');
+    li.textContent = text;
+    dom.bookPreviewList.appendChild(li);
+  });
+}
+
+function renderTopFields() {
+  dom.bookTitleInput.value = state.book.title;
+  dom.paperSelect.value = state.book.paper;
 }
 
 function renderAll() {
-  renderPageList();
+  renderTopFields();
+  renderNavigation();
+  renderEditor();
   renderPreview();
-  renderTeacherPanel();
-  renderError();
+  renderBookPreviewList();
 }
 
-function addPage() {
-  const page = createPage(state.project.pages.length + 1);
-  state.project.pages.push(page);
-  state.selectedPageId = page.id;
-  setError('');
-  renderAll();
+function bindTopEvents() {
+  dom.studentModeBtn.addEventListener('click', () => {
+    setMode('student');
+  });
+
+  dom.teacherModeBtn.addEventListener('click', () => {
+    setMode('teacher');
+  });
+
+  dom.coverNavBtn.addEventListener('click', () => {
+    state.active = { type: 'cover', id: 'cover' };
+    renderAll();
+  });
+
+  dom.bookTitleInput.addEventListener('input', () => {
+    state.book.title = dom.bookTitleInput.value;
+  });
+
+  dom.paperSelect.addEventListener('change', () => {
+    state.book.paper = dom.paperSelect.value === 'B4' ? 'B4' : 'A4';
+  });
+
+  dom.addSpreadBtn.addEventListener('click', () => {
+    const spread = createSpread(state.book.spreads.length + 1);
+    state.book.spreads.push(spread);
+    state.active = { type: 'spread', id: spread.id };
+    renderAll();
+  });
+
+  dom.saveJsonBtn.addEventListener('click', () => {
+    downloadJson();
+  });
+
+  dom.jsonFileInput.addEventListener('change', async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const data = JSON.parse(text);
+    state.book = normalizeBook(data);
+    state.active = { type: 'cover', id: 'cover' };
+    renderAll();
+    event.target.value = '';
+  });
+
+  dom.printBookBtn.addEventListener('click', () => {
+    openPrintWindow();
+  });
 }
 
-function readFileAsDataURL(file) {
+function normalizeBook(raw) {
+  const spreads = Array.isArray(raw.spreads) && raw.spreads.length ? raw.spreads.map((item, index) => ({
+    id: String(item.id || ('spread_' + (index + 1))),
+    leftTitle: String(item.leftTitle || `${index + 1}번째 펼침`),
+    leftBody: String(item.leftBody || ''),
+    leftFontSize: toNumber(item.leftFontSize, 24),
+    leftFontWeight: String(item.leftFontWeight || '400'),
+    rightImage: typeof item.rightImage === 'string' ? item.rightImage : '',
+    rightImageScale: toNumber(item.rightImageScale, 1),
+    rightImageX: toNumber(item.rightImageX, 0),
+    rightImageY: toNumber(item.rightImageY, 0)
+  })) : [createSpread(1)];
+
+  return {
+    title: String(raw.title || '불러온 책'),
+    paper: raw.paper === 'B4' ? 'B4' : 'A4',
+    cover: {
+      title: String((raw.cover || {}).title || '제목 없음'),
+      subtitle: String((raw.cover || {}).subtitle || ''),
+      imageSrc: typeof (raw.cover || {}).imageSrc === 'string' ? raw.cover.imageSrc : ''
+    },
+    spreads
+  };
+}
+
+function downloadJson() {
+  const blob = new Blob([JSON.stringify(state.book, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'kcs-book-project.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function buildLogicalPages() {
+  const pages = [];
+  pages.push({ kind: 'cover', title: state.book.cover.title, subtitle: state.book.cover.subtitle, imageSrc: state.book.cover.imageSrc });
+
+  state.book.spreads.forEach((spread) => {
+    pages.push({ kind: 'text', title: spread.leftTitle, body: spread.leftBody, fontSize: spread.leftFontSize, fontWeight: spread.leftFontWeight });
+    pages.push({ kind: 'image', imageSrc: spread.rightImage, scale: spread.rightImageScale, x: spread.rightImageX, y: spread.rightImageY, title: spread.leftTitle + ' 이미지' });
+  });
+
+  pages.push({ kind: 'blank', title: '뒷표지' });
+
+  while (pages.length % 4 !== 0) {
+    pages.push({ kind: 'blank', title: '빈 페이지' });
+  }
+
+  return pages;
+}
+
+function buildBookletSheets(pages) {
+  let left = 0;
+  let right = pages.length - 1;
+  const sheets = [];
+
+  while (left < right) {
+    sheets.push({
+      front: [pages[right], pages[left]],
+      back: [pages[left + 1], pages[right - 1]]
+    });
+    left += 2;
+    right -= 2;
+  }
+
+  return sheets;
+}
+
+function openPrintWindow() {
+  const logicalPages = buildLogicalPages();
+  const sheets = buildBookletSheets(logicalPages);
+
+  const html = `<!DOCTYPE html>
+  <html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>책 인쇄 배열</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; color: #111827; }
+      h1 { margin: 0 0 12px; }
+      .print-note { margin-bottom: 16px; line-height: 1.7; }
+      .print-sheet { break-after: page; page-break-after: always; margin-bottom: 24px; }
+      .print-face { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+      .print-page { border: 1px solid #cbd5e1; min-height: 420px; background: #fff; padding: 16px; overflow: hidden; position: relative; }
+      .print-page img { position: absolute; top: 50%; left: 50%; max-width: 100%; max-height: 100%; transform-origin: center center; }
+      .label { font-size: 12px; color: #475569; margin-bottom: 8px; font-weight: bold; }
+      .empty { color: #64748b; display: grid; place-items: center; height: calc(100% - 24px); text-align: center; }
+      @media print { body { padding: 0; } }
+    </style>
+  </head>
+  <body>
+    <h1>${escapeHtml(state.book.title || '책 인쇄 배열')}</h1>
+    <div class="print-note">이 창은 책 제본용 배열 초안입니다. 각 시트의 앞면/뒷면 순서대로 인쇄해 접으면 책 순서가 맞춰지도록 구성했습니다.</div>
+    ${sheets.map((sheet, index) => `
+      <section class="print-sheet">
+        <h2>인쇄 시트 ${index + 1}</h2>
+        <div class="print-face">
+          ${sheet.front.map((page, pageIndex) => renderPrintPage(page, pageIndex === 0 ? '앞면 왼쪽' : '앞면 오른쪽')).join('')}
+        </div>
+        <div class="print-face">
+          ${sheet.back.map((page, pageIndex) => renderPrintPage(page, pageIndex === 0 ? '뒷면 왼쪽' : '뒷면 오른쪽')).join('')}
+        </div>
+      </section>
+    `).join('')}
+    <script>window.onload = () => window.print();<\/script>
+  </body>
+  </html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+function renderPrintPage(page, label) {
+  if (!page) return `<div class="print-page"><div class="label">${label}</div></div>`;
+
+  if (page.kind === 'cover') {
+    return `<div class="print-page"><div class="label">${label}</div><h3>${escapeHtml(page.title || '표지')}</h3><p>${escapeHtml(page.subtitle || '')}</p>${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(-50%, -50%) scale(1);" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}</div>`;
+  }
+
+  if (page.kind === 'text') {
+    return `<div class="print-page"><div class="label">${label}</div><h3 style="font-size:${Number(page.fontSize || 24)}px; font-weight:${escapeAttr(page.fontWeight || '400')};">${escapeHtml(page.title || '')}</h3><p style="white-space:pre-wrap; line-height:1.7;">${escapeHtml(page.body || '')}</p></div>`;
+  }
+
+  if (page.kind === 'image') {
+    return `<div class="print-page image-page"><div class="label">${label}</div>${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />` : `<div class="empty">이미지 없음</div>`}</div>`;
+  }
+
+  return `<div class="print-page"><div class="label">${label}</div><div class="empty">${escapeHtml(page.title || '빈 페이지')}</div></div>`;
+}
+
+function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('이미지 파일을 읽지 못했습니다.'));
+    reader.onerror = () => reject(new Error('파일을 읽지 못했습니다.'));
     reader.readAsDataURL(file);
   });
 }
 
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('JSON 파일을 읽지 못했습니다.'));
-    reader.readAsText(file, 'utf-8');
-  });
+async function getImageFromPaste(event) {
+  const items = Array.from((event.clipboardData || {}).items || []);
+  const imageItem = items.find((item) => item.type && item.type.startsWith('image/'));
+  if (!imageItem) {
+    alert('클립보드에 이미지가 없습니다. 그림을 복사한 뒤 다시 Ctrl+V 하세요.');
+    return '';
+  }
+  event.preventDefault();
+  const file = imageItem.getAsFile();
+  if (!file) return '';
+  return await fileToDataUrl(file);
 }
 
-function normalizePage(rawPage, index) {
-  return {
-    id: String(rawPage.id || makePageId()),
-    name: String(rawPage.name || `${index + 1}페이지`),
-    imageSrc: typeof rawPage.imageSrc === 'string' ? rawPage.imageSrc : '',
-    imageScale: isFinite(Number(rawPage.imageScale)) ? Number(rawPage.imageScale) : 1,
-    imageX: isFinite(Number(rawPage.imageX)) ? Number(rawPage.imageX) : 0,
-    imageY: isFinite(Number(rawPage.imageY)) ? Number(rawPage.imageY) : 0,
-    paper: rawPage.paper === 'B4' ? 'B4' : 'A4'
-  };
-}
-
-function validateProject(data) {
-  if (!data || typeof data !== 'object') throw new Error('JSON 루트는 객체여야 합니다.');
-  if (!Array.isArray(data.pages)) throw new Error('JSON 안에 pages 배열이 필요합니다.');
-
-  const pages = data.pages.map((page, index) => normalizePage(page, index));
-  if (!pages.length) throw new Error('pages 배열은 최소 1개 이상의 페이지가 필요합니다.');
-
-  return {
-    title: typeof data.title === 'string' ? data.title : '불러온 프로젝트',
-    paper: data.paper === 'B4' ? 'B4' : 'A4',
-    pages
-  };
+function toNumber(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value || '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
@@ -221,97 +513,13 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-async function handleImageChange(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  const page = getSelectedPage();
-  if (!page) {
-    setError('먼저 페이지를 선택하거나 화면을 추가하세요.');
-    event.target.value = '';
-    return;
-  }
-
-  try {
-    const imageSrc = await readFileAsDataURL(file);
-    page.imageSrc = imageSrc;
-    setError('');
-    renderAll();
-  } catch (error) {
-    setError(error.message || '이미지 불러오기에 실패했습니다.');
-  } finally {
-    event.target.value = '';
-  }
-}
-
-async function handleJsonChange(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  try {
-    const text = await readFileAsText(file);
-    const data = JSON.parse(text);
-    state.project = validateProject(data);
-    state.selectedPageId = state.project.pages[0].id;
-    setError('');
-    renderAll();
-  } catch (error) {
-    setError(error.message || 'JSON 불러오기에 실패했습니다.');
-  } finally {
-    event.target.value = '';
-  }
-}
-
-function bindTeacherInputs() {
-  dom.teacherPageNameInput.addEventListener('input', () => {
-    const page = getSelectedPage();
-    if (!page) return;
-    page.name = dom.teacherPageNameInput.value.trim() || '이름 없는 페이지';
-    renderAll();
-  });
-
-  dom.teacherScaleInput.addEventListener('input', () => {
-    const page = getSelectedPage();
-    if (!page) return;
-    const value = Number(dom.teacherScaleInput.value);
-    page.imageScale = value > 0 ? value : 1;
-    renderPreview();
-  });
-
-  dom.teacherPaperSelect.addEventListener('change', () => {
-    const page = getSelectedPage();
-    if (!page) return;
-    page.paper = dom.teacherPaperSelect.value === 'B4' ? 'B4' : 'A4';
-  });
-
-  dom.teacherOffsetXInput.addEventListener('input', () => {
-    const page = getSelectedPage();
-    if (!page) return;
-    page.imageX = Number(dom.teacherOffsetXInput.value) || 0;
-    renderPreview();
-  });
-
-  dom.teacherOffsetYInput.addEventListener('input', () => {
-    const page = getSelectedPage();
-    if (!page) return;
-    page.imageY = Number(dom.teacherOffsetYInput.value) || 0;
-    renderPreview();
-  });
-}
-
-function bindEvents() {
-  dom.studentModeBtn.addEventListener('click', () => setMode('student'));
-  dom.teacherModeBtn.addEventListener('click', () => setMode('teacher'));
-  dom.addPageBtn.addEventListener('click', addPage);
-  dom.imageInput.addEventListener('change', handleImageChange);
-  dom.jsonInput.addEventListener('change', handleJsonChange);
-  bindTeacherInputs();
+function escapeAttr(value) {
+  return escapeHtml(value).replaceAll('\n', ' ');
 }
 
 function init() {
-  addPage();
-  bindEvents();
   setMode('student');
+  bindTopEvents();
   renderAll();
 }
 

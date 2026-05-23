@@ -1012,20 +1012,24 @@ async function handleInitialRemoteLoad() {
 
   if (!loadFrom) {
     state.loadedFromUrl = '';
+
     if (mode === 'teacher') {
       const ok = await ensureTeacherAccess();
       if (ok) setMode('teacher');
     }
+
     updateReviewSaveButton();
     return;
   }
 
   try {
     await loadBookFromRemoteUrl(loadFrom);
+
     if (mode === 'teacher') {
       const ok = await ensureTeacherAccess();
       if (ok) setMode('teacher');
     }
+
     updateReviewSaveButton();
     alert('제출된 작품을 불러왔습니다. 선생님 모드에서 바로 검토할 수 있습니다.');
   } catch (error) {
@@ -1033,154 +1037,181 @@ async function handleInitialRemoteLoad() {
     alert(error && error.message ? error.message : '제출 작품 불러오기에 실패했습니다.');
   }
 }
-
-
-  try {
-    await loadBookFromRemoteUrl(loadFrom);
-    if (mode === 'teacher') setMode('teacher');
-    updateReviewSaveButton();
-    alert('제출된 작품을 불러왔습니다. 선생님 모드에서 바로 검토할 수 있습니다.');
-  } catch (error) {
-    console.error(error);
-    alert(error && error.message ? error.message : '제출 작품 불러오기에 실패했습니다.');
-  }
-}
-
 
 function bindTopEvents() {
-  dom.studentModeBtn.addEventListener('click', () => {
-    setMode('student');
-  });
-
-    dom.teacherModeBtn.addEventListener('click', async () => {
-    const ok = await ensureTeacherAccess();
-    if (!ok) return;
-    setMode('teacher');
-  });
-
-
-  dom.coverNavBtn.addEventListener('click', () => {
-    state.active = { type: 'cover', id: 'cover' };
-    renderAll();
-  });
-
- bindImeSafeTextField(
-  dom.bookTitleInput,
-  () => {
-    state.book.title = dom.bookTitleInput.value;
-  },
-  () => {
-    renderBookPreviewList();
-    renderTeacherPanels();
+  if (dom.studentModeBtn) {
+    dom.studentModeBtn.addEventListener('click', () => {
+      setMode('student');
+    });
   }
-);
 
-  dom.paperSelect.addEventListener('change', () => {
-    state.book.paper = dom.paperSelect.value === 'B4' ? 'B4' : 'A4';
-    renderTeacherPanels();
-  });
+  if (dom.teacherModeBtn) {
+    dom.teacherModeBtn.addEventListener('click', async () => {
+      const ok = await ensureTeacherAccess();
+      if (!ok) return;
+      setMode('teacher');
+    });
+  }
 
-  dom.addSpreadBtn.addEventListener('click', () => {
-    const spread = createSpread(state.book.spreads.length + 1);
-    state.book.spreads.push(spread);
-    state.active = { type: 'spread', id: spread.id };
-    renderAll();
-  });
-
-  dom.saveJsonBtn.addEventListener('click', () => {
-    downloadJson();
-  });
-
-  if (dom.saveReviewBtn) {
-  dom.saveReviewBtn.addEventListener('click', async () => {
-    await saveTeacherReview();
-  });
-}
-
-
-  dom.submitWorkBtn.addEventListener('click', () => {
-    openSubmitModal();
-  });
-
-
-  dom.closeSubmitModalBtn.addEventListener('click', () => {
-    closeSubmitModal();
-  });
-
-  dom.cancelSubmitBtn.addEventListener('click', () => {
-    closeSubmitModal();
-  });
-
-  dom.submitModal.addEventListener('click', (event) => {
-    const shouldClose = event.target && event.target.dataset && event.target.dataset.submitClose === 'true';
-    if (shouldClose) closeSubmitModal();
-  });
-
-  dom.confirmSubmitBtn.addEventListener('click', async () => {
-    await submitCurrentBook();
-  });
-
-  dom.jsonFileInput.addEventListener('change', async (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-
-    try {
-            const text = await file.text();
-      const data = JSON.parse(text);
-      state.book = normalizeBook(data);
-      state.loadedFromUrl = '';
+  if (dom.coverNavBtn) {
+    dom.coverNavBtn.addEventListener('click', () => {
       state.active = { type: 'cover', id: 'cover' };
       renderAll();
-      updateReviewSaveButton();
-      alert('현재 KCS JSON 형식 파일을 정상적으로 불러왔습니다.');
-    } catch (error) {
-      console.error(error);
-      alert(error && error.message ? error.message : 'JSON 불러오기에 실패했습니다. 현재 KCS 형식 파일인지 확인해 주세요.');
-    } finally {
-      event.target.value = '';
-    }
-  });
+    });
+  }
 
-  dom.printBookBtn.addEventListener('click', () => {
-    openPrintWindow();
-  });
+  if (dom.bookTitleInput) {
+    bindImeSafeTextField(
+      dom.bookTitleInput,
+      () => {
+        state.book.title = dom.bookTitleInput.value;
+      },
+      () => {
+        renderBookPreviewList();
+        renderTeacherPanels();
+      }
+    );
+  }
 
-  dom.jumpFirstIssueBtn.addEventListener('click', () => {
-    const report = buildTeacherReport();
-    if (!report.issues.length) return;
-    goToIssue(report.issues[0]);
-  });
+  if (dom.paperSelect) {
+    dom.paperSelect.addEventListener('change', () => {
+      state.book.paper = dom.paperSelect.value === 'B4' ? 'B4' : 'A4';
+      renderTeacherPanels();
+    });
+  }
 
-  dom.centerAllImagesBtn.addEventListener('click', () => {
-    const count = centerAllImages();
-    if (count) {
+  if (dom.addSpreadBtn) {
+    dom.addSpreadBtn.addEventListener('click', () => {
+      const spread = createSpread(state.book.spreads.length + 1);
+      state.book.spreads.push(spread);
+      state.active = { type: 'spread', id: spread.id };
       renderAll();
-      alert(`${count}개의 이미지 페이지를 중앙 정렬했습니다.`);
-    }
-  });
+    });
+  }
 
-  dom.resetAllImagesBtn.addEventListener('click', () => {
-    const count = resetAllImages();
-    if (count) {
+  if (dom.saveJsonBtn) {
+    dom.saveJsonBtn.addEventListener('click', () => {
+      downloadJson();
+    });
+  }
+
+  if (dom.saveReviewBtn) {
+    dom.saveReviewBtn.addEventListener('click', async () => {
+      await saveTeacherReview();
+    });
+  }
+
+  if (dom.submitWorkBtn) {
+    dom.submitWorkBtn.addEventListener('click', () => {
+      openSubmitModal();
+    });
+  }
+
+  if (dom.closeSubmitModalBtn) {
+    dom.closeSubmitModalBtn.addEventListener('click', () => {
+      closeSubmitModal();
+    });
+  }
+
+  if (dom.cancelSubmitBtn) {
+    dom.cancelSubmitBtn.addEventListener('click', () => {
+      closeSubmitModal();
+    });
+  }
+
+  if (dom.submitModal) {
+    dom.submitModal.addEventListener('click', (event) => {
+      const shouldClose =
+        event.target &&
+        event.target.dataset &&
+        event.target.dataset.submitClose === 'true';
+
+      if (shouldClose) closeSubmitModal();
+    });
+  }
+
+  if (dom.confirmSubmitBtn) {
+    dom.confirmSubmitBtn.addEventListener('click', async () => {
+      await submitCurrentBook();
+    });
+  }
+
+  if (dom.jsonFileInput) {
+    dom.jsonFileInput.addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        state.book = normalizeBook(data);
+        state.loadedFromUrl = '';
+        state.active = { type: 'cover', id: 'cover' };
+        renderAll();
+        updateReviewSaveButton();
+        alert('현재 KCS JSON 형식 파일을 정상적으로 불러왔습니다.');
+      } catch (error) {
+        console.error(error);
+        alert(error && error.message ? error.message : 'JSON 불러오기에 실패했습니다. 현재 KCS 형식 파일인지 확인해 주세요.');
+      } finally {
+        event.target.value = '';
+      }
+    });
+  }
+
+  if (dom.printBookBtn) {
+    dom.printBookBtn.addEventListener('click', () => {
+      openPrintWindow();
+    });
+  }
+
+  if (dom.jumpFirstIssueBtn) {
+    dom.jumpFirstIssueBtn.addEventListener('click', () => {
+      const report = buildTeacherReport();
+      if (!report.issues.length) return;
+      goToIssue(report.issues[0]);
+    });
+  }
+
+  if (dom.centerAllImagesBtn) {
+    dom.centerAllImagesBtn.addEventListener('click', () => {
+      const count = centerAllImages();
+      if (count) {
+        renderAll();
+        alert(`${count}개의 이미지 페이지를 중앙 정렬했습니다.`);
+      }
+    });
+  }
+
+  if (dom.resetAllImagesBtn) {
+    dom.resetAllImagesBtn.addEventListener('click', () => {
+      const count = resetAllImages();
+      if (count) {
+        renderAll();
+        alert(`${count}개의 이미지 배율과 위치를 초기화했습니다.`);
+      }
+    });
+  }
+
+  if (dom.setAllTextNormalBtn) {
+    dom.setAllTextNormalBtn.addEventListener('click', () => {
+      applyTextSizeToAllSpreads(24);
       renderAll();
-      alert(`${count}개의 이미지 배율과 위치를 초기화했습니다.`);
-    }
-  });
+      alert('모든 펼침의 기본 글자 크기를 24로 맞췄습니다.');
+    });
+  }
 
-  dom.setAllTextNormalBtn.addEventListener('click', () => {
-    applyTextSizeToAllSpreads(24);
-    renderAll();
-    alert('모든 펼침의 기본 글자 크기를 24로 맞췄습니다.');
-  });
-
-  dom.setAllTextLargeBtn.addEventListener('click', () => {
-    applyTextSizeToAllSpreads(28);
-    renderAll();
-    alert('모든 펼침의 글자 크기를 28로 키웠습니다.');
-  });
+  if (dom.setAllTextLargeBtn) {
+    dom.setAllTextLargeBtn.addEventListener('click', () => {
+      applyTextSizeToAllSpreads(28);
+      renderAll();
+      alert('모든 펼침의 글자 크기를 28로 키웠습니다.');
+    });
+  }
 
   bindGlobalShortcuts();
 }
+
 
 function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);

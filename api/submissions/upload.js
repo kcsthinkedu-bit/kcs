@@ -27,6 +27,11 @@ export default async function handler(req, res) {
   }
 
   try {
+    const expectedSubmissionCode = String(process.env.SUBMISSION_CODE || '').trim();
+    if (!expectedSubmissionCode) {
+      return res.status(500).json({ error: '서버 제출코드 설정이 없습니다.' });
+    }
+
     const raw = readBody(req.body);
     const submission = raw && raw.submission ? raw.submission : {};
     const book = raw && raw.book ? raw.book : raw;
@@ -37,6 +42,15 @@ export default async function handler(req, res) {
 
     if (!submission.studentName) {
       return res.status(400).json({ error: '학생 이름이 필요합니다.' });
+    }
+
+    const submissionCode = String(submission.submissionCode || '').trim();
+    if (!submissionCode) {
+      return res.status(400).json({ error: '제출코드가 필요합니다.' });
+    }
+
+    if (submissionCode !== expectedSubmissionCode) {
+      return res.status(403).json({ error: '제출코드가 올바르지 않습니다.' });
     }
 
     if (!book || !book.cover || !Array.isArray(book.spreads)) {
@@ -57,6 +71,7 @@ export default async function handler(req, res) {
         className: String(submission.className || '').trim(),
         studentName: String(submission.studentName || '').trim(),
         studentNumber: String(submission.studentNumber || '').trim(),
+        submissionCode,
         bookTitle: String(submission.bookTitle || book.title || '').trim(),
         paper: String(submission.paper || book.paper || 'A4').trim(),
         submittedAt: submission.submittedAt || now.toISOString()
@@ -82,4 +97,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error && error.message ? error.message : '작품 제출 처리에 실패했습니다.' });
   }
 }
-

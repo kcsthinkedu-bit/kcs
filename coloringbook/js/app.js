@@ -9,6 +9,75 @@ const state = {
   book: createInitialBook(),
   loadedFromUrl: ''
 };
+const TEACHER_PASSWORD_STORAGE_KEY = 'kcs-teacher-password';
+
+function getStoredTeacherPassword() {
+  try {
+    return sessionStorage.getItem(TEACHER_PASSWORD_STORAGE_KEY) || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function setStoredTeacherPassword(password) {
+  try {
+    if (password) {
+      sessionStorage.setItem(TEACHER_PASSWORD_STORAGE_KEY, password);
+    } else {
+      sessionStorage.removeItem(TEACHER_PASSWORD_STORAGE_KEY);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function verifyTeacherPassword(password) {
+  if (!password) return false;
+
+  try {
+    const response = await fetch('/api/submissions/list', {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        'x-teacher-password': password
+      }
+    });
+    return response.ok;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+async function ensureTeacherAccess(forcePrompt = false) {
+  let password = forcePrompt ? '' : getStoredTeacherPassword();
+
+  if (!password) {
+    password = window.prompt('선생님 비밀번호를 입력하세요.');
+    password = String(password || '').trim();
+  }
+
+  if (!password) return false;
+
+  const ok = await verifyTeacherPassword(password);
+  if (!ok) {
+    setStoredTeacherPassword('');
+    alert('선생님 비밀번호가 맞지 않습니다.');
+    return false;
+  }
+
+  setStoredTeacherPassword(password);
+  return true;
+}
+
+function buildTeacherAuthHeaders(extraHeaders = {}) {
+  const password = getStoredTeacherPassword();
+  if (!password) return { ...extraHeaders };
+  return {
+    ...extraHeaders,
+    'x-teacher-password': password
+  };
+}
 
 
 const dom = {
@@ -781,6 +850,7 @@ function buildSubmissionInfo() {
     className: getSubmissionFormValue(dom.submitClassInput),
     studentName: getSubmissionFormValue(dom.submitStudentNameInput),
     studentNumber: getSubmissionFormValue(dom.submitStudentNumberInput),
+    submissionCode: getSubmissionFormValue(dom.submitCodeInput),
     bookTitle: normalizeString(state.book.title, '').trim(),
     paper: normalizePaper(state.book.paper),
     submittedAt: new Date().toISOString()
@@ -794,7 +864,11 @@ function validateSubmissionInfo(info) {
   if (!info.studentName) {
     throw new Error('학생 이름을 입력해 주세요.');
   }
+  if (!info.submissionCode) {
+    throw new Error('제출코드를 입력해 주세요.');
+  }
 }
+
 
 function buildReviewSubmissionInfo() {
   const source = state.book && state.book.submission ? state.book.submission : {};
@@ -803,6 +877,7 @@ function buildReviewSubmissionInfo() {
     className: normalizeString(source.className, '').trim(),
     studentName: normalizeString(source.studentName, '').trim(),
     studentNumber: normalizeString(source.studentNumber, '').trim(),
+    submissionCode: normalizeString(source.submissionCode, '').trim(),
     bookTitle: normalizeString(state.book.title || source.bookTitle, '').trim(),
     paper: normalizePaper(state.book.paper || source.paper),
     submittedAt: source.submittedAt || ''
@@ -814,6 +889,9 @@ async function saveTeacherReview() {
     alert('선생님 모드에서만 수정본을 저장할 수 있습니다.');
     return;
   }
+
+  const accessOk = await ensureTeacherAccess();
+  if (!accessOk) return;
 
   if (!state.loadedFromUrl) {
     alert('학생 제출본을 먼저 불러온 뒤 저장해 주세요.');
@@ -843,9 +921,9 @@ async function saveTeacherReview() {
 
     const response = await fetch(REVIEW_SAVE_ENDPOINT, {
       method: 'POST',
-      headers: {
+      headers: buildTeacherAuthHeaders({
         'Content-Type': 'application/json'
-      },
+      }),
       body: JSON.stringify(payload)
     });
 
@@ -934,10 +1012,28 @@ async function handleInitialRemoteLoad() {
 
   if (!loadFrom) {
     state.loadedFromUrl = '';
-    if (mode === 'teacher') setMode('teacher');
+    if (mode === 'teacher') {
+      const ok = await ensureTeacherAccess();
+      if (ok) setMode('teacher');
+    }
     updateReviewSaveButton();
     return;
   }
+
+  try {
+    await loadBookFromRemoteUrl(loadFrom);
+    if (mode === 'teacher') {
+      const ok = await ensureTeacherAccess();
+      if (ok) setMode('teacher');
+    }
+    updateReviewSaveButton();
+    alert('제출된 작품을 불러왔습니다. 선생님 모드에서 바로 검토할 수 있습니다.');
+  } catch (error) {
+    console.error(error);
+    alert(error && error.message ? error.message : '제출 작품 불러오기에 실패했습니다.');
+  }
+}
+
 
   try {
     await loadBookFromRemoteUrl(loadFrom);
@@ -956,9 +1052,12 @@ function bindTopEvents() {
     setMode('student');
   });
 
-  dom.teacherModeBtn.addEventListener('click', () => {
+    dom.teacherModeBtn.addEventListener('click', async () => {
+    const ok = await ensureTeacherAccess();
+    if (!ok) return;
     setMode('teacher');
   });
+
 
   dom.coverNavBtn.addEventListener('click', () => {
     state.active = { type: 'cover', id: 'cover' };

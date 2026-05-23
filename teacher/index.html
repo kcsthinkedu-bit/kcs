@@ -14,34 +14,210 @@
       --primary: #2563eb;
       --teacher: #7c3aed;
       --teacher-soft: #ede9fe;
+      --green: #16a34a;
+      --green-soft: #dcfce7;
+      --orange: #ea580c;
+      --orange-soft: #ffedd5;
+      --blue-soft: #dbeafe;
+      --blue-text: #1d4ed8;
+      --red: #dc2626;
       --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: "Noto Sans KR", sans-serif; }
-    .shell { max-width: 1240px; margin: 0 auto; padding: 24px 18px 60px; }
-    .hero, .panel, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
-    .hero { padding: 24px; margin-bottom: 18px; display: grid; gap: 16px; }
-    .hero h1 { margin: 0; font-size: 32px; }
-    .hero p, .muted, .meta { color: var(--muted); line-height: 1.8; }
-    .top-row, .actions, .stats { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-    .badge { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--teacher-soft); color: #5b21b6; }
-    .btn { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--text); font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-    .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
-    .panel { padding: 20px; }
-    .stats { margin-bottom: 16px; }
-    .stat { min-width: 160px; padding: 16px; border: 1px solid #e6edf8; border-radius: 18px; background: #fbfdff; }
-    .stat strong { display: block; font-size: 24px; margin-bottom: 6px; }
-    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-    .card { padding: 18px; display: grid; gap: 12px; }
-    .card h3 { margin: 0; font-size: 20px; }
-    .meta-list { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
-    .links { display: flex; gap: 10px; flex-wrap: wrap; }
-    .empty { padding: 22px; border: 1px dashed var(--line); border-radius: 18px; background: #f8fbff; color: var(--muted); }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Noto Sans KR", sans-serif;
+    }
+    .shell {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px 18px 60px;
+    }
+    .hero, .panel, .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero {
+      padding: 24px;
+      margin-bottom: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+    .hero p, .muted, .meta {
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .top-row, .actions, .stats, .filters {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      background: var(--teacher-soft);
+      color: #5b21b6;
+    }
+    .btn {
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      font-weight: 800;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btn.danger {
+      background: #fff5f5;
+      border-color: #fecaca;
+      color: #b91c1c;
+    }
+    .panel {
+      padding: 20px;
+    }
+    .stats {
+      margin-bottom: 16px;
+    }
+    .stat {
+      min-width: 160px;
+      padding: 16px;
+      border: 1px solid #e6edf8;
+      border-radius: 18px;
+      background: #fbfdff;
+    }
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+    .filters {
+      margin-bottom: 18px;
+    }
+    .filter-field {
+      display: grid;
+      gap: 6px;
+      min-width: 180px;
+      flex: 1 1 180px;
+    }
+    .filter-field label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .filter-field input,
+    .filter-field select {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 12px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+    .card {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+    .card h3 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.4;
+    }
+    .meta-list {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .tag-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid transparent;
+    }
+    .tag.submission {
+      background: var(--blue-soft);
+      color: var(--blue-text);
+    }
+    .tag.review {
+      background: var(--teacher-soft);
+      color: #6d28d9;
+    }
+    .tag.latest {
+      background: #111827;
+      color: #fff;
+    }
+    .tag.done {
+      background: var(--green-soft);
+      color: #166534;
+    }
+    .tag.todo {
+      background: var(--orange-soft);
+      color: #9a3412;
+    }
+    .empty {
+      padding: 22px;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      background: #f8fbff;
+      color: var(--muted);
+    }
     .loading { color: var(--primary); }
     .error { color: #991b1b; }
+    .small-note {
+      font-size: 13px;
+      color: var(--muted);
+    }
     @media (max-width: 768px) {
       .hero h1 { font-size: 26px; }
       .shell { padding: 14px 12px 40px; }
+      .filter-field { min-width: 100%; }
     }
   </style>
 </head>
@@ -53,10 +229,12 @@
         <a class="btn" href="/">시작 페이지</a>
         <a class="btn" href="/coloringbook/">편집기로 이동</a>
       </div>
+
       <div>
         <h1>KCS 학생 작품 제출 목록</h1>
-        <p>학생이 편집기에서 <strong>학생 작품 제출</strong> 버튼을 누르면 이 페이지에 작품이 쌓입니다. 각 카드에서 바로 JSON 원본을 열거나, 선생님 모드 편집기로 불러와 검토할 수 있습니다.</p>
+        <p>학생 원본과 선생님 수정본을 함께 봅니다. 목록에서 눌렀을 때만 편집기로 열리고, 연습용 파일은 여기서 바로 삭제할 수 있습니다.</p>
       </div>
+
       <div class="actions">
         <button id="refreshBtn" class="btn primary" type="button">목록 새로고침</button>
         <span id="statusText" class="muted">제출 목록을 불러오는 중입니다.</span>
@@ -65,106 +243,269 @@
 
     <section class="panel">
       <div id="statsRow" class="stats"></div>
-      <div id="submissionList" class="grid"></div>
+
+      <div class="filters">
+        <div class="filter-field">
+          <label for="searchInput">검색</label>
+          <input id="searchInput" type="text" placeholder="학생명, 제목, 학교, 학급 검색" />
+        </div>
+
+        <div class="filter-field">
+          <label for="classFilter">학급</label>
+          <select id="classFilter">
+            <option value="all">전체 학급</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="kindFilter">구분</label>
+          <select id="kindFilter">
+            <option value="all">전체</option>
+            <option value="submission">학생 원본</option>
+            <option value="review">선생님 수정본</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="statusFilter">검토 상태</label>
+          <select id="statusFilter">
+            <option value="all">전체</option>
+            <option value="reviewed">검토완료</option>
+            <option value="pending">검토필요</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="small-note">연습용 삭제 버튼은 <strong>submissions/</strong>, <strong>reviews/</strong> 파일에만 적용됩니다.</div>
+
+      <div id="submissionList" class="grid" style="margin-top:16px;"></div>
     </section>
   </div>
 
- <script>
-  const refreshBtn = document.getElementById('refreshBtn');
-  const statusText = document.getElementById('statusText');
-  const statsRow = document.getElementById('statsRow');
-  const submissionList = document.getElementById('submissionList');
+  <script>
+    const refreshBtn = document.getElementById('refreshBtn');
+    const statusText = document.getElementById('statusText');
+    const statsRow = document.getElementById('statsRow');
+    const submissionList = document.getElementById('submissionList');
+    const searchInput = document.getElementById('searchInput');
+    const classFilter = document.getElementById('classFilter');
+    const kindFilter = document.getElementById('kindFilter');
+    const statusFilter = document.getElementById('statusFilter');
 
-  function fmt(value) {
-    if (!value) return '-';
-    try {
-      return new Date(value).toLocaleString('ko-KR');
-    } catch (error) {
-      return value;
-    }
-  }
+    const state = {
+      allItems: [],
+      classes: []
+    };
 
-  function escapeHtml(value) {
-    return String(value || '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
-
-  function renderStats(items) {
-    const total = items.length;
-    const classes = new Set(items.map((item) => item.className).filter(Boolean)).size;
-    const students = new Set(items.map((item) => `${item.className}::${item.studentName}::${item.studentNumber}`).filter(Boolean)).size;
-    const withImages = items.filter((item) => Number(item.spreadCount) > 0).length;
-
-    statsRow.innerHTML = [
-      { label: '총 제출 수', value: total },
-      { label: '학급 수', value: classes },
-      { label: '학생 수', value: students },
-      { label: '책 데이터 포함', value: withImages }
-    ].map((item) => `
-      <div class="stat">
-        <strong>${item.value}</strong>
-        <div class="meta">${item.label}</div>
-      </div>
-    `).join('');
-  }
-
-  function renderList(items) {
-    renderStats(items);
-    if (!items.length) {
-      submissionList.innerHTML = '<div class="empty">아직 제출된 작품이 없습니다. 학생 편집기에서 <strong>학생 작품 제출</strong> 버튼을 눌러 첫 작품을 보내 보세요.</div>';
-      return;
-    }
-
-    submissionList.innerHTML = items.map((item) => `
-      <article class="card">
-        <div>
-          <h3>${escapeHtml(item.title || '제목 없는 책')}</h3>
-          <div class="meta">${escapeHtml(item.schoolName || '학교 미입력')} · ${escapeHtml(item.className || '학급 미입력')} · ${escapeHtml(item.studentName || '이름 미입력')} ${item.studentNumber ? '(' + escapeHtml(item.studentNumber) + ')' : ''}</div>
-        </div>
-        <div class="meta-list">
-          <div>제출 시각: ${escapeHtml(fmt(item.submittedAt || item.uploadedAt))}</div>
-          <div>용지: ${escapeHtml(item.paper || 'A4')} · 펼침 수: ${escapeHtml(String(item.spreadCount || 0))}</div>
-          <div>저장 경로: ${escapeHtml(item.pathname || '')}</div>
-        </div>
-        <div class="links">
-          <a class="btn primary" href="${item.editUrl}" target="_blank" rel="noopener">선생님 모드로 열기</a>
-          <a class="btn" href="${item.url}" target="_blank" rel="noopener">JSON 원본 보기</a>
-        </div>
-      </article>
-    `).join('');
-  }
-
-  async function loadSubmissions() {
-    statusText.textContent = '제출 목록을 불러오는 중입니다.';
-    statusText.className = 'muted loading';
-    refreshBtn.disabled = true;
-    try {
-      const response = await fetch('/api/submissions/list', { cache: 'no-store' });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result && result.error ? result.error : '제출 목록을 불러오지 못했습니다.');
+    function fmt(value) {
+      if (!value) return '-';
+      try {
+        return new Date(value).toLocaleString('ko-KR');
+      } catch (error) {
+        return value;
       }
-      renderList(Array.isArray(result.items) ? result.items : []);
-      statusText.textContent = `최근 제출 ${result.count || 0}건을 불러왔습니다.`;
-      statusText.className = 'muted';
-    } catch (error) {
-      console.error(error);
-      statsRow.innerHTML = '';
-      submissionList.innerHTML = `<div class="empty error">${escapeHtml(error && error.message ? error.message : '제출 목록을 불러오지 못했습니다.')}</div>`;
-      statusText.textContent = '오류가 발생했습니다.';
-      statusText.className = 'muted error';
-    } finally {
-      refreshBtn.disabled = false;
     }
-  }
 
-  refreshBtn.addEventListener('click', loadSubmissions);
-  loadSubmissions();
-</script>
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
 
+    function fillClassOptions(classes) {
+      const current = classFilter.value;
+      classFilter.innerHTML = '<option value="all">전체 학급</option>' + classes.map((name) => (
+        `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
+      )).join('');
+
+      if (classes.includes(current)) {
+        classFilter.value = current;
+      } else {
+        classFilter.value = 'all';
+      }
+    }
+
+    function renderStats(items) {
+      const total = items.length;
+      const originalCount = items.filter((item) => item.kind === 'submission').length;
+      const reviewCount = items.filter((item) => item.kind === 'review').length;
+      const latestCount = items.filter((item) => item.isLatestForStudent).length;
+      const reviewedCount = items.filter((item) => item.kind === 'submission' && item.reviewed).length;
+
+      statsRow.innerHTML = [
+        { label: '전체 항목', value: total },
+        { label: '학생 원본', value: originalCount },
+        { label: '선생님 수정본', value: reviewCount },
+        { label: '학생별 최신 묶음', value: latestCount },
+        { label: '검토완료 원본', value: reviewedCount }
+      ].map((item) => `
+        <div class="stat">
+          <strong>${item.value}</strong>
+          <div class="meta">${item.label}</div>
+        </div>
+      `).join('');
+    }
+
+    function matchesSearch(item, query) {
+      if (!query) return true;
+      const haystack = [
+        item.title,
+        item.schoolName,
+        item.className,
+        item.studentName,
+        item.studentNumber,
+        item.pathname
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    }
+
+    function getFilteredItems() {
+      const query = (searchInput.value || '').trim().toLowerCase();
+      const classValue = classFilter.value;
+      const kindValue = kindFilter.value;
+      const statusValue = statusFilter.value;
+
+      return state.allItems.filter((item) => {
+        if (!matchesSearch(item, query)) return false;
+        if (classValue !== 'all' && item.className !== classValue) return false;
+        if (kindValue !== 'all' && item.kind !== kindValue) return false;
+
+        if (statusValue === 'reviewed') {
+          if (!item.reviewed) return false;
+        }
+        if (statusValue === 'pending') {
+          if (item.kind !== 'submission' || item.reviewed) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function renderList() {
+      const items = getFilteredItems();
+      renderStats(state.allItems);
+
+      if (!items.length) {
+        submissionList.innerHTML = '<div class="empty">현재 필터 조건에 맞는 항목이 없습니다.</div>';
+        return;
+      }
+
+      submissionList.innerHTML = items.map((item) => `
+        <article class="card">
+          <div class="tag-row">
+            <span class="tag ${item.kind === 'review' ? 'review' : 'submission'}">${escapeHtml(item.kindLabel)}</span>
+            <span class="tag ${item.reviewed ? 'done' : 'todo'}">${escapeHtml(item.statusLabel)}</span>
+            ${item.isLatestForStudent ? '<span class="tag latest">최신</span>' : ''}
+          </div>
+
+          <div>
+            <h3>${escapeHtml(item.title || '제목 없는 책')}</h3>
+            <div class="meta">
+              ${escapeHtml(item.schoolName || '학교 미입력')} ·
+              ${escapeHtml(item.className || '학급 미입력')} ·
+              ${escapeHtml(item.studentName || '이름 미입력')}
+              ${item.studentNumber ? '(' + escapeHtml(item.studentNumber) + ')' : ''}
+            </div>
+          </div>
+
+          <div class="meta-list">
+            <div>작성 구분: ${escapeHtml(item.kindLabel)}</div>
+            <div>기록 시각: ${escapeHtml(fmt(item.createdAt || item.uploadedAt))}</div>
+            <div>용지: ${escapeHtml(item.paper || 'A4')} · 펼침 수: ${escapeHtml(String(item.spreadCount || 0))}</div>
+            <div>저장 경로: ${escapeHtml(item.pathname || '')}</div>
+            ${item.kind === 'submission'
+              ? `<div>연결된 수정본 수: ${escapeHtml(String(item.reviewCount || 0))}</div>`
+              : `<div>원본 연결: ${item.sourceUrl ? '있음' : '없음'}</div>`}
+          </div>
+
+          <div class="links">
+            <a class="btn primary" href="${item.editUrl}" target="_blank" rel="noopener">열기</a>
+            <a class="btn" href="${item.url}" target="_blank" rel="noopener">JSON 보기</a>
+            <button class="btn danger" type="button" data-delete-path="${escapeHtml(item.pathname || '')}" data-delete-title="${escapeHtml(item.title || '제목 없는 책')}">삭제</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function loadSubmissions() {
+      statusText.textContent = '제출 목록을 불러오는 중입니다.';
+      statusText.className = 'muted loading';
+      refreshBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/submissions/list', { cache: 'no-store' });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result && result.error ? result.error : '제출 목록을 불러오지 못했습니다.');
+        }
+
+        state.allItems = Array.isArray(result.items) ? result.items : [];
+        state.classes = Array.isArray(result.classes) ? result.classes : [];
+
+        fillClassOptions(state.classes);
+        renderList();
+
+        statusText.textContent = `현재 ${result.count || 0}건을 불러왔습니다.`;
+        statusText.className = 'muted';
+      } catch (error) {
+        console.error(error);
+        statsRow.innerHTML = '';
+        submissionList.innerHTML = `<div class="empty error">${escapeHtml(error && error.message ? error.message : '제출 목록을 불러오지 못했습니다.')}</div>`;
+        statusText.textContent = '오류가 발생했습니다.';
+        statusText.className = 'muted error';
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+
+    async function deleteItem(pathname, title) {
+      const ok = window.confirm(`정말 삭제할까요?\n\n${title || '제목 없는 항목'}\n${pathname}`);
+      if (!ok) return;
+
+      try {
+        const response = await fetch('/api/submissions/delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ pathname })
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result && result.error ? result.error : '삭제에 실패했습니다.');
+        }
+
+        await loadSubmissions();
+        alert('삭제되었습니다.');
+      } catch (error) {
+        console.error(error);
+        alert(error && error.message ? error.message : '삭제에 실패했습니다.');
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadSubmissions);
+    searchInput.addEventListener('input', renderList);
+    classFilter.addEventListener('change', renderList);
+    kindFilter.addEventListener('change', renderList);
+    statusFilter.addEventListener('change', renderList);
+
+    submissionList.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-delete-path]');
+      if (!button) return;
+
+      const pathname = button.getAttribute('data-delete-path') || '';
+      const title = button.getAttribute('data-delete-title') || '';
+      if (!pathname) return;
+
+      await deleteItem(pathname, title);
+    });
+
+    loadSubmissions();
+  </script>
 </body>
 </html>

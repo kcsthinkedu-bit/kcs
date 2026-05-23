@@ -9,6 +9,10 @@ function safeTime(value) {
   return Number.isFinite(time) ? time : 0;
 }
 
+function getTeacherPassword(req) {
+  return String(req.headers['x-teacher-password'] || '').trim();
+}
+
 function buildStudentKey(item) {
   return [
     safeString(item.schoolName).trim().toLowerCase(),
@@ -38,6 +42,7 @@ function buildItem(blob, data, kind) {
   const className = safeString(submission.className);
   const studentName = safeString(submission.studentName);
   const studentNumber = safeString(submission.studentNumber);
+  const submissionCode = safeString(submission.submissionCode);
   const title = safeString((data && data.title) || submission.bookTitle);
   const paper = safeString((data && data.paper) || submission.paper);
   const sourceUrl = safeString(review.sourceUrl);
@@ -62,6 +67,7 @@ function buildItem(blob, data, kind) {
     className,
     studentName,
     studentNumber,
+    submissionCode,
     submittedAt: safeString(submission.submittedAt) || safeString(blob.uploadedAt),
     sourceUrl,
     studentKey: buildStudentKey({
@@ -80,6 +86,22 @@ export default async function handler(req, res) {
   }
 
   try {
+    const expectedTeacherPassword = String(process.env.TEACHER_ACCESS_PASSWORD || '').trim();
+    const expectedSubmissionCode = String(process.env.SUBMISSION_CODE || '').trim();
+
+    if (!expectedTeacherPassword) {
+      return res.status(500).json({ error: '서버 선생님 비밀번호 설정이 없습니다.' });
+    }
+
+    if (!expectedSubmissionCode) {
+      return res.status(500).json({ error: '서버 제출코드 설정이 없습니다.' });
+    }
+
+    const teacherPassword = getTeacherPassword(req);
+    if (teacherPassword !== expectedTeacherPassword) {
+      return res.status(401).json({ error: '선생님 비밀번호가 올바르지 않습니다.' });
+    }
+
     const [submissionResult, reviewResult] = await Promise.all([
       list({ prefix: 'submissions/' }),
       list({ prefix: 'reviews/' })
@@ -88,10 +110,13 @@ export default async function handler(req, res) {
     const submissionBlobs = Array.isArray(submissionResult.blobs) ? submissionResult.blobs.slice() : [];
     const reviewBlobs = Array.isArray(reviewResult.blobs) ? reviewResult.blobs.slice() : [];
 
-    const [submissionItems, reviewItems] = await Promise.all([
+    const [submissionItemsRaw, reviewItemsRaw] = await Promise.all([
       Promise.all(submissionBlobs.map(async (blob) => buildItem(blob, await readBlobJson(blob), 'submission'))),
       Promise.all(reviewBlobs.map(async (blob) => buildItem(blob, await readBlobJson(blob), 'review')))
     ]);
+
+    const submissionItems = submissionItemsRaw.filter((item) => item.submissionCode === expectedSubmissionCode);
+    const reviewItems = reviewItemsRaw.filter((item) => item.submissionCode === expectedSubmissionCode);
 
     const reviewCountBySourceUrl = new Map();
     reviewItems.forEach((item) => {

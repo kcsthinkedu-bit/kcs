@@ -69,101 +69,102 @@
     </section>
   </div>
 
-  <script>
-    const refreshBtn = document.getElementById('refreshBtn');
-    const statusText = document.getElementById('statusText');
-    const statsRow = document.getElementById('statsRow');
-    const submissionList = document.getElementById('submissionList');
+ <script>
+  const refreshBtn = document.getElementById('refreshBtn');
+  const statusText = document.getElementById('statusText');
+  const statsRow = document.getElementById('statsRow');
+  const submissionList = document.getElementById('submissionList');
 
-    function fmt(value) {
-      if (!value) return '-';
-      try {
-        return new Date(value).toLocaleString('ko-KR');
-      } catch (error) {
-        return value;
-      }
+  function fmt(value) {
+    if (!value) return '-';
+    try {
+      return new Date(value).toLocaleString('ko-KR');
+    } catch (error) {
+      return value;
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function renderStats(items) {
+    const total = items.length;
+    const classes = new Set(items.map((item) => item.className).filter(Boolean)).size;
+    const students = new Set(items.map((item) => `${item.className}::${item.studentName}::${item.studentNumber}`).filter(Boolean)).size;
+    const withImages = items.filter((item) => Number(item.spreadCount) > 0).length;
+
+    statsRow.innerHTML = [
+      { label: '총 제출 수', value: total },
+      { label: '학급 수', value: classes },
+      { label: '학생 수', value: students },
+      { label: '책 데이터 포함', value: withImages }
+    ].map((item) => `
+      <div class="stat">
+        <strong>${item.value}</strong>
+        <div class="meta">${item.label}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderList(items) {
+    renderStats(items);
+    if (!items.length) {
+      submissionList.innerHTML = '<div class="empty">아직 제출된 작품이 없습니다. 학생 편집기에서 <strong>학생 작품 제출</strong> 버튼을 눌러 첫 작품을 보내 보세요.</div>';
+      return;
     }
 
-    function escapeHtml(value) {
-      return String(value || '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-    }
-
-    function renderStats(items) {
-      const total = items.length;
-      const classes = new Set(items.map((item) => item.className).filter(Boolean)).size;
-      const students = new Set(items.map((item) => `${item.className}::${item.studentName}::${item.studentNumber}`).filter(Boolean)).size;
-      const withImages = items.filter((item) => Number(item.spreadCount) > 0).length;
-
-      statsRow.innerHTML = [
-        { label: '총 제출 수', value: total },
-        { label: '학급 수', value: classes },
-        { label: '학생 수', value: students },
-        { label: '책 데이터 포함', value: withImages }
-      ].map((item) => `
-        <div class="stat">
-          <strong>${item.value}</strong>
-          <div class="meta">${item.label}</div>
+    submissionList.innerHTML = items.map((item) => `
+      <article class="card">
+        <div>
+          <h3>${escapeHtml(item.title || '제목 없는 책')}</h3>
+          <div class="meta">${escapeHtml(item.schoolName || '학교 미입력')} · ${escapeHtml(item.className || '학급 미입력')} · ${escapeHtml(item.studentName || '이름 미입력')} ${item.studentNumber ? '(' + escapeHtml(item.studentNumber) + ')' : ''}</div>
         </div>
-      `).join('');
-    }
+        <div class="meta-list">
+          <div>제출 시각: ${escapeHtml(fmt(item.submittedAt || item.uploadedAt))}</div>
+          <div>용지: ${escapeHtml(item.paper || 'A4')} · 펼침 수: ${escapeHtml(String(item.spreadCount || 0))}</div>
+          <div>저장 경로: ${escapeHtml(item.pathname || '')}</div>
+        </div>
+        <div class="links">
+          <a class="btn primary" href="${item.editUrl}" target="_blank" rel="noopener">선생님 모드로 열기</a>
+          <a class="btn" href="${item.url}" target="_blank" rel="noopener">JSON 원본 보기</a>
+        </div>
+      </article>
+    `).join('');
+  }
 
-    function renderList(items) {
-      renderStats(items);
-      if (!items.length) {
-        submissionList.innerHTML = '<div class="empty">아직 제출된 작품이 없습니다. 학생 편집기에서 <strong>학생 작품 제출</strong> 버튼을 눌러 첫 작품을 보내 보세요.</div>';
-        return;
+  async function loadSubmissions() {
+    statusText.textContent = '제출 목록을 불러오는 중입니다.';
+    statusText.className = 'muted loading';
+    refreshBtn.disabled = true;
+    try {
+      const response = await fetch('/api/submissions/list', { cache: 'no-store' });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result && result.error ? result.error : '제출 목록을 불러오지 못했습니다.');
       }
-
-      submissionList.innerHTML = items.map((item) => `
-        <article class="card">
-          <div>
-            <h3>${escapeHtml(item.title || '제목 없는 책')}</h3>
-            <div class="meta">${escapeHtml(item.schoolName || '학교 미입력')} · ${escapeHtml(item.className || '학급 미입력')} · ${escapeHtml(item.studentName || '이름 미입력')} ${item.studentNumber ? '(' + escapeHtml(item.studentNumber) + ')' : ''}</div>
-          </div>
-          <div class="meta-list">
-            <div>제출 시각: ${escapeHtml(fmt(item.submittedAt || item.uploadedAt))}</div>
-            <div>용지: ${escapeHtml(item.paper || 'A4')} · 펼침 수: ${escapeHtml(String(item.spreadCount || 0))}</div>
-            <div>저장 경로: ${escapeHtml(item.pathname || '')}</div>
-          </div>
-          <div class="links">
-            <a class="btn primary" href="${item.editUrl}" target="_blank" rel="noopener">선생님 모드로 열기</a>
-            <a class="btn" href="${item.url}" target="_blank" rel="noopener">JSON 원본 보기</a>
-          </div>
-        </article>
-      `).join('');
+      renderList(Array.isArray(result.items) ? result.items : []);
+      statusText.textContent = `최근 제출 ${result.count || 0}건을 불러왔습니다.`;
+      statusText.className = 'muted';
+    } catch (error) {
+      console.error(error);
+      statsRow.innerHTML = '';
+      submissionList.innerHTML = `<div class="empty error">${escapeHtml(error && error.message ? error.message : '제출 목록을 불러오지 못했습니다.')}</div>`;
+      statusText.textContent = '오류가 발생했습니다.';
+      statusText.className = 'muted error';
+    } finally {
+      refreshBtn.disabled = false;
     }
+  }
 
-    async function loadSubmissions() {
-      statusText.textContent = '제출 목록을 불러오는 중입니다.';
-      statusText.className = 'muted loading';
-      refreshBtn.disabled = true;
-      try {
-        const response = await fetch('/api/submissions/list', { cache: 'no-store' });
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result && result.error ? result.error : '제출 목록을 불러오지 못했습니다.');
-        }
-        renderList(Array.isArray(result.items) ? result.items : []);
-        statusText.textContent = `최근 제출 ${result.count || 0}건을 불러왔습니다.`;
-        statusText.className = 'muted';
-      } catch (error) {
-        console.error(error);
-        statsRow.innerHTML = '';
-        submissionList.innerHTML = `<div class="empty error">${escapeHtml(error && error.message ? error.message : '제출 목록을 불러오지 못했습니다.')}</div>`;
-        statusText.textContent = '오류가 발생했습니다.';
-        statusText.className = 'muted error';
-      } finally {
-        refreshBtn.disabled = false;
-      }
-    }
+  refreshBtn.addEventListener('click', loadSubmissions);
+  loadSubmissions();
+</script>
 
-    refreshBtn.addEventListener('click', loadSubmissions);
-    loadSubmissions();
-  </script>
 </body>
 </html>

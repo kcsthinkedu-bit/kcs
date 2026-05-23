@@ -232,12 +232,12 @@
 
       <div>
         <h1>KCS 학생 작품 제출 목록</h1>
-        <p>학생 원본과 선생님 수정본을 함께 봅니다. 목록에서 눌렀을 때만 편집기로 열리고, 연습용 파일은 여기서 바로 삭제할 수 있습니다.</p>
+        <p>선생님 비밀번호를 통과한 뒤, 현재 제출코드에 해당하는 학생 원본과 선생님 수정본만 볼 수 있습니다.</p>
       </div>
 
       <div class="actions">
         <button id="refreshBtn" class="btn primary" type="button">목록 새로고침</button>
-        <span id="statusText" class="muted">제출 목록을 불러오는 중입니다.</span>
+        <span id="statusText" class="muted">선생님 인증 후 목록을 불러옵니다.</span>
       </div>
     </section>
 
@@ -276,13 +276,15 @@
         </div>
       </div>
 
-      <div class="small-note">연습용 삭제 버튼은 <strong>submissions/</strong>, <strong>reviews/</strong> 파일에만 적용됩니다.</div>
+      <div class="small-note">목록/삭제는 선생님 비밀번호가 맞을 때만 동작합니다.</div>
 
       <div id="submissionList" class="grid" style="margin-top:16px;"></div>
     </section>
   </div>
 
   <script>
+    const TEACHER_PASSWORD_STORAGE_KEY = 'kcs-teacher-password';
+
     const refreshBtn = document.getElementById('refreshBtn');
     const statusText = document.getElementById('statusText');
     const statsRow = document.getElementById('statsRow');
@@ -313,6 +315,70 @@
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
+    }
+
+    function getStoredTeacherPassword() {
+      try {
+        return sessionStorage.getItem(TEACHER_PASSWORD_STORAGE_KEY) || '';
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function setStoredTeacherPassword(password) {
+      try {
+        if (password) {
+          sessionStorage.setItem(TEACHER_PASSWORD_STORAGE_KEY, password);
+        } else {
+          sessionStorage.removeItem(TEACHER_PASSWORD_STORAGE_KEY);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function promptTeacherPassword() {
+      const value = window.prompt('선생님 비밀번호를 입력하세요.');
+      return String(value || '').trim();
+    }
+
+    async function fetchWithTeacherAuth(url, options = {}, reprompt = true) {
+      let password = getStoredTeacherPassword();
+
+      if (!password) {
+        password = promptTeacherPassword();
+        if (!password) {
+          throw new Error('선생님 비밀번호가 필요합니다.');
+        }
+        setStoredTeacherPassword(password);
+      }
+
+      let response = await fetch(url, {
+        ...options,
+        headers: {
+          ...(options.headers || {}),
+          'x-teacher-password': password
+        }
+      });
+
+      if (response.status === 401 && reprompt) {
+        setStoredTeacherPassword('');
+        password = promptTeacherPassword();
+        if (!password) {
+          throw new Error('선생님 비밀번호가 필요합니다.');
+        }
+        setStoredTeacherPassword(password);
+
+        response = await fetch(url, {
+          ...options,
+          headers: {
+            ...(options.headers || {}),
+            'x-teacher-password': password
+          }
+        });
+      }
+
+      return response;
     }
 
     function fillClassOptions(classes) {
@@ -373,9 +439,7 @@
         if (classValue !== 'all' && item.className !== classValue) return false;
         if (kindValue !== 'all' && item.kind !== kindValue) return false;
 
-        if (statusValue === 'reviewed') {
-          if (!item.reviewed) return false;
-        }
+        if (statusValue === 'reviewed' && !item.reviewed) return false;
         if (statusValue === 'pending') {
           if (item.kind !== 'submission' || item.reviewed) return false;
         }
@@ -389,7 +453,7 @@
       renderStats(state.allItems);
 
       if (!items.length) {
-        submissionList.innerHTML = '<div class="empty">현재 필터 조건에 맞는 항목이 없습니다.</div>';
+        submissionList.innerHTML = '<div class="empty">현재 조건에 맞는 항목이 없습니다.</div>';
         return;
       }
 
@@ -431,12 +495,12 @@
     }
 
     async function loadSubmissions() {
-      statusText.textContent = '제출 목록을 불러오는 중입니다.';
+      statusText.textContent = '선생님 인증 후 목록을 불러오는 중입니다.';
       statusText.className = 'muted loading';
       refreshBtn.disabled = true;
 
       try {
-        const response = await fetch('/api/submissions/list', { cache: 'no-store' });
+        const response = await fetchWithTeacherAuth('/api/submissions/list', { cache: 'no-store' });
         const result = await response.json();
 
         if (!response.ok) {
@@ -467,7 +531,7 @@
       if (!ok) return;
 
       try {
-        const response = await fetch('/api/submissions/delete', {
+        const response = await fetchWithTeacherAuth('/api/submissions/delete', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

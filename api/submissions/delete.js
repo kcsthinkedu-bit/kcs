@@ -12,13 +12,26 @@ function readBody(body) {
   return body;
 }
 
-// 연습용: teacher 목록에서 바로 삭제 가능
+function getTeacherPassword(req) {
+  return String(req.headers['x-teacher-password'] || '').trim();
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST 요청만 허용됩니다.' });
   }
 
   try {
+    const expectedTeacherPassword = String(process.env.TEACHER_ACCESS_PASSWORD || '').trim();
+    if (!expectedTeacherPassword) {
+      return res.status(500).json({ error: '서버 선생님 비밀번호 설정이 없습니다.' });
+    }
+
+    const teacherPassword = getTeacherPassword(req);
+    if (teacherPassword !== expectedTeacherPassword) {
+      return res.status(401).json({ error: '선생님 비밀번호가 올바르지 않습니다.' });
+    }
+
     const raw = readBody(req.body);
     const pathname = typeof raw.pathname === 'string' ? raw.pathname.trim() : '';
 
@@ -27,7 +40,7 @@ export default async function handler(req, res) {
     }
 
     if (!pathname.startsWith('submissions/') && !pathname.startsWith('reviews/')) {
-      return res.status(400).json({ error: '연습용 submissions/reviews 파일만 삭제할 수 있습니다.' });
+      return res.status(400).json({ error: 'submissions/reviews 파일만 삭제할 수 있습니다.' });
     }
 
     await del(pathname);

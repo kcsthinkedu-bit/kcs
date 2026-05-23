@@ -27,7 +27,7 @@ const dom = {
   confirmSubmitBtn: document.getElementById('confirmSubmitBtn'),
   submitSchoolInput: document.getElementById('submitSchoolInput'),
   submitClassInput: document.getElementById('submitClassInput'),
-    submitStudentNameInput: document.getElementById('submitStudentNameInput'),
+  submitStudentNameInput: document.getElementById('submitStudentNameInput'),
   submitStudentNumberInput: document.getElementById('submitStudentNumberInput'),
   submitCodeInput: document.getElementById('submitCodeInput'),
   submitStatusBox: document.getElementById('submitStatusBox'),

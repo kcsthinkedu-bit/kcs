@@ -1389,11 +1389,12 @@ function openPrintWindow() {
     <meta charset="UTF-8" />
     <title>책 인쇄 배열</title>
     <style>
-      @page { size: ${pageSizeCss}; margin: 10mm; }
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; background: #eef2f7; color: #111827; font-family: Arial, sans-serif; }
-      body { padding: 24px; }
-      h1 { margin: 0 0 10px; font-size: 28px; }
+     @page { size: ${pageSizeCss}; margin: 5mm; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; color: #111827; font-family: Arial, sans-serif; }
+body { padding: 0; }
+h1 { margin: 0 0 6px; font-size: 20px; }
+
       .screen-toolbar {
         position: sticky;
         top: 0;
@@ -1438,7 +1439,7 @@ function openPrintWindow() {
         background: #fff;
         border: 1px solid #dbe5f0;
         border-radius: 22px;
-        padding: 20px;
+        padding: 0;
         box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
         break-after: page;
         page-break-after: always;
@@ -1456,8 +1457,8 @@ function openPrintWindow() {
         aspect-ratio: 1.414 / 1;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 14px;
-        margin-bottom: 14px;
+        gap: 4mm;
+        margin-bottom: 4mm;
       }
       .sheet-face:last-child {
         margin-bottom: 0;
@@ -1470,7 +1471,7 @@ function openPrintWindow() {
         height: 100%;
         border: 1px solid #cbd5e1;
         background: #fff;
-        padding: 16px;
+        padding: 6mm;
         overflow: hidden;
         position: relative;
         display: flex;

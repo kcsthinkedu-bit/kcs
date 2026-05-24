@@ -318,24 +318,25 @@
     }
 
     function getStoredTeacherPassword() {
-      try {
-        return localStorage.getItem(TEACHER_PASSWORD_STORAGE_KEY) || '';
-      } catch (error) {
-        return '';
-      }
-    }
+  try {
+    return localStorage.getItem(TEACHER_PASSWORD_STORAGE_KEY) || '';
+  } catch (error) {
+    return '';
+  }
+}
 
-    function setStoredTeacherPassword(password) {
-      try {
-        if (password) {
-          localStorage.setItem(TEACHER_PASSWORD_STORAGE_KEY, password);
-        } else {
-          localStorage.removeItem(TEACHER_PASSWORD_STORAGE_KEY);
-        }
-      } catch (error) {
-        console.error(error);
-      }
+function setStoredTeacherPassword(password) {
+  try {
+    if (password) {
+      localStorage.setItem(TEACHER_PASSWORD_STORAGE_KEY, password);
+    } else {
+      localStorage.removeItem(TEACHER_PASSWORD_STORAGE_KEY);
     }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 
     function promptTeacherPassword() {
       const value = window.prompt('선생님 비밀번호를 입력하세요.');

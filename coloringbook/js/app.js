@@ -1389,11 +1389,21 @@ function openPrintWindow() {
     <meta charset="UTF-8" />
     <title>책 인쇄 배열</title>
     <style>
-     @page { size: ${pageSizeCss}; margin: 5mm; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: #fff; color: #111827; font-family: Arial, sans-serif; }
-body { padding: 0; }
-h1 { margin: 0 0 6px; font-size: 20px; }
+      @page { size: ${pageSizeCss}; margin: 5mm; }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        color: #111827;
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        padding: 0;
+      }
 
       .screen-toolbar {
         position: sticky;
@@ -1403,14 +1413,15 @@ h1 { margin: 0 0 6px; font-size: 20px; }
         gap: 10px;
         align-items: center;
         flex-wrap: wrap;
-        padding: 14px 16px;
-        margin-bottom: 20px;
-        background: rgba(255,255,255,0.95);
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        background: rgba(255,255,255,0.96);
         border: 1px solid #dbe5f0;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        border-radius: 14px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
         backdrop-filter: blur(8px);
       }
+
       .screen-toolbar button {
         border: 1px solid #cbd5e1;
         background: #fff;
@@ -1421,70 +1432,79 @@ h1 { margin: 0 0 6px; font-size: 20px; }
         cursor: pointer;
         font-weight: 700;
       }
+
       .screen-toolbar .primary {
         background: #2563eb;
         color: #fff;
         border-color: #2563eb;
       }
+
       .print-note {
-        line-height: 1.7;
+        line-height: 1.5;
         color: #475569;
         margin-left: auto;
+        font-size: 13px;
       }
+
       .sheet-stack {
         display: grid;
-        gap: 28px;
+        gap: 8px;
       }
+
       .sheet-card {
         background: #fff;
-        border: 1px solid #dbe5f0;
-        border-radius: 22px;
+        border: 0;
+        border-radius: 0;
         padding: 0;
-        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+        margin: 0;
+        box-shadow: none;
         break-after: page;
         page-break-after: always;
       }
+
       .sheet-card:last-child {
         break-after: auto;
         page-break-after: auto;
       }
-      .sheet-title {
-        margin: 0 0 14px;
-        font-size: 22px;
-      }
+
       .sheet-face {
         width: 100%;
         aspect-ratio: 1.414 / 1;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 4mm;
-        margin-bottom: 4mm;
+        gap: 3mm;
+        margin: 0 0 3mm 0;
       }
+
       .sheet-face:last-child {
         margin-bottom: 0;
       }
+
       .sheet-slot {
         min-width: 0;
         min-height: 0;
       }
+
       .print-page {
         height: 100%;
         border: 1px solid #cbd5e1;
         background: #fff;
-        padding: 6mm;
+        padding: 4mm;
         overflow: hidden;
         position: relative;
         display: flex;
         flex-direction: column;
       }
+
       .print-page img {
         position: absolute;
         top: 50%;
         left: 50%;
-        max-width: calc(100% - 24px);
-        max-height: calc(100% - 48px);
+        max-width: calc(100% - 12mm);
+        max-height: calc(100% - 12mm);
         transform-origin: center center;
       }
+
       .slot-label {
         font-size: 12px;
         color: #475569;
@@ -1492,22 +1512,26 @@ h1 { margin: 0 0 6px; font-size: 20px; }
         font-weight: 800;
         letter-spacing: 0.02em;
       }
+
       .page-meta {
         font-size: 12px;
         color: #64748b;
         margin-bottom: 8px;
         font-weight: 700;
       }
+
       .print-page h3 {
-        margin: 0 0 10px;
-        font-size: 22px;
-        line-height: 1.3;
+        margin: 0 0 8px;
+        font-size: 20px;
+        line-height: 1.25;
       }
+
       .print-page p {
         margin: 0;
-        line-height: 1.7;
+        line-height: 1.55;
         white-space: pre-wrap;
       }
+
       .empty {
         color: #64748b;
         display: grid;
@@ -1515,11 +1539,13 @@ h1 { margin: 0 0 6px; font-size: 20px; }
         text-align: center;
         height: 100%;
       }
+
       .cover-page {
         justify-content: flex-start;
       }
+
       .cover-image-box {
-        margin-top: 10px;
+        margin-top: 6px;
         flex: 1;
         position: relative;
         border: 1px dashed #cbd5e1;
@@ -1527,6 +1553,7 @@ h1 { margin: 0 0 6px; font-size: 20px; }
         background: #f8fafc;
         overflow: hidden;
       }
+
       .image-page .image-stage {
         flex: 1;
         position: relative;
@@ -1535,20 +1562,57 @@ h1 { margin: 0 0 6px; font-size: 20px; }
         background: #f8fafc;
         overflow: hidden;
       }
+
       .blank-page {
         align-items: center;
         justify-content: center;
       }
+
       @media print {
-        html, body { background: #fff; }
-        body { padding: 0; }
-        .screen-toolbar { display: none !important; }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
+
+        body {
+          padding: 0 !important;
+        }
+
+        .screen-toolbar {
+          display: none !important;
+        }
+
+        .print-note {
+          display: none !important;
+        }
+
         .sheet-card {
-          box-shadow: none;
-          border: 0;
-          border-radius: 0;
-          padding: 0;
-          margin: 0;
+          border: 0 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        .sheet-face {
+          gap: 3mm !important;
+          margin: 0 0 3mm 0 !important;
+        }
+
+        .print-page {
+          padding: 4mm !important;
+        }
+
+        .cover-image-box {
+          margin-top: 4mm !important;
+        }
+
+        h1,
+        .sheet-title,
+        .slot-label,
+        .page-meta {
+          display: none !important;
         }
       }
     </style>
@@ -1557,13 +1621,12 @@ h1 { margin: 0 0 6px; font-size: 20px; }
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">이 화면은 스크롤 문서형 초안 대신 시트 카드형 미리보기입니다. 화면에서 확인 후 인쇄 버튼을 누르세요.</div>
+      <div class="print-note">미리보기 확인 후 인쇄하세요.</div>
     </div>
-    <h1>${escapeHtml(state.book.title || '책 인쇄 배열')}</h1>
+
     <div class="sheet-stack">
-      ${sheets.map((sheet, index) => `
+      ${sheets.map((sheet) => `
         <section class="sheet-card">
-          <h2 class="sheet-title">인쇄 시트 ${index + 1}</h2>
           ${renderPrintFace(sheet.front, '앞면')}
           ${renderPrintFace(sheet.back, '뒷면')}
         </section>
@@ -1577,10 +1640,12 @@ h1 { margin: 0 0 6px; font-size: 20px; }
     alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
     return;
   }
+
   win.document.open();
   win.document.write(html);
   win.document.close();
 }
+
 
 function renderPrintFace(facePages, faceLabel) {
   return `

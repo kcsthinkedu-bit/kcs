@@ -1642,61 +1642,77 @@ function openPrintWindow() {
         justify-content: center;
       }
 
-      @media print {
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          background: #fff !important;
-        }
+     @media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
 
-        body {
-          padding: 0 !important;
-        }
+  body {
+    padding: 0 !important;
+  }
 
-        .screen-toolbar {
-          display: none !important;
-        }
+  .screen-toolbar,
+  .print-note,
+  .sheet-screen-title,
+  .slot-label,
+  .page-meta {
+    display: none !important;
+  }
 
-        .print-stack {
-          display: block !important;
-        }
+  .print-stack {
+    display: block !important;
+  }
 
-        .print-sheet-page {
-          width: ${contentWidthMm}mm !important;
-          min-width: ${contentWidthMm}mm !important;
-          max-width: ${contentWidthMm}mm !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          border: 0 !important;
-          box-shadow: none !important;
-          break-after: page !important;
-          page-break-after: always !important;
-        }
+  .print-sheet-page {
+    width: ${contentWidthMm}mm !important;
+    min-width: ${contentWidthMm}mm !important;
+    max-width: ${contentWidthMm}mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
 
-        .print-sheet-page:last-child {
-          break-after: auto !important;
-          page-break-after: auto !important;
-        }
+  .print-sheet-page:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
 
-        .sheet-face {
-          width: ${contentWidthMm}mm !important;
-          height: ${contentHeightMm}mm !important;
-          grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm !important;
-          column-gap: ${gapMm}mm !important;
-          margin: 0 !important;
-        }
+  .sheet-face {
+    width: ${contentWidthMm}mm !important;
+    height: ${contentHeightMm}mm !important;
+    grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm !important;
+    column-gap: ${gapMm}mm !important;
+    margin: 0 !important;
+  }
 
-        .sheet-slot {
-          width: ${slotWidthMm}mm !important;
-          height: ${contentHeightMm}mm !important;
-        }
+  .sheet-slot {
+    width: ${slotWidthMm}mm !important;
+    height: ${contentHeightMm}mm !important;
+  }
 
-        .print-page {
-          width: ${slotWidthMm}mm !important;
-          height: ${contentHeightMm}mm !important;
-          padding: 4mm !important;
-        }
-      }
+  .print-page {
+    width: ${slotWidthMm}mm !important;
+    height: ${contentHeightMm}mm !important;
+    padding: 4mm !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .cover-image-box,
+  .image-page .image-stage {
+    margin-top: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+}
+
     </style>
   </head>
   <body>

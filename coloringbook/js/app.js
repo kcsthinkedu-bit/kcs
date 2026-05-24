@@ -143,6 +143,9 @@ function createSpread(index) {
     leftBody: '여기에 본문 내용을 적거나 붙여넣으세요.',
     leftFontSize: 24,
     leftFontWeight: '400',
+    leftTextAlign: 'left',
+    leftVerticalAlign: 'top',
+    leftTitleOffsetY: 0,
     rightImage: '',
     rightImageScale: 1,
     rightImageX: 0,
@@ -381,6 +384,9 @@ function renderEditor() {
   const spreadBodyMeta = document.getElementById('spreadBodyMeta');
   const fontSizeInput = document.getElementById('fontSizeInput');
   const fontWeightInput = document.getElementById('fontWeightInput');
+  const textAlignInput = document.getElementById('textAlignInput');
+  const verticalAlignInput = document.getElementById('verticalAlignInput');
+  const titleOffsetInput = document.getElementById('titleOffsetInput');
   const spreadImageInput = document.getElementById('spreadImageInput');
   const spreadPasteZone = document.getElementById('spreadPasteZone');
   const removeSpreadImageBtn = document.getElementById('removeSpreadImageBtn');
@@ -395,7 +401,11 @@ function renderEditor() {
   spreadBodyInput.value = spread.leftBody;
   fontSizeInput.value = spread.leftFontSize;
   fontWeightInput.value = spread.leftFontWeight;
+  textAlignInput.value = spread.leftTextAlign || 'left';
+  verticalAlignInput.value = spread.leftVerticalAlign || 'top';
+  titleOffsetInput.value = spread.leftTitleOffsetY || 0;
   imageScaleInput.value = spread.rightImageScale;
+
   imageXInput.value = spread.rightImageX;
   imageYInput.value = spread.rightImageY;
 
@@ -438,7 +448,6 @@ function renderEditor() {
   }
 );
 
-
   fontSizeInput.addEventListener('input', () => {
     spread.leftFontSize = toNumber(fontSizeInput.value, 24);
     renderPreview();
@@ -450,6 +459,24 @@ function renderEditor() {
     spread.leftFontWeight = fontWeightInput.value;
     renderPreview();
   });
+
+  textAlignInput.addEventListener('change', () => {
+  spread.leftTextAlign = textAlignInput.value;
+  renderPreview();
+  renderTeacherPanels();
+});
+
+verticalAlignInput.addEventListener('change', () => {
+  spread.leftVerticalAlign = verticalAlignInput.value;
+  renderPreview();
+  renderTeacherPanels();
+});
+
+titleOffsetInput.addEventListener('input', () => {
+  spread.leftTitleOffsetY = toNumber(titleOffsetInput.value, 0);
+  renderPreview();
+  renderTeacherPanels();
+});
 
   spreadImageInput.addEventListener('change', async (event) => {
     const file = event.target.files && event.target.files[0];
@@ -555,11 +582,43 @@ function renderPreview() {
     <div class="preview-caption">펼침 ${spreadIndex + 1} · 본문 ${bodyStats.chars}자 · ${spread.rightImage ? '이미지 있음' : '이미지 없음'}</div>
     <div class="preview-spread-pages">
       <div class="preview-page">
-        <div class="preview-left-inner">
-          <h3 style="font-size:${Number(spread.leftFontSize || 24)}px; font-weight:${escapeAttr(spread.leftFontWeight || '400')};">${escapeHtml(spread.leftTitle || '제목 없음')}</h3>
-          <p style="font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px; font-weight:${escapeAttr(spread.leftFontWeight || '400')};">${escapeHtml(spread.leftBody || '').replace(/\n/g, '<br />')}</p>
-        </div>
-      </div>
+  <div
+    class="preview-left-inner"
+    style="
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: ${
+        spread.leftVerticalAlign === 'center'
+          ? 'center'
+          : spread.leftVerticalAlign === 'bottom'
+            ? 'flex-end'
+            : 'flex-start'
+      };
+      text-align: ${escapeAttr(spread.leftTextAlign || 'left')};
+    "
+  >
+    <h3
+      style="
+        font-size:${Number(spread.leftFontSize || 24)}px;
+        font-weight:${escapeAttr(spread.leftFontWeight || '400')};
+        margin-top:${Number(spread.leftTitleOffsetY || 0)}px;
+        margin-bottom:10px;
+      "
+    >
+      ${escapeHtml(spread.leftTitle || '제목 없음')}
+    </h3>
+    <p
+      style="
+        font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px;
+        font-weight:${escapeAttr(spread.leftFontWeight || '400')};
+      "
+    >
+      ${escapeHtml(spread.leftBody || '').replace(/\n/g, '<br />')}
+    </p>
+  </div>
+</div>
+
       <div class="preview-page">
         <div class="preview-image-stage">
           ${spread.rightImage ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />` : `<div class="preview-empty">오른쪽 페이지 이미지가 아직 없습니다.<br />파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.</div>`}
@@ -1238,12 +1297,19 @@ function normalizeCover(cover) {
 
 function normalizeSpread(item, index) {
   const safeItem = isPlainObject(item) ? item : {};
+
+  const textAlign = normalizeString(safeItem.leftTextAlign, 'left');
+  const verticalAlign = normalizeString(safeItem.leftVerticalAlign, 'top');
+
   return {
     id: normalizeString(safeItem.id, 'spread_' + (index + 1)),
     leftTitle: normalizeString(safeItem.leftTitle, `${index + 1}번째 펼침`),
     leftBody: normalizeString(safeItem.leftBody, ''),
     leftFontSize: toNumber(safeItem.leftFontSize, 24),
     leftFontWeight: normalizeString(safeItem.leftFontWeight, '400'),
+    leftTextAlign: ['left', 'center', 'right'].includes(textAlign) ? textAlign : 'left',
+    leftVerticalAlign: ['top', 'center', 'bottom'].includes(verticalAlign) ? verticalAlign : 'top',
+    leftTitleOffsetY: toNumber(safeItem.leftTitleOffsetY, 0),
     rightImage: typeof safeItem.rightImage === 'string' ? safeItem.rightImage : '',
     rightImageScale: toNumber(safeItem.rightImageScale, 1),
     rightImageX: toNumber(safeItem.rightImageX, 0),
@@ -1324,13 +1390,16 @@ function buildLogicalPages() {
 
   state.book.spreads.forEach((spread) => {
     pages.push({
-      pageNo: pages.length + 1,
-      kind: 'text',
-      title: spread.leftTitle,
-      body: spread.leftBody,
-      fontSize: spread.leftFontSize,
-      fontWeight: spread.leftFontWeight
-    });
+  pageNo: pages.length + 1,
+  kind: 'text',
+  title: spread.leftTitle,
+  body: spread.leftBody,
+  fontSize: spread.leftFontSize,
+  fontWeight: spread.leftFontWeight,
+  textAlign: spread.leftTextAlign,
+  verticalAlign: spread.leftVerticalAlign,
+  titleOffsetY: spread.leftTitleOffsetY
+});
 
     pages.push({
       pageNo: pages.length + 1,
@@ -1699,15 +1768,50 @@ function renderPrintPage(page, slotLabel) {
   }
 
   if (page.kind === 'text') {
-    return `
-      <div class="print-page">
-        <div class="slot-label">${slotLabel}</div>
-        <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
-        <h3 style="font-size:${Number(page.fontSize || 24)}px; font-weight:${escapeAttr(page.fontWeight || '400')};">${escapeHtml(page.title || '')}</h3>
-        <p style="font-size:${Math.max(16, Number(page.fontSize || 24) - 4)}px; font-weight:${escapeAttr(page.fontWeight || '400')};">${escapeHtml(page.body || '')}</p>
-      </div>
-    `;
-  }
+  const justifyContent =
+    page.verticalAlign === 'center'
+      ? 'center'
+      : page.verticalAlign === 'bottom'
+        ? 'flex-end'
+        : 'flex-start';
+
+  const textAlign = ['left', 'center', 'right'].includes(page.textAlign)
+    ? page.textAlign
+    : 'left';
+
+  return `
+    <div
+      class="print-page"
+      style="
+        display:flex;
+        flex-direction:column;
+        justify-content:${justifyContent};
+        text-align:${escapeAttr(textAlign)};
+      "
+    >
+      <div class="slot-label">${slotLabel}</div>
+      <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
+      <h3
+        style="
+          font-size:${Number(page.fontSize || 24)}px;
+          font-weight:${escapeAttr(page.fontWeight || '400')};
+          margin-top:${Number(page.titleOffsetY || 0)}px;
+          margin-bottom:10px;
+        "
+      >
+        ${escapeHtml(page.title || '')}
+      </h3>
+      <p
+        style="
+          font-size:${Math.max(16, Number(page.fontSize || 24) - 4)}px;
+          font-weight:${escapeAttr(page.fontWeight || '400')};
+        "
+      >
+        ${escapeHtml(page.body || '')}
+      </p>
+    </div>
+  `;
+}
 
   if (page.kind === 'image') {
     return `

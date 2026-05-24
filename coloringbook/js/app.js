@@ -13,7 +13,7 @@ const TEACHER_PASSWORD_STORAGE_KEY = 'kcs-teacher-password';
 
 function getStoredTeacherPassword() {
   try {
-    return sessionStorage.getItem(TEACHER_PASSWORD_STORAGE_KEY) || '';
+    return localStorage.getItem(TEACHER_PASSWORD_STORAGE_KEY) || '';
   } catch (error) {
     return '';
   }
@@ -22,14 +22,15 @@ function getStoredTeacherPassword() {
 function setStoredTeacherPassword(password) {
   try {
     if (password) {
-      sessionStorage.setItem(TEACHER_PASSWORD_STORAGE_KEY, password);
+      localStorage.setItem(TEACHER_PASSWORD_STORAGE_KEY, password);
     } else {
-      sessionStorage.removeItem(TEACHER_PASSWORD_STORAGE_KEY);
+      localStorage.removeItem(TEACHER_PASSWORD_STORAGE_KEY);
     }
   } catch (error) {
     console.error(error);
   }
 }
+
 
 async function verifyTeacherPassword(password) {
   if (!password) return false;
@@ -52,10 +53,12 @@ async function verifyTeacherPassword(password) {
 async function ensureTeacherAccess(forcePrompt = false) {
   let password = forcePrompt ? '' : getStoredTeacherPassword();
 
-  if (!password) {
-    password = window.prompt('선생님 비밀번호를 입력하세요.');
-    password = String(password || '').trim();
+  if (password && !forcePrompt) {
+    return true;
   }
+
+  password = window.prompt('선생님 비밀번호를 입력하세요.');
+  password = String(password || '').trim();
 
   if (!password) return false;
 

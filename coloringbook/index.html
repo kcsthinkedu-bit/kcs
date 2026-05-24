@@ -170,19 +170,44 @@
         <div id="spreadBodyMeta" class="field-meta"></div>
 
         <div class="inline-fields">
-          <label class="field">
-            글자 크기
-            <input id="fontSizeInput" type="number" min="16" max="64" step="1" />
-          </label>
-          <label class="field">
-            글자 굵기
-            <select id="fontWeightInput">
-              <option value="400">보통</option>
-              <option value="700">굵게</option>
-              <option value="800">아주 굵게</option>
-            </select>
-          </label>
-        </div>
+  <label class="field">
+    글자 크기
+    <input id="fontSizeInput" type="number" min="16" max="64" step="1" />
+  </label>
+
+  <label class="field">
+    글자 굵기
+    <select id="fontWeightInput">
+      <option value="400">보통</option>
+      <option value="700">굵게</option>
+      <option value="800">아주 굵게</option>
+    </select>
+  </label>
+
+  <label class="field">
+    좌우 정렬
+    <select id="textAlignInput">
+      <option value="left">왼쪽</option>
+      <option value="center">가운데</option>
+      <option value="right">오른쪽</option>
+    </select>
+  </label>
+
+  <label class="field">
+    상하 정렬
+    <select id="verticalAlignInput">
+      <option value="top">위쪽</option>
+      <option value="center">가운데</option>
+      <option value="bottom">아래쪽</option>
+    </select>
+  </label>
+
+  <label class="field">
+    제목 아래로 이동
+    <input id="titleOffsetInput" type="number" min="0" max="200" step="2" value="0" />
+  </label>
+</div>
+
       </section>
 
       <section class="card-block">

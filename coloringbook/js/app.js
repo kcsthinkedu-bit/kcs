@@ -1412,11 +1412,20 @@ function buildLogicalPages() {
     });
   });
 
-  pages.push({
-    pageNo: pages.length + 1,
-    kind: 'blank',
-    title: '뒷표지'
-  });
+  const backCoverStudentName = normalizeString(
+  (state.book.submission && state.book.submission.studentName) ||
+  (dom.submitStudentNameInput && dom.submitStudentNameInput.value) ||
+  '',
+  ''
+).trim();
+
+pages.push({
+  pageNo: pages.length + 1,
+  kind: 'blank',
+  title: '뒷표지',
+  authorName: backCoverStudentName
+});
+
 
   while (pages.length % 4 !== 0) {
     pages.push({
@@ -1841,13 +1850,33 @@ function renderPrintPage(page, slotLabel) {
     `;
   }
 
+ if (page.kind === 'blank' && page.title === '뒷표지') {
   return `
-    <div class="print-page blank-page">
-      <div class="slot-label">${slotLabel}</div>
-      <div class="page-meta">${pageMeta}</div>
-      <div class="empty">${escapeHtml(page.title || '빈 페이지')}</div>
+    <div
+      class="print-page blank-page"
+      style="
+        justify-content: flex-end;
+        align-items: flex-end;
+        padding: 6mm 8mm 8mm 8mm;
+      "
+    >
+      ${
+        page.authorName
+          ? `<div style="font-size:14px; font-weight:700; color:#111827;">${escapeHtml(page.authorName)}</div>`
+          : ''
+      }
     </div>
   `;
+}
+
+return `
+  <div class="print-page blank-page">
+    <div class="slot-label">${slotLabel}</div>
+    <div class="page-meta">${pageMeta}</div>
+    <div class="empty">${escapeHtml(page.title || '빈 페이지')}</div>
+  </div>
+`;
+
 }
 
 function fileToDataUrl(file) {

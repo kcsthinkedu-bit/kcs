@@ -1383,26 +1383,37 @@ function openPrintWindow() {
   const paper = state.book.paper === 'B4' ? 'B4' : 'A4';
   const pageSizeCss = `${paper} landscape`;
 
+  // @page margin 5mm 기준 실제 인쇄 가능 영역(mm)
+  const contentWidthMm = paper === 'B4' ? 343 : 287;
+  const contentHeightMm = paper === 'B4' ? 240 : 200;
+  const gapMm = 3;
+  const slotWidthMm = (contentWidthMm - gapMm) / 2;
+
   const html = `<!DOCTYPE html>
   <html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <title>책 인쇄 배열</title>
     <style>
-      @page { size: ${pageSizeCss}; margin: 5mm; }
+      @page {
+        size: ${pageSizeCss};
+        margin: 5mm;
+      }
 
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
 
       html, body {
         margin: 0;
         padding: 0;
-        background: #fff;
+        background: #f3f4f6;
         color: #111827;
         font-family: Arial, sans-serif;
       }
 
       body {
-        padding: 0;
+        padding: 10px;
       }
 
       .screen-toolbar {
@@ -1413,20 +1424,19 @@ function openPrintWindow() {
         gap: 10px;
         align-items: center;
         flex-wrap: wrap;
-        padding: 12px 14px;
+        padding: 10px 12px;
         margin-bottom: 10px;
         background: rgba(255,255,255,0.96);
         border: 1px solid #dbe5f0;
-        border-radius: 14px;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-        backdrop-filter: blur(8px);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
       }
 
       .screen-toolbar button {
         border: 1px solid #cbd5e1;
         background: #fff;
         color: #111827;
-        min-height: 40px;
+        min-height: 38px;
         padding: 0 14px;
         border-radius: 10px;
         cursor: pointer;
@@ -1440,24 +1450,26 @@ function openPrintWindow() {
       }
 
       .print-note {
-        line-height: 1.5;
-        color: #475569;
         margin-left: auto;
+        color: #64748b;
         font-size: 13px;
       }
 
       .print-stack {
         display: grid;
-        gap: 8px;
+        gap: 10px;
+        justify-content: center;
       }
 
       .print-sheet-page {
+        width: ${contentWidthMm}mm;
+        min-width: ${contentWidthMm}mm;
+        max-width: ${contentWidthMm}mm;
         background: #fff;
-        border: 0;
-        border-radius: 0;
+        margin: 0 auto;
         padding: 0;
-        margin: 0;
-        box-shadow: none;
+        border: 0;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
         break-after: page;
         page-break-after: always;
       }
@@ -1467,30 +1479,26 @@ function openPrintWindow() {
         page-break-after: auto;
       }
 
-      .sheet-screen-title {
-        margin: 0 0 6px;
-        font-size: 14px;
-        color: #64748b;
-        font-weight: 700;
-      }
-
       .sheet-face {
-        width: 100%;
-        aspect-ratio: 1.414 / 1;
+        width: ${contentWidthMm}mm;
+        height: ${contentHeightMm}mm;
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 3mm;
+        grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm;
+        column-gap: ${gapMm}mm;
         margin: 0;
       }
 
       .sheet-slot {
+        width: ${slotWidthMm}mm;
+        height: ${contentHeightMm}mm;
         min-width: 0;
         min-height: 0;
       }
 
       .print-page {
-        height: 100%;
-        border: 1px solid #cbd5e1;
+        width: ${slotWidthMm}mm;
+        height: ${contentHeightMm}mm;
+        border: 0.3mm solid #cbd5e1;
         background: #fff;
         padding: 4mm;
         overflow: hidden;
@@ -1499,40 +1507,23 @@ function openPrintWindow() {
         flex-direction: column;
       }
 
-      .print-page img {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        max-width: calc(100% - 12mm);
-        max-height: calc(100% - 12mm);
-        transform-origin: center center;
-      }
-
-      .slot-label {
-        font-size: 12px;
-        color: #475569;
-        margin-bottom: 10px;
-        font-weight: 800;
-        letter-spacing: 0.02em;
-      }
-
+      /* 디버그용 상단 메타는 레이아웃을 깨므로 숨김 */
+      .slot-label,
       .page-meta {
-        font-size: 12px;
-        color: #64748b;
-        margin-bottom: 8px;
-        font-weight: 700;
+        display: none !important;
       }
 
       .print-page h3 {
-        margin: 0 0 8px;
-        font-size: 20px;
+        margin: 0 0 3mm;
+        font-size: 18px;
         line-height: 1.25;
       }
 
       .print-page p {
         margin: 0;
-        line-height: 1.55;
+        line-height: 1.45;
         white-space: pre-wrap;
+        font-size: 12px;
       }
 
       .empty {
@@ -1548,12 +1539,12 @@ function openPrintWindow() {
       }
 
       .cover-image-box {
-        margin-top: 6px;
+        margin-top: 3mm;
         flex: 1 1 auto;
         min-height: 0;
         position: relative;
-        border: 1px dashed #cbd5e1;
-        border-radius: 12px;
+        border: 0.3mm dashed #cbd5e1;
+        border-radius: 2mm;
         background: #f8fafc;
         overflow: hidden;
       }
@@ -1562,10 +1553,19 @@ function openPrintWindow() {
         flex: 1 1 auto;
         min-height: 0;
         position: relative;
-        border: 1px dashed #cbd5e1;
-        border-radius: 12px;
+        border: 0.3mm dashed #cbd5e1;
+        border-radius: 2mm;
         background: #f8fafc;
         overflow: hidden;
+      }
+
+      .print-page img {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        max-width: calc(100% - 8mm);
+        max-height: calc(100% - 8mm);
+        transform-origin: center center;
       }
 
       .blank-page {
@@ -1584,11 +1584,7 @@ function openPrintWindow() {
           padding: 0 !important;
         }
 
-        .screen-toolbar,
-        .print-note,
-        .sheet-screen-title,
-        .slot-label,
-        .page-meta {
+        .screen-toolbar {
           display: none !important;
         }
 
@@ -1597,11 +1593,13 @@ function openPrintWindow() {
         }
 
         .print-sheet-page {
-          border: 0 !important;
-          border-radius: 0 !important;
-          box-shadow: none !important;
-          padding: 0 !important;
+          width: ${contentWidthMm}mm !important;
+          min-width: ${contentWidthMm}mm !important;
+          max-width: ${contentWidthMm}mm !important;
           margin: 0 !important;
+          padding: 0 !important;
+          border: 0 !important;
+          box-shadow: none !important;
           break-after: page !important;
           page-break-after: always !important;
         }
@@ -1612,17 +1610,22 @@ function openPrintWindow() {
         }
 
         .sheet-face {
-          gap: 3mm !important;
+          width: ${contentWidthMm}mm !important;
+          height: ${contentHeightMm}mm !important;
+          grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm !important;
+          column-gap: ${gapMm}mm !important;
           margin: 0 !important;
         }
 
-        .print-page {
-          padding: 4mm !important;
+        .sheet-slot {
+          width: ${slotWidthMm}mm !important;
+          height: ${contentHeightMm}mm !important;
         }
 
-        .cover-image-box,
-        .image-page .image-stage {
-          margin-top: 0 !important;
+        .print-page {
+          width: ${slotWidthMm}mm !important;
+          height: ${contentHeightMm}mm !important;
+          padding: 4mm !important;
         }
       }
     </style>
@@ -1631,17 +1634,15 @@ function openPrintWindow() {
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">한 페이지에는 한 면(앞면 또는 뒷면)만 배치됩니다.</div>
+      <div class="print-note">고정 mm 레이아웃 인쇄 미리보기</div>
     </div>
 
     <div class="print-stack">
-      ${sheets.map((sheet, index) => `
+      ${sheets.map((sheet) => `
         <section class="print-sheet-page">
-          <div class="sheet-screen-title">인쇄 시트 ${index + 1} · 앞면</div>
           ${renderPrintFace(sheet.front, '앞면')}
         </section>
         <section class="print-sheet-page">
-          <div class="sheet-screen-title">인쇄 시트 ${index + 1} · 뒷면</div>
           ${renderPrintFace(sheet.back, '뒷면')}
         </section>
       `).join('')}
@@ -1659,7 +1660,6 @@ function openPrintWindow() {
   win.document.write(html);
   win.document.close();
 }
-
 
 function renderPrintFace(facePages, faceLabel) {
   return `

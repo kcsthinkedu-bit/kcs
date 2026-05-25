@@ -337,7 +337,7 @@ function renderEditor() {
         state.book.cover.subtitle = coverSubtitleInput.value;
       },
       () => {
-        renderPreview();
+        ();
         renderTeacherPanels();
         syncCoverMeta();
       }
@@ -445,7 +445,7 @@ function renderEditor() {
       spread.leftBody = spreadBodyInput.value;
     },
     () => {
-      renderPreview();
+      ();
       renderNavigation();
       renderBookPreviewList();
       renderTeacherPanels();
@@ -455,21 +455,21 @@ function renderEditor() {
 
   fontSizeInput.addEventListener('input', () => {
     spread.leftFontSize = toNumber(fontSizeInput.value, 24);
-    renderPreview();
+    ();
     renderTeacherPanels();
     syncSpreadMeta();
   });
 
   fontWeightInput.addEventListener('change', () => {
     spread.leftFontWeight = fontWeightInput.value;
-    renderPreview();
+    ();
     renderTeacherPanels();
   });
 
   if (titleAlignInput) {
     titleAlignInput.addEventListener('change', () => {
       spread.leftTitleAlign = titleAlignInput.value;
-      renderPreview();
+      ();
       renderTeacherPanels();
     });
   }
@@ -477,7 +477,7 @@ function renderEditor() {
   if (textAlignInput) {
     textAlignInput.addEventListener('change', () => {
       spread.leftTextAlign = textAlignInput.value;
-      renderPreview();
+      ();
       renderTeacherPanels();
     });
   }
@@ -485,7 +485,7 @@ function renderEditor() {
   if (verticalAlignInput) {
     verticalAlignInput.addEventListener('change', () => {
       spread.leftVerticalAlign = verticalAlignInput.value;
-      renderPreview();
+      ();
       renderTeacherPanels();
     });
   }
@@ -493,7 +493,7 @@ function renderEditor() {
   if (titleOffsetInput) {
     titleOffsetInput.addEventListener('input', () => {
       spread.leftTitleOffsetY = toNumber(titleOffsetInput.value, 0);
-      renderPreview();
+      ();
       renderTeacherPanels();
     });
   }
@@ -501,7 +501,7 @@ function renderEditor() {
   if (innerGutterInput) {
     innerGutterInput.addEventListener('input', () => {
       spread.leftInnerGutter = toNumber(innerGutterInput.value, 24);
-      renderPreview();
+      ();
       renderTeacherPanels();
     });
   }
@@ -528,7 +528,7 @@ function renderEditor() {
 
   imageScaleInput.addEventListener('input', () => {
     spread.rightImageScale = toNumber(imageScaleInput.value, 1);
-    renderPreview();
+    ();
     renderTeacherPanels();
     syncSpreadMeta();
   });
@@ -590,12 +590,13 @@ function renderPreview() {
       <div class="preview-caption">표지 · ${state.book.cover.imageSrc ? '이미지 있음' : '텍스트 중심 표지'}</div>
       <div class="preview-cover-page">
         <div class="preview-cover-image" style="background-image:url('${escapeAttr(state.book.cover.imageSrc)}')"></div>
-        <div class="preview-cover-text">
-          <h3>${escapeHtml(state.book.cover.title || '제목 없음')}</h3>
-          <p>${escapeHtml(state.book.cover.subtitle || '')}</p>
+        <div class="preview-cover-text" style="text-align:center;">
+        <h3 style="text-align:center;">${escapeHtml(state.book.cover.title || '제목 없음')}</h3>
+        <p style="text-align:center;">${escapeHtml(state.book.cover.subtitle || '')}</p>
         </div>
       </div>
     `;
+    
     dom.currentPreview.appendChild(wrap);
     return;
   }
@@ -917,7 +918,7 @@ function renderAll() {
   renderTopFields();
   renderNavigation();
   renderEditor();
-  renderPreview();
+  ();
   renderBookPreviewList();
   renderTeacherPanels();
 }

@@ -1825,7 +1825,7 @@ function renderPrintPage(page, slotLabel) {
 
   const pageMeta = page.pageNo ? `책 페이지 ${page.pageNo}` : '보조 페이지';
 
-  if ( === 'cover') {
+  if (page.kind === 'cover') {
     return `
       <div class="print-page cover-page">
         <div class="page-meta">${pageMeta} · 표지</div>

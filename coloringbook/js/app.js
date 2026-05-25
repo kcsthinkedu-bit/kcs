@@ -455,21 +455,21 @@ function renderEditor() {
 
   fontSizeInput.addEventListener('input', () => {
     spread.leftFontSize = toNumber(fontSizeInput.value, 24);
-    ();
+    renderPreview();
     renderTeacherPanels();
     syncSpreadMeta();
   });
 
   fontWeightInput.addEventListener('change', () => {
     spread.leftFontWeight = fontWeightInput.value;
-    ();
+    renderPreview();
     renderTeacherPanels();
   });
 
   if (titleAlignInput) {
     titleAlignInput.addEventListener('change', () => {
       spread.leftTitleAlign = titleAlignInput.value;
-      ();
+      renderPreview();
       renderTeacherPanels();
     });
   }
@@ -477,7 +477,7 @@ function renderEditor() {
   if (textAlignInput) {
     textAlignInput.addEventListener('change', () => {
       spread.leftTextAlign = textAlignInput.value;
-      ();
+      renderPreview();
       renderTeacherPanels();
     });
   }
@@ -485,7 +485,7 @@ function renderEditor() {
   if (verticalAlignInput) {
     verticalAlignInput.addEventListener('change', () => {
       spread.leftVerticalAlign = verticalAlignInput.value;
-      ();
+      renderPreview();
       renderTeacherPanels();
     });
   }
@@ -493,7 +493,7 @@ function renderEditor() {
   if (titleOffsetInput) {
     titleOffsetInput.addEventListener('input', () => {
       spread.leftTitleOffsetY = toNumber(titleOffsetInput.value, 0);
-      ();
+      renderPreview();
       renderTeacherPanels();
     });
   }
@@ -501,7 +501,7 @@ function renderEditor() {
   if (innerGutterInput) {
     innerGutterInput.addEventListener('input', () => {
       spread.leftInnerGutter = toNumber(innerGutterInput.value, 24);
-      ();
+      renderPreview();
       renderTeacherPanels();
     });
   }
@@ -528,7 +528,7 @@ function renderEditor() {
 
   imageScaleInput.addEventListener('input', () => {
     spread.rightImageScale = toNumber(imageScaleInput.value, 1);
-    ();
+    renderPreview();
     renderTeacherPanels();
     syncSpreadMeta();
   });
@@ -918,7 +918,7 @@ function renderAll() {
   renderTopFields();
   renderNavigation();
   renderEditor();
-  ();
+  renderPreview();
   renderBookPreviewList();
   renderTeacherPanels();
 }

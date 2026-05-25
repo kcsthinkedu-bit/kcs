@@ -320,28 +320,26 @@ function renderEditor() {
     };
 
     bindImeSafeTextField(
-  coverTitleInput,
-  () => {
-    state.book.cover.title = coverTitleInput.value;
-  },
-  () => {
-    refreshViewsForTyping();
-  }
-);
-
+      coverTitleInput,
+      () => {
+        state.book.cover.title = coverTitleInput.value;
+      },
+      () => {
+        refreshViewsForTyping();
+      }
+    );
 
     bindImeSafeTextField(
-  coverSubtitleInput,
-  () => {
-    state.book.cover.subtitle = coverSubtitleInput.value;
-  },
-  () => {
-    renderPreview();
-    renderTeacherPanels();
-    syncCoverMeta();
-  }
-);
-
+      coverSubtitleInput,
+      () => {
+        state.book.cover.subtitle = coverSubtitleInput.value;
+      },
+      () => {
+        renderPreview();
+        renderTeacherPanels();
+        syncCoverMeta();
+      }
+    );
 
     coverImageInput.addEventListener('change', async (event) => {
       const file = event.target.files && event.target.files[0];
@@ -387,9 +385,11 @@ function renderEditor() {
   const spreadBodyMeta = document.getElementById('spreadBodyMeta');
   const fontSizeInput = document.getElementById('fontSizeInput');
   const fontWeightInput = document.getElementById('fontWeightInput');
+  const titleAlignInput = document.getElementById('titleAlignInput');
   const textAlignInput = document.getElementById('textAlignInput');
   const verticalAlignInput = document.getElementById('verticalAlignInput');
   const titleOffsetInput = document.getElementById('titleOffsetInput');
+  const innerGutterInput = document.getElementById('innerGutterInput');
   const spreadImageInput = document.getElementById('spreadImageInput');
   const spreadPasteZone = document.getElementById('spreadPasteZone');
   const removeSpreadImageBtn = document.getElementById('removeSpreadImageBtn');
@@ -404,11 +404,12 @@ function renderEditor() {
   spreadBodyInput.value = spread.leftBody;
   fontSizeInput.value = spread.leftFontSize;
   fontWeightInput.value = spread.leftFontWeight;
-  textAlignInput.value = spread.leftTextAlign || 'left';
-  verticalAlignInput.value = spread.leftVerticalAlign || 'top';
-  titleOffsetInput.value = spread.leftTitleOffsetY || 0;
+  if (titleAlignInput) titleAlignInput.value = spread.leftTitleAlign || spread.leftTextAlign || 'left';
+  if (textAlignInput) textAlignInput.value = spread.leftTextAlign || 'left';
+  if (verticalAlignInput) verticalAlignInput.value = spread.leftVerticalAlign || 'top';
+  if (titleOffsetInput) titleOffsetInput.value = spread.leftTitleOffsetY || 0;
+  if (innerGutterInput) innerGutterInput.value = spread.leftInnerGutter ?? 24;
   imageScaleInput.value = spread.rightImageScale;
-
   imageXInput.value = spread.rightImageX;
   imageYInput.value = spread.rightImageY;
 
@@ -426,30 +427,29 @@ function renderEditor() {
     deleteSpreadBtn.disabled = state.book.spreads.length <= 1;
   };
 
- bindImeSafeTextField(
-  spreadTitleInput,
-  () => {
-    spread.leftTitle = spreadTitleInput.value;
-  },
-  () => {
-    refreshViewsForTyping();
-  }
-);
-
+  bindImeSafeTextField(
+    spreadTitleInput,
+    () => {
+      spread.leftTitle = spreadTitleInput.value;
+    },
+    () => {
+      refreshViewsForTyping();
+    }
+  );
 
   bindImeSafeTextField(
-  spreadBodyInput,
-  () => {
-    spread.leftBody = spreadBodyInput.value;
-  },
-  () => {
-    renderPreview();
-    renderNavigation();
-    renderBookPreviewList();
-    renderTeacherPanels();
-    syncSpreadMeta();
-  }
-);
+    spreadBodyInput,
+    () => {
+      spread.leftBody = spreadBodyInput.value;
+    },
+    () => {
+      renderPreview();
+      renderNavigation();
+      renderBookPreviewList();
+      renderTeacherPanels();
+      syncSpreadMeta();
+    }
+  );
 
   fontSizeInput.addEventListener('input', () => {
     spread.leftFontSize = toNumber(fontSizeInput.value, 24);
@@ -461,25 +461,48 @@ function renderEditor() {
   fontWeightInput.addEventListener('change', () => {
     spread.leftFontWeight = fontWeightInput.value;
     renderPreview();
+    renderTeacherPanels();
   });
 
-  textAlignInput.addEventListener('change', () => {
-  spread.leftTextAlign = textAlignInput.value;
-  renderPreview();
-  renderTeacherPanels();
-});
+  if (titleAlignInput) {
+    titleAlignInput.addEventListener('change', () => {
+      spread.leftTitleAlign = titleAlignInput.value;
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
 
-verticalAlignInput.addEventListener('change', () => {
-  spread.leftVerticalAlign = verticalAlignInput.value;
-  renderPreview();
-  renderTeacherPanels();
-});
+  if (textAlignInput) {
+    textAlignInput.addEventListener('change', () => {
+      spread.leftTextAlign = textAlignInput.value;
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
 
-titleOffsetInput.addEventListener('input', () => {
-  spread.leftTitleOffsetY = toNumber(titleOffsetInput.value, 0);
-  renderPreview();
-  renderTeacherPanels();
-});
+  if (verticalAlignInput) {
+    verticalAlignInput.addEventListener('change', () => {
+      spread.leftVerticalAlign = verticalAlignInput.value;
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (titleOffsetInput) {
+    titleOffsetInput.addEventListener('input', () => {
+      spread.leftTitleOffsetY = toNumber(titleOffsetInput.value, 0);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (innerGutterInput) {
+    innerGutterInput.addEventListener('input', () => {
+      spread.leftInnerGutter = toNumber(innerGutterInput.value, 24);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
 
   spreadImageInput.addEventListener('change', async (event) => {
     const file = event.target.files && event.target.files[0];
@@ -553,6 +576,7 @@ titleOffsetInput.addEventListener('input', () => {
 
   syncSpreadMeta();
 }
+
 
 function renderPreview() {
   dom.currentPreview.innerHTML = '';

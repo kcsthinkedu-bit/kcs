@@ -1302,6 +1302,7 @@ function normalizeSpread(item, index) {
   const safeItem = isPlainObject(item) ? item : {};
 
   const textAlign = normalizeString(safeItem.leftTextAlign, 'left');
+  const titleAlign = normalizeString(safeItem.leftTitleAlign, textAlign);
   const verticalAlign = normalizeString(safeItem.leftVerticalAlign, 'top');
 
   return {
@@ -1310,9 +1311,11 @@ function normalizeSpread(item, index) {
     leftBody: normalizeString(safeItem.leftBody, ''),
     leftFontSize: toNumber(safeItem.leftFontSize, 24),
     leftFontWeight: normalizeString(safeItem.leftFontWeight, '400'),
+    leftTitleAlign: ['left', 'center', 'right'].includes(titleAlign) ? titleAlign : 'left',
     leftTextAlign: ['left', 'center', 'right'].includes(textAlign) ? textAlign : 'left',
     leftVerticalAlign: ['top', 'center', 'bottom'].includes(verticalAlign) ? verticalAlign : 'top',
     leftTitleOffsetY: toNumber(safeItem.leftTitleOffsetY, 0),
+    leftInnerGutter: toNumber(safeItem.leftInnerGutter, 24),
     rightImage: typeof safeItem.rightImage === 'string' ? safeItem.rightImage : '',
     rightImageScale: toNumber(safeItem.rightImageScale, 1),
     rightImageX: toNumber(safeItem.rightImageX, 0),

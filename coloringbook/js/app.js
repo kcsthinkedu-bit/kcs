@@ -1818,7 +1818,6 @@ function renderPrintPage(page, slotLabel) {
   if (!page) {
     return `
       <div class="print-page blank-page">
-        <div class="slot-label">${slotLabel}</div>
         <div class="empty">페이지 없음</div>
       </div>
     `;
@@ -1829,7 +1828,6 @@ function renderPrintPage(page, slotLabel) {
   if (page.kind === 'cover') {
     return `
       <div class="print-page cover-page">
-        <div class="slot-label">${slotLabel}</div>
         <div class="page-meta">${pageMeta} · 표지</div>
         <h3>${escapeHtml(page.title || '표지')}</h3>
         <p>${escapeHtml(page.subtitle || '')}</p>
@@ -1841,90 +1839,110 @@ function renderPrintPage(page, slotLabel) {
   }
 
   if (page.kind === 'text') {
-  const justifyContent =
-    page.verticalAlign === 'center'
-      ? 'center'
-      : page.verticalAlign === 'bottom'
-        ? 'flex-end'
-        : 'flex-start';
+    const justifyContent =
+      page.verticalAlign === 'center'
+        ? 'center'
+        : page.verticalAlign === 'bottom'
+          ? 'flex-end'
+          : 'flex-start';
 
-  const textAlign = ['left', 'center', 'right'].includes(page.textAlign)
-    ? page.textAlign
-    : 'left';
+    const textAlign = ['left', 'center', 'right'].includes(page.textAlign) ? page.textAlign : 'left';
+    const titleAlign = ['left', 'center', 'right'].includes(page.titleAlign) ? page.titleAlign : textAlign;
+    const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
+    const gutterStyle = String(slotLabel || '').includes('왼쪽')
+      ? `padding-right:${gutterMm}mm;`
+      : String(slotLabel || '').includes('오른쪽')
+        ? `padding-left:${gutterMm}mm;`
+        : '';
 
-  return `
-    <div
-      class="print-page"
-      style="
-        display:flex;
-        flex-direction:column;
-        justify-content:${justifyContent};
-        text-align:${escapeAttr(textAlign)};
-      "
-    >
-      <div class="slot-label">${slotLabel}</div>
-      <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
-      <h3
-        style="
-          font-size:${Number(page.fontSize || 24)}px;
-          font-weight:${escapeAttr(page.fontWeight || '400')};
-          margin-top:${Number(page.titleOffsetY || 0)}px;
-          margin-bottom:10px;
-        "
-      >
-        ${escapeHtml(page.title || '')}
-      </h3>
-      <p
-        style="
-          font-size:${Math.max(16, Number(page.fontSize || 24) - 4)}px;
-          font-weight:${escapeAttr(page.fontWeight || '400')};
-        "
-      >
-        ${escapeHtml(page.body || '')}
-      </p>
-    </div>
-  `;
-}
-
-  if (page.kind === 'image') {
     return `
-      <div class="print-page image-page">
-        <div class="slot-label">${slotLabel}</div>
-        <div class="page-meta">${pageMeta} · 이미지 페이지</div>
-        <div class="image-stage">
-          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />` : `<div class="empty">이미지 없음</div>`}
+      <div class="print-page text-page">
+        <div
+          style="
+            height:100%;
+            display:flex;
+            flex-direction:column;
+            justify-content:${justifyContent};
+            box-sizing:border-box;
+            ${gutterStyle}
+          "
+        >
+          <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
+          <h3
+            style="
+              font-size:${Number(page.fontSize || 24)}px;
+              font-weight:${escapeAttr(page.fontWeight || '400')};
+              text-align:${escapeAttr(titleAlign)};
+              margin-top:${Number(page.titleOffsetY || 0)}px;
+              margin-bottom:10px;
+            "
+          >
+            ${escapeHtml(page.title || '')}
+          </h3>
+          <p
+            style="
+              font-size:${Math.max(16, Number(page.fontSize || 24) - 4)}px;
+              font-weight:${escapeAttr(page.fontWeight || '400')};
+              text-align:${escapeAttr(textAlign)};
+              margin:0;
+            "
+          >
+            ${escapeHtml(page.body || '').replace(/\n/g, '<br />')}
+          </p>
         </div>
       </div>
     `;
   }
 
- if (page.kind === 'blank' && page.title === '뒷표지') {
+  if (page.kind === 'image') {
+    const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
+    const gutterStyle = String(slotLabel || '').includes('왼쪽')
+      ? `padding-right:${gutterMm}mm;`
+      : String(slotLabel || '').includes('오른쪽')
+        ? `padding-left:${gutterMm}mm;`
+        : '';
+
+    return `
+      <div class="print-page image-page">
+        <div style="height:100%; box-sizing:border-box; ${gutterStyle}">
+          <div class="page-meta">${pageMeta} · 이미지 페이지</div>
+          <div class="image-stage">
+            ${
+              page.imageSrc
+                ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />`
+                : `<div class="empty">이미지 없음</div>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (page.kind === 'blank' && page.title === '뒷표지') {
+    return `
+      <div
+        class="print-page blank-page"
+        style="
+          justify-content:flex-end;
+          align-items:flex-end;
+          padding:6mm 8mm 8mm 8mm;
+        "
+      >
+        ${
+          page.authorName
+            ? `<div style="font-size:14px; font-weight:700; color:#111827;">${escapeHtml(page.authorName)}</div>`
+            : ''
+        }
+      </div>
+    `;
+  }
+
   return `
-    <div
-      class="print-page blank-page"
-      style="
-        justify-content: flex-end;
-        align-items: flex-end;
-        padding: 6mm 8mm 8mm 8mm;
-      "
-    >
-      ${
-        page.authorName
-          ? `<div style="font-size:14px; font-weight:700; color:#111827;">${escapeHtml(page.authorName)}</div>`
-          : ''
-      }
+    <div class="print-page blank-page">
+      <div class="page-meta">${pageMeta}</div>
+      <div class="empty">${escapeHtml(page.title || '빈 페이지')}</div>
     </div>
   `;
-}
-
-return `
-  <div class="print-page blank-page">
-    <div class="slot-label">${slotLabel}</div>
-    <div class="page-meta">${pageMeta}</div>
-    <div class="empty">${escapeHtml(page.title || '빈 페이지')}</div>
-  </div>
-`;
-
 }
 
 function fileToDataUrl(file) {

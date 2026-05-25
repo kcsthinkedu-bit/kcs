@@ -332,16 +332,16 @@ function renderEditor() {
     );
 
     bindImeSafeTextField(
-      coverSubtitleInput,
-      () => {
-        state.book.cover.subtitle = coverSubtitleInput.value;
-      },
-      () => {
-        ();
-        renderTeacherPanels();
-        syncCoverMeta();
-      }
-    );
+  coverSubtitleInput,
+  () => {
+    state.book.cover.subtitle = coverSubtitleInput.value;
+  },
+  () => {
+    renderPreview();
+    renderTeacherPanels();
+    syncCoverMeta();
+  }
+);
 
     coverImageInput.addEventListener('change', async (event) => {
       const file = event.target.files && event.target.files[0];

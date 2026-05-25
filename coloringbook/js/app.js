@@ -445,7 +445,7 @@ function renderEditor() {
       spread.leftBody = spreadBodyInput.value;
     },
     () => {
-      ();
+      renderPreview();
       renderNavigation();
       renderBookPreviewList();
       renderTeacherPanels();

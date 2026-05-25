@@ -1436,7 +1436,7 @@ function buildLogicalPages() {
   });
 
   state.book.spreads.forEach((spread) => {
-    const printGutterMm = Math.round(Math.max(0, Number(spread.leftInnerGutter || 24)) * 0.25 * 10) / 10;
+    const printGutterMm = Math.round(Math.max(0, Number(spread.leftInnerGutter || 24)) * 0.5 * 10) / 10;
 
     pages.push({
       pageNo: pages.length + 1,
@@ -1515,7 +1515,7 @@ function openPrintWindow() {
   // @page margin 5mm 기준 실제 인쇄 가능 영역(mm)
   const contentWidthMm = paper === 'B4' ? 343 : 287;
   const contentHeightMm = paper === 'B4' ? 240 : 200;
-  const gapMm = 3;
+  const gapMm = 10;
   const slotWidthMm = (contentWidthMm - gapMm) / 2;
 
   const html = `<!DOCTYPE html>
@@ -1829,17 +1829,18 @@ function renderPrintPage(page, slotLabel) {
   const pageMeta = page.pageNo ? `책 페이지 ${page.pageNo}` : '보조 페이지';
 
   if (page.kind === 'cover') {
-    return `
-      <div class="print-page cover-page">
-        <div class="page-meta">${pageMeta} · 표지</div>
-        <h3>${escapeHtml(page.title || '표지')}</h3>
-        <p>${escapeHtml(page.subtitle || '')}</p>
-        <div class="cover-image-box">
-          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(-50%, -50%) scale(1);" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
-        </div>
+  return `
+    <div class="print-page cover-page">
+      <div class="page-meta">${pageMeta} · 표지</div>
+      <h3 style="text-align:center;">${escapeHtml(page.title || '표지')}</h3>
+      <p style="text-align:center;">${escapeHtml(page.subtitle || '')}</p>
+      <div class="cover-image-box">
+        ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(-50%, -50%) scale(1);" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
       </div>
-    `;
-  }
+    </div>
+  `;
+}
+
 
   if (page.kind === 'text') {
     const justifyContent =

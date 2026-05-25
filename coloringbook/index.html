@@ -148,100 +148,122 @@
   </template>
 
   <template id="spreadEditorTemplate">
-    <div class="editor-grid double">
-      <section class="card-block">
-        <h3>왼쪽 페이지 텍스트</h3>
-        <div class="editor-toolbar">
-          <button id="prevSpreadBtn" class="toolbar-btn" type="button">이전 펼침</button>
-          <button id="nextSpreadBtn" class="toolbar-btn" type="button">다음 펼침</button>
-          <button id="moveSpreadUpBtn" class="toolbar-btn teacher-only-control" type="button">위로 이동</button>
-          <button id="moveSpreadDownBtn" class="toolbar-btn teacher-only-control" type="button">아래로 이동</button>
-          <button id="duplicateSpreadBtn" class="toolbar-btn" type="button">복제</button>
-          <button id="deleteSpreadBtn" class="toolbar-btn danger" type="button">삭제</button>
-        </div>
+  <div class="editor-grid double">
+    <section class="card-block">
+      <h3>왼쪽 페이지 텍스트</h3>
+      <div class="editor-toolbar">
+        <button id="prevSpreadBtn" class="toolbar-btn" type="button">이전 펼침</button>
+        <button id="nextSpreadBtn" class="toolbar-btn" type="button">다음 펼침</button>
+        <button id="moveSpreadUpBtn" class="toolbar-btn teacher-only-control" type="button">위로 이동</button>
+        <button id="moveSpreadDownBtn" class="toolbar-btn teacher-only-control" type="button">아래로 이동</button>
+        <button id="duplicateSpreadBtn" class="toolbar-btn" type="button">복제</button>
+        <button id="deleteSpreadBtn" class="toolbar-btn danger" type="button">삭제</button>
+      </div>
+
+      <label class="field">
+        페이지 제목
+        <input id="spreadTitleInput" type="text" placeholder="예: 벚꽃 길" />
+      </label>
+
+      <label class="field">
+        본문 텍스트
+        <textarea id="spreadBodyInput" rows="10" placeholder="왼쪽 페이지에 들어갈 글을 입력하거나 붙여넣으세요."></textarea>
+      </label>
+
+      <div id="spreadBodyMeta" class="field-meta"></div>
+
+      <div class="inline-fields">
         <label class="field">
-          페이지 제목
-          <input id="spreadTitleInput" type="text" placeholder="예: 벚꽃 길" />
+          글자 크기
+          <input id="fontSizeInput" type="number" min="16" max="64" step="1" />
         </label>
+
         <label class="field">
-          본문 텍스트
-          <textarea id="spreadBodyInput" rows="10" placeholder="왼쪽 페이지에 들어갈 글을 입력하거나 붙여넣으세요."></textarea>
+          글자 굵기
+          <select id="fontWeightInput">
+            <option value="400">보통</option>
+            <option value="700">굵게</option>
+            <option value="800">아주 굵게</option>
+          </select>
         </label>
-        <div id="spreadBodyMeta" class="field-meta"></div>
 
-        <div class="inline-fields">
-  <label class="field">
-    글자 크기
-    <input id="fontSizeInput" type="number" min="16" max="64" step="1" />
-  </label>
-
-  <label class="field">
-    글자 굵기
-    <select id="fontWeightInput">
-      <option value="400">보통</option>
-      <option value="700">굵게</option>
-      <option value="800">아주 굵게</option>
-    </select>
-  </label>
-
-  <label class="field">
-    좌우 정렬
-    <select id="textAlignInput">
-      <option value="left">왼쪽</option>
-      <option value="center">가운데</option>
-      <option value="right">오른쪽</option>
-    </select>
-  </label>
-
-  <label class="field">
-    상하 정렬
-    <select id="verticalAlignInput">
-      <option value="top">위쪽</option>
-      <option value="center">가운데</option>
-      <option value="bottom">아래쪽</option>
-    </select>
-  </label>
-
-  <label class="field">
-    제목 아래로 이동
-    <input id="titleOffsetInput" type="number" min="0" max="200" step="2" value="0" />
-  </label>
-</div>
-
-      </section>
-
-      <section class="card-block">
-        <h3>오른쪽 페이지 이미지</h3>
-        <label class="file-drop">
-          이미지 파일 넣기
-          <input id="spreadImageInput" type="file" accept="image/*" />
+        <label class="field">
+          제목 정렬
+          <select id="titleAlignInput">
+            <option value="left">왼쪽</option>
+            <option value="center">가운데</option>
+            <option value="right">오른쪽</option>
+          </select>
         </label>
-        <div id="spreadPasteZone" class="paste-zone" tabindex="0">여기에 클릭 후 Ctrl+V로 이미지를 붙여넣으세요.</div>
-        <button id="removeSpreadImageBtn" class="ghost-btn block" type="button">이미지 삭제</button>
-        <div id="spreadImageMeta" class="field-meta"></div>
 
-        <div class="inline-fields teacher-only-control">
-          <label class="field">
-            크기 배율
-            <input id="imageScaleInput" type="number" min="0.2" max="3" step="0.1" />
-          </label>
-          <label class="field">
-            X 위치
-            <input id="imageXInput" type="number" min="-400" max="400" step="1" />
-          </label>
-          <label class="field">
-            Y 위치
-            <input id="imageYInput" type="number" min="-400" max="400" step="1" />
-          </label>
-        </div>
+        <label class="field">
+          본문 정렬
+          <select id="textAlignInput">
+            <option value="left">왼쪽</option>
+            <option value="center">가운데</option>
+            <option value="right">오른쪽</option>
+          </select>
+        </label>
 
-        <div class="quick-adjust teacher-only-control">
-          <button id="centerImageBtn" class="toolbar-btn" type="button">이미지 중앙 정렬</button>
-          <button id="resetImageBtn" class="toolbar-btn" type="button">배율/위치 초기화</button>
-        </div>
-      </section>
-    </div>
-  </template>
+        <label class="field">
+          상하 정렬
+          <select id="verticalAlignInput">
+            <option value="top">위쪽</option>
+            <option value="center">가운데</option>
+            <option value="bottom">아래쪽</option>
+          </select>
+        </label>
+
+        <label class="field">
+          제목 아래로 이동
+          <input id="titleOffsetInput" type="number" min="0" max="200" step="2" value="0" />
+        </label>
+
+        <label class="field">
+          접는선 여백
+          <input id="innerGutterInput" type="number" min="0" max="80" step="2" value="24" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card-block">
+      <h3>오른쪽 페이지 이미지</h3>
+
+      <label class="file-drop">
+        이미지 파일 넣기
+        <input id="spreadImageInput" type="file" accept="image/*" />
+      </label>
+
+      <div id="spreadPasteZone" class="paste-zone" tabindex="0">여기에 클릭 후 Ctrl+V로 이미지를 붙여넣으세요.</div>
+
+      <button id="removeSpreadImageBtn" class="ghost-btn block" type="button">이미지 삭제</button>
+
+      <div id="spreadImageMeta" class="field-meta"></div>
+
+      <div class="inline-fields teacher-only-control">
+        <label class="field">
+          크기 배율
+          <input id="imageScaleInput" type="number" min="0.2" max="3" step="0.1" />
+        </label>
+
+        <label class="field">
+          X 위치
+          <input id="imageXInput" type="number" min="-400" max="400" step="1" />
+        </label>
+
+        <label class="field">
+          Y 위치
+          <input id="imageYInput" type="number" min="-400" max="400" step="1" />
+        </label>
+      </div>
+
+      <div class="quick-adjust teacher-only-control">
+        <button id="centerImageBtn" class="toolbar-btn" type="button">이미지 중앙 정렬</button>
+        <button id="resetImageBtn" class="toolbar-btn" type="button">배율/위치 초기화</button>
+      </div>
+    </section>
+  </div>
+</template>
 
   <div id="submitModal" class="submit-modal" hidden>
     <div class="submit-backdrop" data-submit-close="true"></div>

@@ -1513,9 +1513,9 @@ function openPrintWindow() {
   const pageSizeCss = `${paper} landscape`;
 
   // @page margin 5mm 기준 실제 인쇄 가능 영역(mm)
-  const contentWidthMm = paper === 'B4' ? 343 : 287;
-  const contentHeightMm = paper === 'B4' ? 240 : 200;
-  const gapMm = 10;
+  const contentWidthMm = paper === 'B4' ? 353 : 297;
+  const contentHeightMm = paper === 'B4' ? 250 : 210;
+  const gapMm = 6;
   const slotWidthMm = (contentWidthMm - gapMm) / 2;
 
   const html = `<!DOCTYPE html>

@@ -605,50 +605,64 @@ function renderPreview() {
   const bodyStats = getTextStats(spread.leftBody);
   const wrap = document.createElement('div');
   wrap.className = 'preview-spread';
+
+  const titleAlign = spread.leftTitleAlign || spread.leftTextAlign || 'left';
+  const bodyAlign = spread.leftTextAlign || 'left';
+  const previewGutterPx = Math.max(0, Number(spread.leftInnerGutter || 24));
+
   wrap.innerHTML = `
     <div class="preview-caption">펼침 ${spreadIndex + 1} · 본문 ${bodyStats.chars}자 · ${spread.rightImage ? '이미지 있음' : '이미지 없음'}</div>
     <div class="preview-spread-pages">
       <div class="preview-page">
-  <div
-    class="preview-left-inner"
-    style="
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: ${
-        spread.leftVerticalAlign === 'center'
-          ? 'center'
-          : spread.leftVerticalAlign === 'bottom'
-            ? 'flex-end'
-            : 'flex-start'
-      };
-      text-align: ${escapeAttr(spread.leftTextAlign || 'left')};
-    "
-  >
-    <h3
-      style="
-        font-size:${Number(spread.leftFontSize || 24)}px;
-        font-weight:${escapeAttr(spread.leftFontWeight || '400')};
-        margin-top:${Number(spread.leftTitleOffsetY || 0)}px;
-        margin-bottom:10px;
-      "
-    >
-      ${escapeHtml(spread.leftTitle || '제목 없음')}
-    </h3>
-    <p
-      style="
-        font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px;
-        font-weight:${escapeAttr(spread.leftFontWeight || '400')};
-      "
-    >
-      ${escapeHtml(spread.leftBody || '').replace(/\n/g, '<br />')}
-    </p>
-  </div>
-</div>
+        <div
+          class="preview-left-inner"
+          style="
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: ${
+              spread.leftVerticalAlign === 'center'
+                ? 'center'
+                : spread.leftVerticalAlign === 'bottom'
+                  ? 'flex-end'
+                  : 'flex-start'
+            };
+            padding-left: 12px;
+            padding-right: ${previewGutterPx}px;
+            box-sizing: border-box;
+          "
+        >
+          <h3
+            style="
+              font-size:${Number(spread.leftFontSize || 24)}px;
+              font-weight:${escapeAttr(spread.leftFontWeight || '400')};
+              text-align:${escapeAttr(titleAlign)};
+              margin-top:${Number(spread.leftTitleOffsetY || 0)}px;
+              margin-bottom:10px;
+            "
+          >
+            ${escapeHtml(spread.leftTitle || '제목 없음')}
+          </h3>
+          <p
+            style="
+              font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px;
+              font-weight:${escapeAttr(spread.leftFontWeight || '400')};
+              text-align:${escapeAttr(bodyAlign)};
+              margin:0;
+            "
+          >
+            ${escapeHtml(spread.leftBody || '').replace(/\n/g, '<br />')}
+          </p>
+        </div>
+      </div>
 
-      <div class="preview-page">
+      <div class="preview-page" style="padding-left:${previewGutterPx}px; box-sizing:border-box;">
         <div class="preview-image-stage">
-          ${spread.rightImage ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />` : `<div class="preview-empty">오른쪽 페이지 이미지가 아직 없습니다.<br />파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.</div>`}
+          ${
+            spread.rightImage
+              ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />`
+              : `<div class="preview-empty">오른쪽 페이지 이미지가 아직 없습니다.<br />파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.</div>`
+          }
         </div>
       </div>
     </div>

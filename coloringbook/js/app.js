@@ -1526,7 +1526,7 @@ function openPrintWindow() {
     <style>
       @page {
         size: ${pageSizeCss};
-        margin: 5mm;
+        margin: 0;
       }
 
       * {
@@ -1692,8 +1692,8 @@ function openPrintWindow() {
         position: absolute;
         top: 50%;
         left: 50%;
-        max-width: calc(100% - 8mm);
-        max-height: calc(100% - 8mm);
+        max-width: calc(100% - 2mm);
+        max-height: calc(100% - 2mm);
         transform-origin: center center;
       }
 

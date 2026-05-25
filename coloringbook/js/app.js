@@ -1825,7 +1825,7 @@ function renderPrintPage(page, slotLabel) {
 
   const pageMeta = page.pageNo ? `책 페이지 ${page.pageNo}` : '보조 페이지';
 
-  if (page.kind === 'cover') {
+  if ( === 'cover') {
     return `
       <div class="print-page cover-page">
         <div class="page-meta">${pageMeta} · 표지</div>
@@ -1895,28 +1895,36 @@ function renderPrintPage(page, slotLabel) {
   }
 
   if (page.kind === 'image') {
-    const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
-    const gutterStyle = String(slotLabel || '').includes('왼쪽')
-      ? `padding-right:${gutterMm}mm;`
-      : String(slotLabel || '').includes('오른쪽')
-        ? `padding-left:${gutterMm}mm;`
-        : '';
+  const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
+  const gutterStyle = String(slotLabel || '').includes('왼쪽')
+    ? `padding-right:${gutterMm}mm;`
+    : String(slotLabel || '').includes('오른쪽')
+      ? `padding-left:${gutterMm}mm;`
+      : '';
 
-    return `
-      <div class="print-page image-page">
-        <div style="height:100%; box-sizing:border-box; ${gutterStyle}">
-          <div class="page-meta">${pageMeta} · 이미지 페이지</div>
-          <div class="image-stage">
-            ${
-              page.imageSrc
-                ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />`
-                : `<div class="empty">이미지 없음</div>`
-            }
-          </div>
+  return `
+    <div class="print-page image-page">
+      <div
+        style="
+          height:100%;
+          display:flex;
+          flex-direction:column;
+          box-sizing:border-box;
+          ${gutterStyle}
+        "
+      >
+        <div class="page-meta">${page.pageNo ? `책 페이지 ${page.pageNo}` : '보조 페이지'} · 이미지 페이지</div>
+        <div class="image-stage" style="flex:1 1 auto; min-height:0; position:relative; overflow:hidden;">
+          ${
+            page.imageSrc
+              ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />`
+              : `<div class="empty">이미지 없음</div>`
+          }
         </div>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
 
   if (page.kind === 'blank' && page.title === '뒷표지') {
     return `

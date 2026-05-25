@@ -1433,17 +1433,21 @@ function buildLogicalPages() {
   });
 
   state.book.spreads.forEach((spread) => {
+    const printGutterMm = Math.round(Math.max(0, Number(spread.leftInnerGutter || 24)) * 0.25 * 10) / 10;
+
     pages.push({
-  pageNo: pages.length + 1,
-  kind: 'text',
-  title: spread.leftTitle,
-  body: spread.leftBody,
-  fontSize: spread.leftFontSize,
-  fontWeight: spread.leftFontWeight,
-  textAlign: spread.leftTextAlign,
-  verticalAlign: spread.leftVerticalAlign,
-  titleOffsetY: spread.leftTitleOffsetY
-});
+      pageNo: pages.length + 1,
+      kind: 'text',
+      title: spread.leftTitle,
+      body: spread.leftBody,
+      fontSize: spread.leftFontSize,
+      fontWeight: spread.leftFontWeight,
+      titleAlign: spread.leftTitleAlign || spread.leftTextAlign || 'left',
+      textAlign: spread.leftTextAlign || 'left',
+      verticalAlign: spread.leftVerticalAlign || 'top',
+      titleOffsetY: spread.leftTitleOffsetY || 0,
+      innerGutterMm: printGutterMm
+    });
 
     pages.push({
       pageNo: pages.length + 1,
@@ -1452,24 +1456,24 @@ function buildLogicalPages() {
       scale: spread.rightImageScale,
       x: spread.rightImageX,
       y: spread.rightImageY,
-      title: spread.leftTitle + ' 이미지'
+      title: spread.leftTitle + ' 이미지',
+      innerGutterMm: printGutterMm
     });
   });
 
   const backCoverStudentName = normalizeString(
-  (state.book.submission && state.book.submission.studentName) ||
-  (dom.submitStudentNameInput && dom.submitStudentNameInput.value) ||
-  '',
-  ''
-).trim();
+    (state.book.submission && state.book.submission.studentName) ||
+    (dom.submitStudentNameInput && dom.submitStudentNameInput.value) ||
+    '',
+    ''
+  ).trim();
 
-pages.push({
-  pageNo: pages.length + 1,
-  kind: 'blank',
-  title: '뒷표지',
-  authorName: backCoverStudentName
-});
-
+  pages.push({
+    pageNo: pages.length + 1,
+    kind: 'blank',
+    title: '뒷표지',
+    authorName: backCoverStudentName
+  });
 
   while (pages.length % 4 !== 0) {
     pages.push({

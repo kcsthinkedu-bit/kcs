@@ -5,6 +5,8 @@ const REVIEW_SAVE_ENDPOINT = '/api/submissions/review-save';
 const DEFAULT_INNER_GUTTER = 32;
 const DEFAULT_TEXT_FONT = 'notoSans';
 const DEFAULT_LINE_HEIGHT = 1.55;
+const B4_MIN_IMAGE_SCALE = 1.18;
+const B4_TEXT_SCALE = 1.12;
 const TEXT_FONT_STACKS = {
   notoSans: "'Noto Sans KR', 'Malgun Gothic', sans-serif",
   nanumGothic: "'Nanum Gothic', 'Noto Sans KR', sans-serif",
@@ -171,7 +173,8 @@ function createSpread(index) {
     rightImage: '',
     rightImageScale: 1,
     rightImageX: 0,
-    rightImageY: 0
+    rightImageY: 0,
+    rightImageRotation: 0
   };
 }
 
@@ -419,6 +422,9 @@ function renderEditor() {
   const spreadPasteZone = document.getElementById('spreadPasteZone');
   const removeSpreadImageBtn = document.getElementById('removeSpreadImageBtn');
   const spreadImageMeta = document.getElementById('spreadImageMeta');
+  const imageRotationInput = document.getElementById('imageRotationInput');
+  const rotateImageLeftBtn = document.getElementById('rotateImageLeftBtn');
+  const rotateImageRightBtn = document.getElementById('rotateImageRightBtn');
   const imageScaleInput = document.getElementById('imageScaleInput');
   const imageXInput = document.getElementById('imageXInput');
   const imageYInput = document.getElementById('imageYInput');
@@ -440,19 +446,24 @@ function renderEditor() {
   if (bodyIndentInput) bodyIndentInput.value = spread.leftBodyIndent || 0;
   if (leadScaleInput) leadScaleInput.value = String(normalizeLeadScale(spread.leftLeadScale));
   if (innerGutterInput) innerGutterInput.value = spread.leftInnerGutter ?? DEFAULT_INNER_GUTTER;
+  if (imageRotationInput) imageRotationInput.value = String(normalizeImageRotation(spread.rightImageRotation));
   imageScaleInput.value = spread.rightImageScale;
   imageXInput.value = spread.rightImageX;
   imageYInput.value = spread.rightImageY;
 
   const syncSpreadMeta = () => {
     const bodyStats = getTextStats(spread.leftBody);
+    const rotation = normalizeImageRotation(spread.rightImageRotation);
     spreadBodyMeta.textContent = `본문 ${bodyStats.chars}자 · ${Math.max(bodyStats.lines, spread.leftBody ? 1 : 0)}줄`;
-    spreadImageMeta.textContent = buildImageStatusText(spread.rightImage, spread.rightImageScale, spread.rightImageX, spread.rightImageY);
+    spreadImageMeta.textContent = buildImageStatusText(spread.rightImage, spread.rightImageScale, spread.rightImageX, spread.rightImageY, rotation);
     prevSpreadBtn.disabled = spreadIndex <= 0;
     nextSpreadBtn.disabled = spreadIndex >= state.book.spreads.length - 1;
     moveSpreadUpBtn.disabled = spreadIndex <= 0;
     moveSpreadDownBtn.disabled = spreadIndex >= state.book.spreads.length - 1;
     removeSpreadImageBtn.disabled = !spread.rightImage;
+    if (imageRotationInput) imageRotationInput.disabled = !spread.rightImage;
+    if (rotateImageLeftBtn) rotateImageLeftBtn.disabled = !spread.rightImage;
+    if (rotateImageRightBtn) rotateImageRightBtn.disabled = !spread.rightImage;
     centerImageBtn.disabled = !spread.rightImage;
     resetImageBtn.disabled = !spread.rightImage;
     deleteSpreadBtn.disabled = state.book.spreads.length <= 1;
@@ -603,6 +614,35 @@ function renderEditor() {
     renderAll();
   });
 
+  if (imageRotationInput) {
+    imageRotationInput.addEventListener('change', () => {
+      spread.rightImageRotation = normalizeImageRotation(imageRotationInput.value);
+      renderPreview();
+      renderTeacherPanels();
+      syncSpreadMeta();
+    });
+  }
+
+  if (rotateImageLeftBtn) {
+    rotateImageLeftBtn.addEventListener('click', () => {
+      spread.rightImageRotation = rotateImage(spread.rightImageRotation, -90);
+      if (imageRotationInput) imageRotationInput.value = String(spread.rightImageRotation);
+      renderPreview();
+      renderTeacherPanels();
+      syncSpreadMeta();
+    });
+  }
+
+  if (rotateImageRightBtn) {
+    rotateImageRightBtn.addEventListener('click', () => {
+      spread.rightImageRotation = rotateImage(spread.rightImageRotation, 90);
+      if (imageRotationInput) imageRotationInput.value = String(spread.rightImageRotation);
+      renderPreview();
+      renderTeacherPanels();
+      syncSpreadMeta();
+    });
+  }
+
   imageScaleInput.addEventListener('input', () => {
     spread.rightImageScale = toNumber(imageScaleInput.value, 1);
     renderPreview();
@@ -638,9 +678,11 @@ function renderEditor() {
     spread.rightImageScale = 1;
     spread.rightImageX = 0;
     spread.rightImageY = 0;
+    spread.rightImageRotation = 0;
     imageScaleInput.value = 1;
     imageXInput.value = 0;
     imageYInput.value = 0;
+    if (imageRotationInput) imageRotationInput.value = '0';
     renderPreview();
     renderTeacherPanels();
     syncSpreadMeta();
@@ -695,6 +737,7 @@ function renderPreview() {
   const textOffsetY = toNumber(spread.leftTextOffsetY, 0);
   const bodyIndent = Math.max(0, toNumber(spread.leftBodyIndent, 0));
   const leadScale = normalizeLeadScale(spread.leftLeadScale);
+  const imageRotation = normalizeImageRotation(spread.rightImageRotation);
 
   wrap.innerHTML = `
     <div class="preview-caption">펼침 ${spreadIndex + 1} · 본문 ${bodyStats.chars}자 · ${spread.rightImage ? '이미지 있음' : '이미지 없음'}</div>
@@ -750,7 +793,7 @@ function renderPreview() {
         <div class="preview-image-stage" style="left:${previewGutterPx}px;">
           ${
             spread.rightImage
-              ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />`
+              ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) rotate(${imageRotation}deg) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />`
               : `<div class="preview-empty">오른쪽 페이지 이미지가 아직 없습니다.<br />파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.</div>`
           }
         </div>
@@ -1379,7 +1422,7 @@ function bindTopEvents() {
       const count = resetAllImages();
       if (count) {
         renderAll();
-        alert(`${count}개의 이미지 배율과 위치를 초기화했습니다.`);
+        alert(`${count}개의 이미지 배율, 위치, 회전을 초기화했습니다.`);
       }
     });
   }
@@ -1451,6 +1494,15 @@ function normalizeLeadScale(value) {
   return Math.round(scale * 100) / 100;
 }
 
+function normalizeImageRotation(value) {
+  const rotation = ((Math.round(toNumber(value, 0) / 90) * 90) % 360 + 360) % 360;
+  return [0, 90, 180, 270].includes(rotation) ? rotation : 0;
+}
+
+function rotateImage(value, delta) {
+  return normalizeImageRotation(normalizeImageRotation(value) + delta);
+}
+
 function normalizeCover(cover) {
   const safeCover = isPlainObject(cover) ? cover : {};
   return {
@@ -1487,7 +1539,8 @@ function normalizeSpread(item, index) {
     rightImage: typeof safeItem.rightImage === 'string' ? safeItem.rightImage : '',
     rightImageScale: toNumber(safeItem.rightImageScale, 1),
     rightImageX: toNumber(safeItem.rightImageX, 0),
-    rightImageY: toNumber(safeItem.rightImageY, 0)
+    rightImageY: toNumber(safeItem.rightImageY, 0),
+    rightImageRotation: normalizeImageRotation(safeItem.rightImageRotation)
   };
 }
 
@@ -1592,6 +1645,7 @@ function buildLogicalPages() {
       scale: spread.rightImageScale,
       x: spread.rightImageX,
       y: spread.rightImageY,
+      rotation: spread.rightImageRotation,
       title: spread.leftTitle + ' 이미지',
       innerGutterMm: printGutterMm
     });
@@ -1933,7 +1987,7 @@ function openPrintWindow() {
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음으로 인쇄하세요. B4 선택 시 프린터 용지도 B4로 맞춰야 크게 나옵니다.</div>
+      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음으로 인쇄하세요. B4는 그림과 글을 자동 확대하지만, 프린터 용지도 B4로 맞춰야 크게 나옵니다.</div>
     </div>
 
     <div class="print-stack">
@@ -2015,7 +2069,8 @@ function renderPrintPage(page, slotLabel) {
     const textOffsetY = toNumber(page.textOffsetY, 0);
     const bodyIndent = Math.max(0, toNumber(page.bodyIndent, 0));
     const leadScale = normalizeLeadScale(page.leadScale);
-    const titleFontSize = Number(page.fontSize || 24);
+    const printTextScale = state.book.paper === 'B4' ? B4_TEXT_SCALE : 1;
+    const titleFontSize = Number(page.fontSize || 24) * printTextScale;
     const bodyFontSize = Math.max(16, titleFontSize - 4);
     const gutterStyle = String(slotLabel || '').includes('왼쪽')
       ? `padding-right:${gutterMm}mm;`
@@ -2068,6 +2123,8 @@ function renderPrintPage(page, slotLabel) {
 
   if (page.kind === 'image') {
     const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
+    const imageScale = Math.max(Number(page.scale || 1), state.book.paper === 'B4' ? B4_MIN_IMAGE_SCALE : 1);
+    const imageRotation = normalizeImageRotation(page.rotation);
     const gutterStyle = String(slotLabel || '').includes('왼쪽')
       ? `padding-right:${gutterMm}mm;`
       : String(slotLabel || '').includes('오른쪽')
@@ -2089,7 +2146,7 @@ function renderPrintPage(page, slotLabel) {
           <div class="image-stage" style="flex:1 1 auto; min-height:0; position:relative; overflow:hidden;">
             ${
               page.imageSrc
-                ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) scale(${Number(page.scale || 1)});" alt="이미지 페이지" />`
+                ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) rotate(${imageRotation}deg) scale(${imageScale});" alt="이미지 페이지" />`
                 : `<div class="empty">이미지 없음</div>`
             }
           </div>
@@ -2244,11 +2301,11 @@ function buildSpreadSummary(spread) {
   return `${title} · 본문 ${bodyStats.chars}자 · ${imageLabel}`;
 }
 
-function buildImageStatusText(imageSrc, scale, x, y) {
+function buildImageStatusText(imageSrc, scale, x, y, rotation = 0) {
   if (!imageSrc) {
     return '이미지가 아직 없습니다. 파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.';
   }
-  return `이미지 준비됨 · 배율 ${Number(scale || 1).toFixed(1)} · X ${Number(x || 0)} · Y ${Number(y || 0)}`;
+  return `이미지 준비됨 · 배율 ${Number(scale || 1).toFixed(1)} · X ${Number(x || 0)} · Y ${Number(y || 0)} · 회전 ${normalizeImageRotation(rotation)}도`;
 }
 
 function moveActiveSpread(delta) {
@@ -2310,6 +2367,7 @@ function resetAllImages() {
     spread.rightImageScale = 1;
     spread.rightImageX = 0;
     spread.rightImageY = 0;
+    spread.rightImageRotation = 0;
     count += 1;
   });
   return count;

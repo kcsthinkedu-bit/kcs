@@ -80,7 +80,7 @@
           <div class="teacher-tools">
             <button id="jumpFirstIssueBtn" class="toolbar-btn" type="button">첫 문제 페이지로 이동</button>
             <button id="centerAllImagesBtn" class="toolbar-btn" type="button">모든 이미지 중앙 정렬</button>
-            <button id="resetAllImagesBtn" class="toolbar-btn" type="button">모든 이미지 위치 초기화</button>
+            <button id="resetAllImagesBtn" class="toolbar-btn" type="button">모든 이미지 배율/위치/회전 초기화</button>
             <button id="enlargeAllImagesBtn" class="toolbar-btn" type="button">모든 이미지 크게 맞춤</button>
             <button id="setAllTextNormalBtn" class="toolbar-btn" type="button">전체 글자 기본 크기</button>
             <button id="setAllTextLargeBtn" class="toolbar-btn" type="button">전체 글자 크게</button>
@@ -287,6 +287,23 @@
 
       <div id="spreadImageMeta" class="field-meta"></div>
 
+      <div class="inline-fields">
+        <label class="field">
+          그림 회전
+          <select id="imageRotationInput">
+            <option value="0">회전 없음</option>
+            <option value="90">오른쪽 90도</option>
+            <option value="180">180도</option>
+            <option value="270">왼쪽 90도</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="quick-adjust">
+        <button id="rotateImageLeftBtn" class="toolbar-btn" type="button">왼쪽으로 회전</button>
+        <button id="rotateImageRightBtn" class="toolbar-btn" type="button">오른쪽으로 회전</button>
+      </div>
+
       <div class="inline-fields teacher-only-control">
         <label class="field">
           크기 배율
@@ -306,7 +323,7 @@
 
       <div class="quick-adjust teacher-only-control">
         <button id="centerImageBtn" class="toolbar-btn" type="button">이미지 중앙 정렬</button>
-        <button id="resetImageBtn" class="toolbar-btn" type="button">배율/위치 초기화</button>
+        <button id="resetImageBtn" class="toolbar-btn" type="button">배율/위치/회전 초기화</button>
       </div>
     </section>
   </div>

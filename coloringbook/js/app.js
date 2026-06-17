@@ -2,6 +2,16 @@ const BOOK_FORMAT_VERSION = 'kcs-book-v1';
 const BOOK_DOWNLOAD_FILE_NAME = 'kcs-book-project.json';
 const SUBMISSION_ENDPOINT = '/api/submissions/upload';
 const REVIEW_SAVE_ENDPOINT = '/api/submissions/review-save';
+const DEFAULT_INNER_GUTTER = 32;
+const DEFAULT_TEXT_FONT = 'notoSans';
+const DEFAULT_LINE_HEIGHT = 1.55;
+const TEXT_FONT_STACKS = {
+  notoSans: "'Noto Sans KR', 'Malgun Gothic', sans-serif",
+  nanumGothic: "'Nanum Gothic', 'Noto Sans KR', sans-serif",
+  gowunDodum: "'Gowun Dodum', 'Noto Sans KR', sans-serif",
+  malgun: "'Malgun Gothic', 'Noto Sans KR', sans-serif",
+  blackHan: "'Black Han Sans', 'Noto Sans KR', sans-serif"
+};
 
 const state = {
   mode: 'student',
@@ -119,6 +129,7 @@ const dom = {
   jumpFirstIssueBtn: document.getElementById('jumpFirstIssueBtn'),
   centerAllImagesBtn: document.getElementById('centerAllImagesBtn'),
   resetAllImagesBtn: document.getElementById('resetAllImagesBtn'),
+  enlargeAllImagesBtn: document.getElementById('enlargeAllImagesBtn'),
   setAllTextNormalBtn: document.getElementById('setAllTextNormalBtn'),
   setAllTextLargeBtn: document.getElementById('setAllTextLargeBtn'),
   teacherPreviewReport: document.getElementById('teacherPreviewReport'),
@@ -146,11 +157,17 @@ function createSpread(index) {
     leftBody: '여기에 본문 내용을 적거나 붙여넣으세요.',
     leftFontSize: 24,
     leftFontWeight: '400',
+    leftFontFamily: DEFAULT_TEXT_FONT,
+    leftLineHeight: DEFAULT_LINE_HEIGHT,
     leftTitleAlign: 'left',
     leftTextAlign: 'left',
     leftVerticalAlign: 'top',
     leftTitleOffsetY: 0,
-    leftInnerGutter: 24,
+    leftTextOffsetX: 0,
+    leftTextOffsetY: 0,
+    leftBodyIndent: 0,
+    leftLeadScale: 1,
+    leftInnerGutter: DEFAULT_INNER_GUTTER,
     rightImage: '',
     rightImageScale: 1,
     rightImageX: 0,
@@ -387,10 +404,16 @@ function renderEditor() {
   const spreadBodyMeta = document.getElementById('spreadBodyMeta');
   const fontSizeInput = document.getElementById('fontSizeInput');
   const fontWeightInput = document.getElementById('fontWeightInput');
+  const fontFamilyInput = document.getElementById('fontFamilyInput');
+  const lineHeightInput = document.getElementById('lineHeightInput');
   const titleAlignInput = document.getElementById('titleAlignInput');
   const textAlignInput = document.getElementById('textAlignInput');
   const verticalAlignInput = document.getElementById('verticalAlignInput');
   const titleOffsetInput = document.getElementById('titleOffsetInput');
+  const textOffsetXInput = document.getElementById('textOffsetXInput');
+  const textOffsetYInput = document.getElementById('textOffsetYInput');
+  const bodyIndentInput = document.getElementById('bodyIndentInput');
+  const leadScaleInput = document.getElementById('leadScaleInput');
   const innerGutterInput = document.getElementById('innerGutterInput');
   const spreadImageInput = document.getElementById('spreadImageInput');
   const spreadPasteZone = document.getElementById('spreadPasteZone');
@@ -406,11 +429,17 @@ function renderEditor() {
   spreadBodyInput.value = spread.leftBody;
   fontSizeInput.value = spread.leftFontSize;
   fontWeightInput.value = spread.leftFontWeight;
+  if (fontFamilyInput) fontFamilyInput.value = normalizeTextFont(spread.leftFontFamily);
+  if (lineHeightInput) lineHeightInput.value = String(normalizeLineHeight(spread.leftLineHeight));
   if (titleAlignInput) titleAlignInput.value = spread.leftTitleAlign || spread.leftTextAlign || 'left';
   if (textAlignInput) textAlignInput.value = spread.leftTextAlign || 'left';
   if (verticalAlignInput) verticalAlignInput.value = spread.leftVerticalAlign || 'top';
   if (titleOffsetInput) titleOffsetInput.value = spread.leftTitleOffsetY || 0;
-  if (innerGutterInput) innerGutterInput.value = spread.leftInnerGutter ?? 24;
+  if (textOffsetXInput) textOffsetXInput.value = spread.leftTextOffsetX || 0;
+  if (textOffsetYInput) textOffsetYInput.value = spread.leftTextOffsetY || 0;
+  if (bodyIndentInput) bodyIndentInput.value = spread.leftBodyIndent || 0;
+  if (leadScaleInput) leadScaleInput.value = String(normalizeLeadScale(spread.leftLeadScale));
+  if (innerGutterInput) innerGutterInput.value = spread.leftInnerGutter ?? DEFAULT_INNER_GUTTER;
   imageScaleInput.value = spread.rightImageScale;
   imageXInput.value = spread.rightImageX;
   imageYInput.value = spread.rightImageY;
@@ -466,6 +495,22 @@ function renderEditor() {
     renderTeacherPanels();
   });
 
+  if (fontFamilyInput) {
+    fontFamilyInput.addEventListener('change', () => {
+      spread.leftFontFamily = normalizeTextFont(fontFamilyInput.value);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (lineHeightInput) {
+    lineHeightInput.addEventListener('change', () => {
+      spread.leftLineHeight = normalizeLineHeight(lineHeightInput.value);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
   if (titleAlignInput) {
     titleAlignInput.addEventListener('change', () => {
       spread.leftTitleAlign = titleAlignInput.value;
@@ -498,9 +543,41 @@ function renderEditor() {
     });
   }
 
+  if (textOffsetXInput) {
+    textOffsetXInput.addEventListener('input', () => {
+      spread.leftTextOffsetX = toNumber(textOffsetXInput.value, 0);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (textOffsetYInput) {
+    textOffsetYInput.addEventListener('input', () => {
+      spread.leftTextOffsetY = toNumber(textOffsetYInput.value, 0);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (bodyIndentInput) {
+    bodyIndentInput.addEventListener('input', () => {
+      spread.leftBodyIndent = Math.max(0, toNumber(bodyIndentInput.value, 0));
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (leadScaleInput) {
+    leadScaleInput.addEventListener('change', () => {
+      spread.leftLeadScale = normalizeLeadScale(leadScaleInput.value);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
   if (innerGutterInput) {
     innerGutterInput.addEventListener('input', () => {
-      spread.leftInnerGutter = toNumber(innerGutterInput.value, 24);
+      spread.leftInnerGutter = toNumber(innerGutterInput.value, DEFAULT_INNER_GUTTER);
       renderPreview();
       renderTeacherPanels();
     });
@@ -611,7 +688,13 @@ function renderPreview() {
 
   const titleAlign = spread.leftTitleAlign || spread.leftTextAlign || 'left';
   const bodyAlign = spread.leftTextAlign || 'left';
-  const previewGutterPx = Math.max(0, Number(spread.leftInnerGutter || 24));
+  const previewGutterPx = Math.max(0, Number(spread.leftInnerGutter || DEFAULT_INNER_GUTTER));
+  const fontStack = getTextFontStack(spread.leftFontFamily);
+  const lineHeight = normalizeLineHeight(spread.leftLineHeight);
+  const textOffsetX = toNumber(spread.leftTextOffsetX, 0);
+  const textOffsetY = toNumber(spread.leftTextOffsetY, 0);
+  const bodyIndent = Math.max(0, toNumber(spread.leftBodyIndent, 0));
+  const leadScale = normalizeLeadScale(spread.leftLeadScale);
 
   wrap.innerHTML = `
     <div class="preview-caption">펼침 ${spreadIndex + 1} · 본문 ${bodyStats.chars}자 · ${spread.rightImage ? '이미지 있음' : '이미지 없음'}</div>
@@ -633,6 +716,8 @@ function renderPreview() {
             padding-left: 12px;
             padding-right: ${previewGutterPx}px;
             box-sizing: border-box;
+            font-family: ${fontStack};
+            transform: translate(${textOffsetX}px, ${textOffsetY}px);
           "
         >
           <h3
@@ -651,16 +736,18 @@ function renderPreview() {
               font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px;
               font-weight:${escapeAttr(spread.leftFontWeight || '400')};
               text-align:${escapeAttr(bodyAlign)};
+              text-indent:${bodyIndent}px;
+              line-height:${lineHeight};
               margin:0;
             "
           >
-            ${escapeHtml(spread.leftBody || '').replace(/\\n/g, '<br />')}
+            ${renderBodyContentHtml(spread.leftBody || '', leadScale)}
           </p>
         </div>
       </div>
 
-      <div class="preview-page" style="padding-left:${previewGutterPx}px; box-sizing:border-box;">
-        <div class="preview-image-stage">
+      <div class="preview-page">
+        <div class="preview-image-stage" style="left:${previewGutterPx}px;">
           ${
             spread.rightImage
               ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />`
@@ -749,6 +836,7 @@ function renderTeacherPanels() {
   dom.jumpFirstIssueBtn.disabled = !report.issues.length;
   dom.centerAllImagesBtn.disabled = report.imageReadyCount === 0;
   dom.resetAllImagesBtn.disabled = report.imageReadyCount === 0;
+  if (dom.enlargeAllImagesBtn) dom.enlargeAllImagesBtn.disabled = report.imageReadyCount === 0;
   dom.setAllTextNormalBtn.disabled = !state.book.spreads.length;
   dom.setAllTextLargeBtn.disabled = !state.book.spreads.length;
 
@@ -1296,6 +1384,16 @@ function bindTopEvents() {
     });
   }
 
+  if (dom.enlargeAllImagesBtn) {
+    dom.enlargeAllImagesBtn.addEventListener('click', () => {
+      const count = enlargeAllImages();
+      if (count) {
+        renderAll();
+        alert(`${count}개의 이미지 페이지를 크게 맞췄습니다. 인쇄 배열에서 잘리는 부분이 없는지 한 번 확인해 주세요.`);
+      }
+    });
+  }
+
   if (dom.setAllTextNormalBtn) {
     dom.setAllTextNormalBtn.addEventListener('click', () => {
       applyTextSizeToAllSpreads(24);
@@ -1330,6 +1428,29 @@ function normalizeString(value, fallback = '') {
   return String(value);
 }
 
+function normalizeTextFont(value) {
+  const key = normalizeString(value, DEFAULT_TEXT_FONT);
+  return Object.prototype.hasOwnProperty.call(TEXT_FONT_STACKS, key) ? key : DEFAULT_TEXT_FONT;
+}
+
+function getTextFontStack(value) {
+  return TEXT_FONT_STACKS[normalizeTextFont(value)] || TEXT_FONT_STACKS[DEFAULT_TEXT_FONT];
+}
+
+function normalizeLineHeight(value) {
+  const lineHeight = toNumber(value, DEFAULT_LINE_HEIGHT);
+  if (lineHeight < 1.2) return 1.2;
+  if (lineHeight > 2.2) return 2.2;
+  return Math.round(lineHeight * 100) / 100;
+}
+
+function normalizeLeadScale(value) {
+  const scale = toNumber(value, 1);
+  if (scale < 1) return 1;
+  if (scale > 1.8) return 1.8;
+  return Math.round(scale * 100) / 100;
+}
+
 function normalizeCover(cover) {
   const safeCover = isPlainObject(cover) ? cover : {};
   return {
@@ -1352,11 +1473,17 @@ function normalizeSpread(item, index) {
     leftBody: normalizeString(safeItem.leftBody, ''),
     leftFontSize: toNumber(safeItem.leftFontSize, 24),
     leftFontWeight: normalizeString(safeItem.leftFontWeight, '400'),
+    leftFontFamily: normalizeTextFont(safeItem.leftFontFamily),
+    leftLineHeight: normalizeLineHeight(safeItem.leftLineHeight),
     leftTitleAlign: ['left', 'center', 'right'].includes(titleAlign) ? titleAlign : 'left',
     leftTextAlign: ['left', 'center', 'right'].includes(textAlign) ? textAlign : 'left',
     leftVerticalAlign: ['top', 'center', 'bottom'].includes(verticalAlign) ? verticalAlign : 'top',
     leftTitleOffsetY: toNumber(safeItem.leftTitleOffsetY, 0),
-    leftInnerGutter: toNumber(safeItem.leftInnerGutter, 24),
+    leftTextOffsetX: toNumber(safeItem.leftTextOffsetX, 0),
+    leftTextOffsetY: toNumber(safeItem.leftTextOffsetY, 0),
+    leftBodyIndent: Math.max(0, toNumber(safeItem.leftBodyIndent, 0)),
+    leftLeadScale: normalizeLeadScale(safeItem.leftLeadScale),
+    leftInnerGutter: toNumber(safeItem.leftInnerGutter, DEFAULT_INNER_GUTTER),
     rightImage: typeof safeItem.rightImage === 'string' ? safeItem.rightImage : '',
     rightImageScale: toNumber(safeItem.rightImageScale, 1),
     rightImageX: toNumber(safeItem.rightImageX, 0),
@@ -1436,7 +1563,7 @@ function buildLogicalPages() {
   });
 
   state.book.spreads.forEach((spread) => {
-    const printGutterMm = Math.round(Math.max(0, Number(spread.leftInnerGutter || 24)) * 0.5 * 10) / 10;
+    const printGutterMm = Math.round(Math.max(0, Number(spread.leftInnerGutter || DEFAULT_INNER_GUTTER)) * 0.75 * 10) / 10;
 
     pages.push({
       pageNo: pages.length + 1,
@@ -1445,10 +1572,16 @@ function buildLogicalPages() {
       body: spread.leftBody,
       fontSize: spread.leftFontSize,
       fontWeight: spread.leftFontWeight,
+      fontFamily: spread.leftFontFamily,
+      lineHeight: spread.leftLineHeight,
       titleAlign: spread.leftTitleAlign || spread.leftTextAlign || 'left',
       textAlign: spread.leftTextAlign || 'left',
       verticalAlign: spread.leftVerticalAlign || 'top',
       titleOffsetY: spread.leftTitleOffsetY || 0,
+      textOffsetX: spread.leftTextOffsetX || 0,
+      textOffsetY: spread.leftTextOffsetY || 0,
+      bodyIndent: spread.leftBodyIndent || 0,
+      leadScale: spread.leftLeadScale || 1,
       innerGutterMm: printGutterMm
     });
 
@@ -1512,10 +1645,10 @@ function openPrintWindow() {
   const paper = state.book.paper === 'B4' ? 'B4' : 'A4';
   const pageSizeCss = `${paper} landscape`;
 
-  // @page margin 5mm 기준 실제 인쇄 가능 영역(mm)
   const contentWidthMm = paper === 'B4' ? 353 : 297;
   const contentHeightMm = paper === 'B4' ? 250 : 210;
-  const gapMm = 6;
+  const gapMm = 0;
+  const pagePaddingMm = paper === 'B4' ? 7 : 6;
   const slotWidthMm = (contentWidthMm - gapMm) / 2;
 
   const html = `<!DOCTYPE html>
@@ -1523,6 +1656,9 @@ function openPrintWindow() {
   <head>
     <meta charset="UTF-8" />
     <title>책 인쇄 배열</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <style>
       @page {
         size: ${pageSizeCss};
@@ -1538,7 +1674,7 @@ function openPrintWindow() {
         padding: 0;
         background: #f3f4f6;
         color: #111827;
-        font-family: Arial, sans-serif;
+        font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
       }
 
       body {
@@ -1582,6 +1718,7 @@ function openPrintWindow() {
         margin-left: auto;
         color: #64748b;
         font-size: 13px;
+        line-height: 1.5;
       }
 
       .print-stack {
@@ -1629,7 +1766,7 @@ function openPrintWindow() {
         height: ${contentHeightMm}mm;
         border: 0.3mm solid #cbd5e1;
         background: #fff;
-        padding: 4mm;
+        padding: ${pagePaddingMm}mm;
         overflow: hidden;
         position: relative;
         display: flex;
@@ -1664,18 +1801,35 @@ function openPrintWindow() {
       }
 
       .cover-page {
-        justify-content: flex-start;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 5mm;
       }
 
       .cover-image-box {
-        margin-top: 3mm;
-        flex: 1 1 auto;
         min-height: 0;
         position: relative;
         border: 0.3mm dashed #cbd5e1;
         border-radius: 2mm;
         background: #f8fafc;
         overflow: hidden;
+      }
+
+      .cover-text-box {
+        text-align: center;
+        padding: 0 2mm 1mm;
+      }
+
+      .cover-text-box h3 {
+        margin: 0 0 2mm;
+        font-size: 26px;
+        line-height: 1.18;
+      }
+
+      .cover-text-box p {
+        text-align: center;
+        font-size: 15px;
+        line-height: 1.45;
       }
 
       .image-page .image-stage {
@@ -1692,8 +1846,8 @@ function openPrintWindow() {
         position: absolute;
         top: 50%;
         left: 50%;
-        max-width: calc(100% - 2mm);
-        max-height: calc(100% - 2mm);
+        max-width: 100%;
+        max-height: 100%;
         transform-origin: center center;
       }
 
@@ -1758,7 +1912,7 @@ function openPrintWindow() {
   .print-page {
     width: ${slotWidthMm}mm !important;
     height: ${contentHeightMm}mm !important;
-    padding: 4mm !important;
+    padding: ${pagePaddingMm}mm !important;
     border: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
@@ -1779,7 +1933,7 @@ function openPrintWindow() {
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">고정 mm 레이아웃 인쇄 미리보기</div>
+      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음으로 인쇄하세요. B4 선택 시 프린터 용지도 B4로 맞춰야 크게 나옵니다.</div>
     </div>
 
     <div class="print-stack">
@@ -1832,10 +1986,12 @@ function renderPrintPage(page, slotLabel) {
   return `
     <div class="print-page cover-page">
       <div class="page-meta">${pageMeta} · 표지</div>
-      <h3 style="text-align:center;">${escapeHtml(page.title || '표지')}</h3>
-      <p style="text-align:center;">${escapeHtml(page.subtitle || '')}</p>
       <div class="cover-image-box">
         ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(-50%, -50%) scale(1);" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
+      </div>
+      <div class="cover-text-box">
+        <h3>${escapeHtml(page.title || '표지')}</h3>
+        <p>${escapeHtml(page.subtitle || '')}</p>
       </div>
     </div>
   `;
@@ -1853,6 +2009,14 @@ function renderPrintPage(page, slotLabel) {
     const textAlign = ['left', 'center', 'right'].includes(page.textAlign) ? page.textAlign : 'left';
     const titleAlign = ['left', 'center', 'right'].includes(page.titleAlign) ? page.titleAlign : textAlign;
     const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
+    const fontStack = getTextFontStack(page.fontFamily);
+    const lineHeight = normalizeLineHeight(page.lineHeight);
+    const textOffsetX = toNumber(page.textOffsetX, 0);
+    const textOffsetY = toNumber(page.textOffsetY, 0);
+    const bodyIndent = Math.max(0, toNumber(page.bodyIndent, 0));
+    const leadScale = normalizeLeadScale(page.leadScale);
+    const titleFontSize = Number(page.fontSize || 24);
+    const bodyFontSize = Math.max(16, titleFontSize - 4);
     const gutterStyle = String(slotLabel || '').includes('왼쪽')
       ? `padding-right:${gutterMm}mm;`
       : String(slotLabel || '').includes('오른쪽')
@@ -1868,13 +2032,15 @@ function renderPrintPage(page, slotLabel) {
             flex-direction:column;
             justify-content:${justifyContent};
             box-sizing:border-box;
+            font-family:${fontStack};
+            transform:translate(${textOffsetX}px, ${textOffsetY}px);
             ${gutterStyle}
           "
         >
           <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
           <h3
             style="
-              font-size:${Number(page.fontSize || 24)}px;
+              font-size:${titleFontSize}px;
               font-weight:${escapeAttr(page.fontWeight || '400')};
               text-align:${escapeAttr(titleAlign)};
               margin-top:${Number(page.titleOffsetY || 0)}px;
@@ -1885,13 +2051,15 @@ function renderPrintPage(page, slotLabel) {
           </h3>
           <p
             style="
-              font-size:${Math.max(16, Number(page.fontSize || 24) - 4)}px;
+              font-size:${bodyFontSize}px;
               font-weight:${escapeAttr(page.fontWeight || '400')};
               text-align:${escapeAttr(textAlign)};
+              text-indent:${bodyIndent}px;
+              line-height:${lineHeight};
               margin:0;
             "
           >
-            ${escapeHtml(page.body || '').replace(/\\n/g, '<br />')}
+            ${renderBodyContentHtml(page.body || '', leadScale)}
           </p>
         </div>
       </div>
@@ -2029,6 +2197,46 @@ function getTextStats(text) {
   return { chars, lines };
 }
 
+function splitLeadText(text) {
+  const source = normalizeString(text, '');
+  if (!source.trim()) return { lead: '', rest: '' };
+
+  const sentenceMatch = source.match(/^(\s*[^.!?\n。！？]{1,90}[.!?。！？])([\s\S]*)$/);
+  if (sentenceMatch) {
+    return { lead: sentenceMatch[1], rest: sentenceMatch[2] || '' };
+  }
+
+  const lineBreakIndex = source.indexOf('\n');
+  if (lineBreakIndex > 0 && lineBreakIndex <= 90) {
+    return {
+      lead: source.slice(0, lineBreakIndex),
+      rest: source.slice(lineBreakIndex)
+    };
+  }
+
+  const fallbackLength = Math.min(28, source.length);
+  return {
+    lead: source.slice(0, fallbackLength),
+    rest: source.slice(fallbackLength)
+  };
+}
+
+function renderBodyContentHtml(text, leadScale = 1) {
+  const source = normalizeString(text, '');
+  const scale = normalizeLeadScale(leadScale);
+
+  if (!source || scale <= 1.01) {
+    return escapeHtml(source).replace(/\n/g, '<br />');
+  }
+
+  const parts = splitLeadText(source);
+  if (!parts.lead) {
+    return escapeHtml(source).replace(/\n/g, '<br />');
+  }
+
+  return `<span class="lead-text" style="font-size:${scale.toFixed(2)}em; font-weight:800; line-height:1.18;">${escapeHtml(parts.lead)}</span>${escapeHtml(parts.rest).replace(/\n/g, '<br />')}`;
+}
+
 function buildSpreadSummary(spread) {
   const title = normalizeString(spread.leftTitle, '제목 없음').trim() || '제목 없음';
   const bodyStats = getTextStats(spread.leftBody);
@@ -2100,6 +2308,18 @@ function resetAllImages() {
   state.book.spreads.forEach((spread) => {
     if (!spread.rightImage) return;
     spread.rightImageScale = 1;
+    spread.rightImageX = 0;
+    spread.rightImageY = 0;
+    count += 1;
+  });
+  return count;
+}
+
+function enlargeAllImages(targetScale = 1.18) {
+  let count = 0;
+  state.book.spreads.forEach((spread) => {
+    if (!spread.rightImage) return;
+    spread.rightImageScale = Math.max(toNumber(spread.rightImageScale, 1), targetScale);
     spread.rightImageX = 0;
     spread.rightImageY = 0;
     count += 1;

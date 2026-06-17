@@ -19,7 +19,8 @@ const state = {
   mode: 'student',
   active: { type: 'cover', id: 'cover' },
   book: createInitialBook(),
-  loadedFromUrl: ''
+  loadedFromUrl: '',
+  bookFlipIndex: 0
 };
 const TEACHER_PASSWORD_STORAGE_KEY = 'kcs-teacher-password';
 
@@ -123,11 +124,14 @@ const dom = {
   editorHelp: document.getElementById('editorHelp'),
   editorRoot: document.getElementById('editorRoot'),
   currentPreview: document.getElementById('currentPreview'),
+  bookFlipPreview: document.getElementById('bookFlipPreview'),
+  bookReadinessReport: document.getElementById('bookReadinessReport'),
   bookPreviewList: document.getElementById('bookPreviewList'),
   teacherOnlySidebar: document.getElementById('teacherOnlySidebar'),
   teacherSummaryCards: document.getElementById('teacherSummaryCards'),
   teacherReadinessBox: document.getElementById('teacherReadinessBox'),
   teacherIssueList: document.getElementById('teacherIssueList'),
+  teacherPrintBookBtn: document.getElementById('teacherPrintBookBtn'),
   jumpFirstIssueBtn: document.getElementById('jumpFirstIssueBtn'),
   centerAllImagesBtn: document.getElementById('centerAllImagesBtn'),
   resetAllImagesBtn: document.getElementById('resetAllImagesBtn'),
@@ -174,7 +178,9 @@ function createSpread(index) {
     rightImageScale: 1,
     rightImageX: 0,
     rightImageY: 0,
-    rightImageRotation: 0
+    rightImageRotation: 0,
+    rightGuideVisible: true,
+    rightFrameInset: 0
   };
 }
 
@@ -428,6 +434,8 @@ function renderEditor() {
   const imageScaleInput = document.getElementById('imageScaleInput');
   const imageXInput = document.getElementById('imageXInput');
   const imageYInput = document.getElementById('imageYInput');
+  const guideVisibleInput = document.getElementById('guideVisibleInput');
+  const frameInsetInput = document.getElementById('frameInsetInput');
   const centerImageBtn = document.getElementById('centerImageBtn');
   const resetImageBtn = document.getElementById('resetImageBtn');
 
@@ -450,6 +458,8 @@ function renderEditor() {
   imageScaleInput.value = spread.rightImageScale;
   imageXInput.value = spread.rightImageX;
   imageYInput.value = spread.rightImageY;
+  if (guideVisibleInput) guideVisibleInput.value = spread.rightGuideVisible === false ? 'hide' : 'show';
+  if (frameInsetInput) frameInsetInput.value = normalizeFrameInset(spread.rightFrameInset);
 
   const syncSpreadMeta = () => {
     const bodyStats = getTextStats(spread.leftBody);
@@ -664,6 +674,24 @@ function renderEditor() {
     syncSpreadMeta();
   });
 
+  if (guideVisibleInput) {
+    guideVisibleInput.addEventListener('change', () => {
+      spread.rightGuideVisible = guideVisibleInput.value !== 'hide';
+      renderPreview();
+      renderTeacherPanels();
+      syncSpreadMeta();
+    });
+  }
+
+  if (frameInsetInput) {
+    frameInsetInput.addEventListener('input', () => {
+      spread.rightFrameInset = normalizeFrameInset(frameInsetInput.value);
+      renderPreview();
+      renderTeacherPanels();
+      syncSpreadMeta();
+    });
+  }
+
   centerImageBtn.addEventListener('click', () => {
     spread.rightImageX = 0;
     spread.rightImageY = 0;
@@ -737,7 +765,10 @@ function renderPreview() {
   const textOffsetY = toNumber(spread.leftTextOffsetY, 0);
   const bodyIndent = Math.max(0, toNumber(spread.leftBodyIndent, 0));
   const leadScale = normalizeLeadScale(spread.leftLeadScale);
-  const imageRotation = normalizeImageRotation(spread.rightImageRotation);
+  const frameInset = normalizeFrameInset(spread.rightFrameInset);
+  const imageStageLeft = previewGutterPx + frameInset;
+  const guideClass = spread.rightGuideVisible === false ? ' no-guide' : '';
+  const imageTransform = buildImageTransform(spread);
 
   wrap.innerHTML = `
     <div class="preview-caption">펼침 ${spreadIndex + 1} · 본문 ${bodyStats.chars}자 · ${spread.rightImage ? '이미지 있음' : '이미지 없음'}</div>
@@ -790,10 +821,19 @@ function renderPreview() {
       </div>
 
       <div class="preview-page">
-        <div class="preview-image-stage" style="left:${previewGutterPx}px;">
+        <div
+          class="preview-image-stage interactive-image-stage${guideClass}"
+          data-preview-image-stage="true"
+          style="
+            top:${frameInset}px;
+            right:${frameInset}px;
+            bottom:${frameInset}px;
+            left:${imageStageLeft}px;
+          "
+        >
           ${
             spread.rightImage
-              ? `<img src="${escapeAttr(spread.rightImage)}" style="transform: translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) rotate(${imageRotation}deg) scale(${Number(spread.rightImageScale || 1)});" alt="펼침 이미지" />`
+              ? `<img data-preview-image="true" src="${escapeAttr(spread.rightImage)}" style="transform: ${imageTransform};" draggable="false" alt="펼침 이미지" /><button class="preview-resize-handle" type="button" data-preview-resize-handle="true" aria-label="그림 크기 조절"></button>`
               : `<div class="preview-empty">오른쪽 페이지 이미지가 아직 없습니다.<br />파일 넣기 또는 Ctrl+V 붙여넣기를 사용하세요.</div>`
           }
         </div>
@@ -801,6 +841,97 @@ function renderPreview() {
     </div>
   `;
   dom.currentPreview.appendChild(wrap);
+  bindPreviewImageInteraction(wrap, spread);
+}
+
+function bindPreviewImageInteraction(root, spread) {
+  if (!root || !spread || !spread.rightImage) return;
+
+  const stage = root.querySelector('[data-preview-image-stage="true"]');
+  const image = root.querySelector('[data-preview-image="true"]');
+  const handle = root.querySelector('[data-preview-resize-handle="true"]');
+  if (!stage || !image || !handle) return;
+
+  const updateImageOnly = () => {
+    image.style.transform = buildImageTransform(spread);
+    syncImageControlInputs(spread);
+  };
+
+  image.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    image.setPointerCapture(event.pointerId);
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startImageX = toNumber(spread.rightImageX, 0);
+    const startImageY = toNumber(spread.rightImageY, 0);
+
+    const move = (moveEvent) => {
+      spread.rightImageX = Math.round(startImageX + moveEvent.clientX - startX);
+      spread.rightImageY = Math.round(startImageY + moveEvent.clientY - startY);
+      updateImageOnly();
+    };
+
+    const stop = () => {
+      image.releasePointerCapture(event.pointerId);
+      image.removeEventListener('pointermove', move);
+      image.removeEventListener('pointerup', stop);
+      image.removeEventListener('pointercancel', stop);
+      renderTeacherPanels();
+    };
+
+    image.addEventListener('pointermove', move);
+    image.addEventListener('pointerup', stop);
+    image.addEventListener('pointercancel', stop);
+  });
+
+  handle.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handle.setPointerCapture(event.pointerId);
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startScale = toNumber(spread.rightImageScale, 1);
+
+    const move = (moveEvent) => {
+      const delta = ((moveEvent.clientX - startX) + (moveEvent.clientY - startY)) / 180;
+      spread.rightImageScale = Math.round(clampNumber(startScale + delta, 0.2, 5) * 100) / 100;
+      updateImageOnly();
+    };
+
+    const stop = () => {
+      handle.releasePointerCapture(event.pointerId);
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', stop);
+      handle.removeEventListener('pointercancel', stop);
+      renderTeacherPanels();
+    };
+
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  });
+}
+
+function syncImageControlInputs(spread) {
+  const imageScaleInput = document.getElementById('imageScaleInput');
+  const imageXInput = document.getElementById('imageXInput');
+  const imageYInput = document.getElementById('imageYInput');
+  const spreadImageMeta = document.getElementById('spreadImageMeta');
+
+  if (imageScaleInput) imageScaleInput.value = String(Math.round(toNumber(spread.rightImageScale, 1) * 100) / 100);
+  if (imageXInput) imageXInput.value = String(Math.round(toNumber(spread.rightImageX, 0)));
+  if (imageYInput) imageYInput.value = String(Math.round(toNumber(spread.rightImageY, 0)));
+  if (spreadImageMeta) {
+    spreadImageMeta.textContent = buildImageStatusText(
+      spread.rightImage,
+      spread.rightImageScale,
+      spread.rightImageX,
+      spread.rightImageY,
+      spread.rightImageRotation
+    );
+  }
 }
 
 function renderBookPreviewList() {
@@ -843,8 +974,317 @@ function renderBookPreviewList() {
   });
 }
 
+function renderBookFlipPreview() {
+  if (!dom.bookFlipPreview || !dom.bookReadinessReport) return;
+
+  const pages = buildLogicalPages();
+  const openings = buildReadingOpenings(pages);
+  if (!openings.length) {
+    dom.bookFlipPreview.innerHTML = '<div class="preview-empty">미리볼 페이지가 없습니다.</div>';
+    dom.bookReadinessReport.innerHTML = '';
+    return;
+  }
+
+  state.bookFlipIndex = clampBookFlipIndex(state.bookFlipIndex, openings.length);
+  const opening = openings[state.bookFlipIndex];
+  const report = buildBookReadinessReport(pages, openings);
+
+  dom.bookFlipPreview.innerHTML = `
+    <div class="book-flip-toolbar">
+      <button class="toolbar-btn" type="button" data-book-flip="prev" ${state.bookFlipIndex <= 0 ? 'disabled' : ''}>이전 장</button>
+      <div class="book-flip-counter">${state.bookFlipIndex + 1} / ${openings.length}</div>
+      <button class="toolbar-btn" type="button" data-book-flip="next" ${state.bookFlipIndex >= openings.length - 1 ? 'disabled' : ''}>다음 장</button>
+    </div>
+    <div class="book-flip-title">${escapeHtml(opening.label)}</div>
+    <div class="book-flip-pages ${opening.pages.length === 1 ? 'single' : ''}">
+      ${opening.pages.map((page) => renderReadingPage(page)).join('')}
+    </div>
+  `;
+
+  const prevBtn = dom.bookFlipPreview.querySelector('[data-book-flip="prev"]');
+  const nextBtn = dom.bookFlipPreview.querySelector('[data-book-flip="next"]');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      state.bookFlipIndex = clampBookFlipIndex(state.bookFlipIndex - 1, openings.length);
+      renderBookFlipPreview();
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      state.bookFlipIndex = clampBookFlipIndex(state.bookFlipIndex + 1, openings.length);
+      renderBookFlipPreview();
+    });
+  }
+
+  dom.bookReadinessReport.className = 'teacher-preview-report book-readiness-report ' + (report.highPriorityCount ? 'warn' : 'good');
+  dom.bookReadinessReport.innerHTML = `
+    <h3>책자 점검</h3>
+    <ul>
+      <li>총 페이지: ${report.totalPages}쪽 · 책장 미리보기 ${openings.length}장면</li>
+      <li>인쇄 시트: ${report.sheetCount}장 · 자동 추가 빈 페이지 ${report.paddingBlankCount}쪽</li>
+      <li>내용 없는 글 페이지 ${report.emptyTextCount}쪽 · 그림 없는 도안 페이지 ${report.emptyImageCount}쪽</li>
+    </ul>
+    ${report.issues.length
+      ? `<div class="book-issue-list">${report.issues.map((issue) => `
+          <div class="book-issue-item ${issue.level}">
+            <strong>${escapeHtml(issue.title)}</strong>
+            <span>${escapeHtml(issue.description)}</span>
+          </div>
+        `).join('')}</div>`
+      : '<div class="issue-empty">현재 책 순서에서는 통째로 빈 펼침이나 누락된 핵심 페이지가 보이지 않습니다.</div>'}
+  `;
+}
+
+function buildReadingOpenings(pages) {
+  if (!Array.isArray(pages) || !pages.length) return [];
+
+  const openings = [
+    {
+      label: '앞표지',
+      pages: [pages[0]]
+    }
+  ];
+
+  for (let index = 1; index < pages.length; index += 2) {
+    const leftPage = pages[index];
+    const rightPage = pages[index + 1];
+    const label =
+      index === 1
+        ? '첫 장을 넘겼을 때'
+        : rightPage
+          ? `${leftPage.pageNo}-${rightPage.pageNo}쪽`
+          : `${leftPage.pageNo}쪽`;
+
+    openings.push({
+      label,
+      pages: [leftPage, rightPage].filter(Boolean)
+    });
+  }
+
+  return openings;
+}
+
+function clampBookFlipIndex(index, count) {
+  if (!count) return 0;
+  return Math.min(count - 1, Math.max(0, Number.isFinite(Number(index)) ? Number(index) : 0));
+}
+
+function renderReadingPage(page) {
+  const status = getPageStatus(page);
+  const classes = ['book-reading-page', page.kind || 'unknown', status.empty ? 'empty-page' : ''].filter(Boolean).join(' ');
+
+  return `
+    <article class="${classes}">
+      <div class="book-reading-meta">${escapeHtml(formatReadingPageLabel(page))}</div>
+      ${renderReadingPageContent(page)}
+      ${status.message ? `<div class="book-reading-status ${status.level}">${escapeHtml(status.message)}</div>` : ''}
+    </article>
+  `;
+}
+
+function renderReadingPageContent(page) {
+  if (!page) return '<div class="preview-empty">페이지 없음</div>';
+
+  if (page.kind === 'cover') {
+    return `
+      <div class="book-reading-cover">
+        <div class="book-reading-image-area">
+          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" alt="표지 이미지" />` : '<div class="preview-empty">표지 이미지 없음</div>'}
+        </div>
+        <h4>${escapeHtml(page.title || '표지')}</h4>
+        <p>${escapeHtml(page.subtitle || '')}</p>
+      </div>
+    `;
+  }
+
+  if (page.kind === 'text') {
+    const fontStack = getTextFontStack(page.fontFamily);
+    const lineHeight = normalizeLineHeight(page.lineHeight);
+    const titleFontSize = Math.max(15, Number(page.fontSize || 24) * 0.72);
+    const bodyFontSize = Math.max(12, titleFontSize - 3);
+    return `
+      <div class="book-reading-text" style="font-family:${fontStack};">
+        <h4 style="font-size:${titleFontSize}px; text-align:${escapeAttr(page.titleAlign || 'left')};">${escapeHtml(page.title || '')}</h4>
+        <p style="font-size:${bodyFontSize}px; line-height:${lineHeight}; text-align:${escapeAttr(page.textAlign || 'left')};">${renderBodyContentHtml(page.body || '', page.leadScale || 1)}</p>
+      </div>
+    `;
+  }
+
+  if (page.kind === 'image') {
+    const imageScale = Math.max(Number(page.scale || 1), state.book.paper === 'B4' ? B4_MIN_IMAGE_SCALE : 1);
+    const imageRotation = normalizeImageRotation(page.rotation);
+    const frameInset = normalizeFrameInset(page.frameInset);
+    const guideClass = page.guideVisible === false ? ' no-guide' : '';
+    return `
+      <div class="book-reading-image-stage${guideClass}" style="margin:${frameInset * 0.18}px;">
+        ${
+          page.imageSrc
+            ? `<img src="${escapeAttr(page.imageSrc)}" style="transform:translate(calc(-50% + ${Number(page.x || 0) * 0.45}px), calc(-50% + ${Number(page.y || 0) * 0.45}px)) rotate(${imageRotation}deg) scale(${imageScale});" alt="도안 이미지" />`
+            : '<div class="preview-empty">도안 이미지 없음</div>'
+        }
+      </div>
+    `;
+  }
+
+  if (page.kind === 'blank' && page.title === '뒷표지') {
+    return `<div class="book-reading-back-cover">${page.authorName ? escapeHtml(page.authorName) : '뒷표지'}</div>`;
+  }
+
+  return `<div class="preview-empty">${escapeHtml(page.title || '빈 페이지')}</div>`;
+}
+
+function formatReadingPageLabel(page) {
+  if (!page) return '페이지 없음';
+  if (page.pageNo === 1) return '1쪽 · 앞표지';
+  if (page.kind === 'blank' && page.title === '뒷표지') return `${page.pageNo}쪽 · 뒷표지`;
+  if (page.pageNo === 2) return '2쪽 · 표지 뒷면';
+  return `${page.pageNo || '-'}쪽 · ${getPageKindLabel(page)}`;
+}
+
+function getPageKindLabel(page) {
+  if (!page) return '없음';
+  if (page.kind === 'cover') return '표지';
+  if (page.kind === 'text') return '글';
+  if (page.kind === 'image') return '도안';
+  if (page.kind === 'blank' && page.title === '뒷표지') return '뒷표지';
+  return '빈 페이지';
+}
+
+function getPageStatus(page) {
+  if (!page) {
+    return { empty: true, level: 'warn', message: '페이지가 없습니다.' };
+  }
+
+  if (page.kind === 'text') {
+    const hasTitle = !!normalizeString(page.title, '').trim();
+    const hasBody = !!normalizeString(page.body, '').trim();
+    return {
+      empty: !hasTitle && !hasBody,
+      level: hasBody ? 'good' : 'warn',
+      message: hasBody ? '' : '본문 글이 비어 있습니다.'
+    };
+  }
+
+  if (page.kind === 'image') {
+    return {
+      empty: !page.imageSrc,
+      level: page.imageSrc ? 'good' : 'warn',
+      message: page.imageSrc ? '' : '도안 이미지가 없습니다.'
+    };
+  }
+
+  if (page.kind === 'cover') {
+    const hasTitle = !!normalizeString(page.title, '').trim();
+    return {
+      empty: !hasTitle && !page.imageSrc,
+      level: hasTitle ? 'good' : 'warn',
+      message: hasTitle ? '' : '표지 제목이 비어 있습니다.'
+    };
+  }
+
+  if (page.kind === 'blank' && page.title === '뒷표지') {
+    return { empty: !page.authorName, level: 'info', message: page.authorName ? '' : '뒷표지는 비어 있습니다.' };
+  }
+
+  return { empty: true, level: 'info', message: '자동으로 추가된 빈 페이지입니다.' };
+}
+
+function buildBookReadinessReport(pages, openings) {
+  const issues = [];
+  let emptyTextCount = 0;
+  let emptyImageCount = 0;
+
+  pages.forEach((page) => {
+    const status = getPageStatus(page);
+    if (page.kind === 'text' && status.empty) emptyTextCount += 1;
+    if (page.kind === 'image' && status.empty) emptyImageCount += 1;
+  });
+
+  const paddingBlankCount = pages.filter((page) => page.kind === 'blank' && page.title === '빈 페이지').length;
+
+  openings.forEach((opening, index) => {
+    if (index === 0) return;
+
+    if (opening.pages.length === 1) {
+      const onlyPage = opening.pages[0];
+      const onlyStatus = getPageStatus(onlyPage);
+      if (onlyStatus.empty) {
+        issues.push({
+          level: onlyPage.kind === 'blank' && onlyPage.title === '빈 페이지' ? 'warn' : 'info',
+          title: `${opening.label}이 비어 있습니다`,
+          description: '책장 넘기기 미리보기에서 마지막에 단독 빈 페이지처럼 보입니다.'
+        });
+      }
+      return;
+    }
+
+    const [leftPage, rightPage] = opening.pages;
+    const leftStatus = getPageStatus(leftPage);
+    const rightStatus = getPageStatus(rightPage);
+    const bothAutoBlank =
+      leftPage &&
+      rightPage &&
+      leftPage.kind === 'blank' &&
+      rightPage.kind === 'blank' &&
+      leftPage.title === '빈 페이지' &&
+      rightPage.title === '빈 페이지';
+
+    if (bothAutoBlank) {
+      issues.push({
+        level: 'warn',
+        title: `${opening.label} 전체가 빈 페이지입니다`,
+        description: '페이지 수를 4의 배수로 맞추는 과정에서 양쪽이 모두 빈 페이지가 되었습니다.'
+      });
+      return;
+    }
+
+    if (leftStatus.empty && rightStatus.empty) {
+      issues.push({
+        level: 'warn',
+        title: `${opening.label} 양쪽이 비어 보입니다`,
+        description: '뒷표지, 자동 빈 페이지, 내용 없는 페이지가 만나 통째로 빈 펼침처럼 보일 수 있습니다.'
+      });
+    }
+  });
+
+  if (paddingBlankCount) {
+    issues.push({
+      level: 'info',
+      title: `자동 빈 페이지 ${paddingBlankCount}쪽`,
+      description: '소책자 인쇄를 위해 페이지 수를 4의 배수로 맞추면서 추가된 페이지입니다.'
+    });
+  }
+
+  if (emptyImageCount) {
+    issues.push({
+      level: 'warn',
+      title: `도안 이미지 없음 ${emptyImageCount}쪽`,
+      description: '이미지 없는 도안 페이지가 있습니다. 일부러 비운 것이 아니라면 해당 펼침을 확인하세요.'
+    });
+  }
+
+  if (emptyTextCount) {
+    issues.push({
+      level: 'info',
+      title: `본문 글 없음 ${emptyTextCount}쪽`,
+      description: '글이 없는 페이지는 비워 둔 채 출력됩니다.'
+    });
+  }
+
+  return {
+    totalPages: pages.length,
+    sheetCount: buildBookletSheets(pages).length,
+    paddingBlankCount,
+    emptyTextCount,
+    emptyImageCount,
+    highPriorityCount: issues.filter((issue) => issue.level === 'warn').length,
+    issues
+  };
+}
+
 function renderTeacherPanels() {
   if (!dom.teacherSummaryCards || !dom.teacherIssueList || !dom.teacherReadinessBox || !dom.teacherPreviewReport) return;
+  renderBookFlipPreview();
 
   const report = buildTeacherReport();
 
@@ -877,6 +1317,7 @@ function renderTeacherPanels() {
     : `아직 ${report.issues.length}개의 보완 항목이 있습니다. 아래 목록에서 바로 이동해 수정한 뒤 인쇄 배열을 다시 확인하세요.`;
 
   dom.jumpFirstIssueBtn.disabled = !report.issues.length;
+  if (dom.teacherPrintBookBtn) dom.teacherPrintBookBtn.disabled = !state.book.spreads.length;
   dom.centerAllImagesBtn.disabled = report.imageReadyCount === 0;
   dom.resetAllImagesBtn.disabled = report.imageReadyCount === 0;
   if (dom.enlargeAllImagesBtn) dom.enlargeAllImagesBtn.disabled = report.imageReadyCount === 0;
@@ -1021,6 +1462,7 @@ function refreshViewsForTyping() {
   renderNavigation();
   renderPreview();
   renderBookPreviewList();
+  renderBookFlipPreview();
   renderTeacherPanels();
 }
 
@@ -1051,6 +1493,7 @@ function renderAll() {
   renderEditor();
   renderPreview();
   renderBookPreviewList();
+  renderBookFlipPreview();
   renderTeacherPanels();
 }
 
@@ -1399,6 +1842,12 @@ function bindTopEvents() {
     });
   }
 
+  if (dom.teacherPrintBookBtn) {
+    dom.teacherPrintBookBtn.addEventListener('click', () => {
+      openPrintWindow();
+    });
+  }
+
   if (dom.jumpFirstIssueBtn) {
     dom.jumpFirstIssueBtn.addEventListener('click', () => {
       const report = buildTeacherReport();
@@ -1494,6 +1943,12 @@ function normalizeLeadScale(value) {
   return Math.round(scale * 100) / 100;
 }
 
+function clampNumber(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.min(max, Math.max(min, number));
+}
+
 function normalizeImageRotation(value) {
   const rotation = ((Math.round(toNumber(value, 0) / 90) * 90) % 360 + 360) % 360;
   return [0, 90, 180, 270].includes(rotation) ? rotation : 0;
@@ -1501,6 +1956,14 @@ function normalizeImageRotation(value) {
 
 function rotateImage(value, delta) {
   return normalizeImageRotation(normalizeImageRotation(value) + delta);
+}
+
+function normalizeFrameInset(value) {
+  return Math.round(clampNumber(toNumber(value, 0), -60, 120));
+}
+
+function buildImageTransform(spread) {
+  return `translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) rotate(${normalizeImageRotation(spread.rightImageRotation)}deg) scale(${Number(spread.rightImageScale || 1)})`;
 }
 
 function normalizeCover(cover) {
@@ -1540,7 +2003,9 @@ function normalizeSpread(item, index) {
     rightImageScale: toNumber(safeItem.rightImageScale, 1),
     rightImageX: toNumber(safeItem.rightImageX, 0),
     rightImageY: toNumber(safeItem.rightImageY, 0),
-    rightImageRotation: normalizeImageRotation(safeItem.rightImageRotation)
+    rightImageRotation: normalizeImageRotation(safeItem.rightImageRotation),
+    rightGuideVisible: safeItem.rightGuideVisible !== false,
+    rightFrameInset: normalizeFrameInset(safeItem.rightFrameInset)
   };
 }
 
@@ -1646,6 +2111,8 @@ function buildLogicalPages() {
       x: spread.rightImageX,
       y: spread.rightImageY,
       rotation: spread.rightImageRotation,
+      guideVisible: spread.rightGuideVisible,
+      frameInset: spread.rightFrameInset,
       title: spread.leftTitle + ' 이미지',
       innerGutterMm: printGutterMm
     });
@@ -1896,6 +2363,11 @@ function openPrintWindow() {
         overflow: hidden;
       }
 
+      .image-page .image-stage.no-guide {
+        border-color: transparent;
+        background: #fff;
+      }
+
       .print-page img {
         position: absolute;
         top: 50%;
@@ -1972,9 +2444,12 @@ function openPrintWindow() {
     background: #fff !important;
   }
 
+  .cover-image-box {
+    margin-top: 0 !important;
+  }
+
   .cover-image-box,
   .image-page .image-stage {
-    margin-top: 0 !important;
     border: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
@@ -2125,6 +2600,8 @@ function renderPrintPage(page, slotLabel) {
     const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
     const imageScale = Math.max(Number(page.scale || 1), state.book.paper === 'B4' ? B4_MIN_IMAGE_SCALE : 1);
     const imageRotation = normalizeImageRotation(page.rotation);
+    const guideClass = page.guideVisible === false ? ' no-guide' : '';
+    const frameInsetMm = Math.round(normalizeFrameInset(page.frameInset) * 0.25 * 10) / 10;
     const gutterStyle = String(slotLabel || '').includes('왼쪽')
       ? `padding-right:${gutterMm}mm;`
       : String(slotLabel || '').includes('오른쪽')
@@ -2143,7 +2620,16 @@ function renderPrintPage(page, slotLabel) {
           "
         >
           <div class="page-meta">${pageMeta} · 이미지 페이지</div>
-          <div class="image-stage" style="flex:1 1 auto; min-height:0; position:relative; overflow:hidden;">
+          <div
+            class="image-stage${guideClass}"
+            style="
+              flex:1 1 auto;
+              min-height:0;
+              position:relative;
+              overflow:hidden;
+              margin:${frameInsetMm}mm;
+            "
+          >
             ${
               page.imageSrc
                 ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(calc(-50% + ${Number(page.x || 0)}px), calc(-50% + ${Number(page.y || 0)}px)) rotate(${imageRotation}deg) scale(${imageScale});" alt="이미지 페이지" />`
@@ -2429,7 +2915,260 @@ function escapeAttr(value) {
   return escapeHtml(value).replaceAll('\n', ' ');
 }
 
+function injectInteractiveImageStyles() {
+  if (document.getElementById('interactiveImageStyles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'interactiveImageStyles';
+  style.textContent = `
+    .preview-image-stage {
+      border: 1px dashed #b9cdea;
+      border-radius: 10px;
+    }
+
+    .preview-image-stage.no-guide {
+      background: #fff !important;
+      border-color: transparent !important;
+    }
+
+    .interactive-image-stage {
+      cursor: grab;
+    }
+
+    .interactive-image-stage:active {
+      cursor: grabbing;
+    }
+
+    .preview-image-stage img {
+      user-select: none;
+      touch-action: none;
+    }
+
+    .preview-resize-handle {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      width: 22px;
+      height: 22px;
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22);
+      cursor: nwse-resize;
+      touch-action: none;
+      z-index: 5;
+    }
+
+    .preview-resize-handle::before {
+      content: "";
+      position: absolute;
+      right: 4px;
+      bottom: 4px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid #2563eb;
+      border-bottom: 2px solid #2563eb;
+    }
+
+    .book-flip-preview {
+      display: grid;
+      gap: 12px;
+    }
+
+    .book-flip-toolbar {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .book-flip-counter,
+    .book-flip-title {
+      text-align: center;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    .book-flip-title {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .book-flip-pages {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .book-flip-pages.single {
+      grid-template-columns: minmax(0, 0.72fr);
+      justify-content: center;
+    }
+
+    .book-reading-page {
+      min-height: 260px;
+      aspect-ratio: 210 / 297;
+      border: 1px solid #d8e1f0;
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      position: relative;
+    }
+
+    .book-reading-page.empty-page {
+      background: #f8fafc;
+    }
+
+    .book-reading-meta {
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+    }
+
+    .book-reading-cover,
+    .book-reading-text,
+    .book-reading-back-cover {
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .book-reading-cover {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .book-reading-cover h4,
+    .book-reading-text h4 {
+      margin: 0 0 6px;
+      line-height: 1.25;
+    }
+
+    .book-reading-cover p,
+    .book-reading-text p {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    .book-reading-image-area,
+    .book-reading-image-stage {
+      min-height: 0;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .book-reading-image-area img,
+    .book-reading-image-stage img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      max-width: 100%;
+      max-height: 100%;
+      transform: translate(-50%, -50%);
+      transform-origin: center center;
+    }
+
+    .book-reading-image-stage.no-guide {
+      background: #fff;
+      border-color: transparent;
+    }
+
+    .book-reading-status {
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 11px;
+      line-height: 1.4;
+      font-weight: 800;
+    }
+
+    .book-reading-status.warn,
+    .book-issue-item.warn {
+      background: #fff7ed;
+      color: #9a3412;
+      border: 1px solid #fed7aa;
+    }
+
+    .book-reading-status.info,
+    .book-issue-item.info {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+
+    .book-readiness-report.good {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .book-readiness-report.warn {
+      border-color: #fed7aa;
+      background: #fffaf5;
+    }
+
+    .book-issue-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .book-issue-item {
+      display: grid;
+      gap: 3px;
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .book-issue-item span {
+      color: inherit;
+      opacity: 0.88;
+    }
+
+    body.teacher-mode .preview-root {
+      align-content: start;
+    }
+
+    body.teacher-mode .teacher-print-focus {
+      order: 1;
+      border-color: #c4b5fd;
+      box-shadow: 0 14px 34px rgba(79, 70, 229, 0.1);
+    }
+
+    body.teacher-mode #bookReadinessReport {
+      order: 2;
+    }
+
+    body.teacher-mode #teacherPreviewReport {
+      order: 0;
+    }
+
+    body.teacher-mode #currentPreview {
+      order: 3;
+    }
+
+    body.teacher-mode .preview-root > .booklet-box:not(.teacher-print-focus) {
+      order: 4;
+    }
+
+    body.student-mode .teacher-print-focus {
+      border-color: #dbe7f7;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 async function init() {
+  injectInteractiveImageStyles();
   setMode('student');
   bindTopEvents();
   renderAll();

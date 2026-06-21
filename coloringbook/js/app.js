@@ -138,6 +138,13 @@ const dom = {
   enlargeAllImagesBtn: document.getElementById('enlargeAllImagesBtn'),
   setAllTextNormalBtn: document.getElementById('setAllTextNormalBtn'),
   setAllTextLargeBtn: document.getElementById('setAllTextLargeBtn'),
+  moveAllTextLeftBtn: document.getElementById('moveAllTextLeftBtn'),
+  moveAllTextRightBtn: document.getElementById('moveAllTextRightBtn'),
+  moveAllTextUpBtn: document.getElementById('moveAllTextUpBtn'),
+  moveAllTextDownBtn: document.getElementById('moveAllTextDownBtn'),
+  resetAllTextPositionBtn: document.getElementById('resetAllTextPositionBtn'),
+  decreaseAllIndentBtn: document.getElementById('decreaseAllIndentBtn'),
+  increaseAllIndentBtn: document.getElementById('increaseAllIndentBtn'),
   teacherPreviewReport: document.getElementById('teacherPreviewReport'),
   coverEditorTemplate: document.getElementById('coverEditorTemplate'),
   spreadEditorTemplate: document.getElementById('spreadEditorTemplate')
@@ -1021,7 +1028,7 @@ function renderBookFlipPreview() {
     <h3>책자 점검</h3>
     <ul>
       <li>총 페이지: ${report.totalPages}쪽 · 책장 미리보기 ${openings.length}장면</li>
-      <li>인쇄 시트: ${report.sheetCount}장 · 자동 추가 빈 페이지 ${report.paddingBlankCount}쪽</li>
+      <li>인쇄 시트: ${report.sheetCount}장 · 자동 채움 페이지 ${report.autoFillCount}쪽</li>
       <li>내용 없는 글 페이지 ${report.emptyTextCount}쪽 · 그림 없는 도안 페이지 ${report.emptyImageCount}쪽</li>
     </ul>
     ${report.issues.length
@@ -1126,8 +1133,50 @@ function renderReadingPageContent(page) {
     `;
   }
 
-  if (page.kind === 'blank' && page.title === '뒷표지') {
-    return `<div class="book-reading-back-cover">${page.authorName ? escapeHtml(page.authorName) : '뒷표지'}</div>`;
+  if (page.kind === 'story-summary') {
+    return `
+      <div class="book-reading-summary">
+        <h4>${escapeHtml(page.title || '이야기 전체 보기')}</h4>
+        ${page.entries && page.entries.length
+          ? page.entries.map((entry) => `
+              <section>
+                <strong>${escapeHtml(entry.index + '. ' + (entry.title || '제목 없음'))}</strong>
+                <p>${escapeHtml(entry.body || '').replace(/\n/g, '<br />')}</p>
+              </section>
+            `).join('')
+          : '<div class="preview-empty">아직 모아 볼 이야기가 없습니다.</div>'}
+      </div>
+    `;
+  }
+
+  if (page.kind === 'image-gallery') {
+    return `
+      <div class="book-reading-gallery">
+        <h4>${escapeHtml(page.title || '도안 모아보기')}</h4>
+        <div>
+          ${page.entries && page.entries.length
+            ? page.entries.map((entry) => `
+                <figure>
+                  <img src="${escapeAttr(entry.imageSrc)}" alt="도안 ${entry.index}" />
+                  <figcaption>${escapeHtml(entry.index + '. ' + (entry.title || '도안'))}</figcaption>
+                </figure>
+              `).join('')
+            : '<div class="preview-empty">아직 모아 볼 도안이 없습니다.</div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  if (page.kind === 'back-cover') {
+    return `
+      <div class="book-reading-back-cover">
+        <strong>${escapeHtml(page.bookTitle || state.book.title || '나의 책')}</strong>
+        <span>글/그림: ${escapeHtml(page.authorName || '________')}</span>
+        ${page.schoolName || page.className || page.studentNumber
+          ? `<small>${escapeHtml([page.schoolName, page.className, page.studentNumber ? page.studentNumber + '번' : ''].filter(Boolean).join(' · '))}</small>`
+          : ''}
+      </div>
+    `;
   }
 
   return `<div class="preview-empty">${escapeHtml(page.title || '빈 페이지')}</div>`;
@@ -1136,7 +1185,7 @@ function renderReadingPageContent(page) {
 function formatReadingPageLabel(page) {
   if (!page) return '페이지 없음';
   if (page.pageNo === 1) return '1쪽 · 앞표지';
-  if (page.kind === 'blank' && page.title === '뒷표지') return `${page.pageNo}쪽 · 뒷표지`;
+  if (page.kind === 'back-cover') return `${page.pageNo}쪽 · 뒷표지`;
   if (page.pageNo === 2) return '2쪽 · 표지 뒷면';
   return `${page.pageNo || '-'}쪽 · ${getPageKindLabel(page)}`;
 }
@@ -1146,7 +1195,9 @@ function getPageKindLabel(page) {
   if (page.kind === 'cover') return '표지';
   if (page.kind === 'text') return '글';
   if (page.kind === 'image') return '도안';
-  if (page.kind === 'blank' && page.title === '뒷표지') return '뒷표지';
+  if (page.kind === 'story-summary') return '이야기 전체';
+  if (page.kind === 'image-gallery') return '도안 모음';
+  if (page.kind === 'back-cover') return '뒷표지';
   return '빈 페이지';
 }
 
@@ -1182,8 +1233,28 @@ function getPageStatus(page) {
     };
   }
 
-  if (page.kind === 'blank' && page.title === '뒷표지') {
-    return { empty: !page.authorName, level: 'info', message: page.authorName ? '' : '뒷표지는 비어 있습니다.' };
+  if (page.kind === 'story-summary') {
+    return {
+      empty: false,
+      level: 'info',
+      message: '남는 페이지에 이야기 전체를 자동으로 넣었습니다.'
+    };
+  }
+
+  if (page.kind === 'image-gallery') {
+    return {
+      empty: false,
+      level: 'info',
+      message: '남는 페이지에 도안을 목차처럼 자동으로 모았습니다.'
+    };
+  }
+
+  if (page.kind === 'back-cover') {
+    return {
+      empty: false,
+      level: page.authorName ? 'good' : 'info',
+      message: page.authorName ? '' : '학생 이름을 찾지 못해 이름 칸을 비워 두었습니다.'
+    };
   }
 
   return { empty: true, level: 'info', message: '자동으로 추가된 빈 페이지입니다.' };
@@ -1200,7 +1271,7 @@ function buildBookReadinessReport(pages, openings) {
     if (page.kind === 'image' && status.empty) emptyImageCount += 1;
   });
 
-  const paddingBlankCount = pages.filter((page) => page.kind === 'blank' && page.title === '빈 페이지').length;
+  const autoFillCount = pages.filter((page) => page.kind === 'story-summary' || page.kind === 'image-gallery').length;
 
   openings.forEach((opening, index) => {
     if (index === 0) return;
@@ -1221,37 +1292,20 @@ function buildBookReadinessReport(pages, openings) {
     const [leftPage, rightPage] = opening.pages;
     const leftStatus = getPageStatus(leftPage);
     const rightStatus = getPageStatus(rightPage);
-    const bothAutoBlank =
-      leftPage &&
-      rightPage &&
-      leftPage.kind === 'blank' &&
-      rightPage.kind === 'blank' &&
-      leftPage.title === '빈 페이지' &&
-      rightPage.title === '빈 페이지';
-
-    if (bothAutoBlank) {
-      issues.push({
-        level: 'warn',
-        title: `${opening.label} 전체가 빈 페이지입니다`,
-        description: '페이지 수를 4의 배수로 맞추는 과정에서 양쪽이 모두 빈 페이지가 되었습니다.'
-      });
-      return;
-    }
-
     if (leftStatus.empty && rightStatus.empty) {
       issues.push({
         level: 'warn',
         title: `${opening.label} 양쪽이 비어 보입니다`,
-        description: '뒷표지, 자동 빈 페이지, 내용 없는 페이지가 만나 통째로 빈 펼침처럼 보일 수 있습니다.'
+        description: '뒷표지, 자동 채움 페이지, 내용 없는 페이지가 만나 통째로 빈 펼침처럼 보일 수 있습니다.'
       });
     }
   });
 
-  if (paddingBlankCount) {
+  if (autoFillCount) {
     issues.push({
       level: 'info',
-      title: `자동 빈 페이지 ${paddingBlankCount}쪽`,
-      description: '소책자 인쇄를 위해 페이지 수를 4의 배수로 맞추면서 추가된 페이지입니다.'
+      title: `자동 채움 페이지 ${autoFillCount}쪽`,
+      description: '페이지 수를 4의 배수로 맞추기 위해 이야기 전체 보기와 도안 모아보기 페이지를 넣었습니다.'
     });
   }
 
@@ -1274,7 +1328,7 @@ function buildBookReadinessReport(pages, openings) {
   return {
     totalPages: pages.length,
     sheetCount: buildBookletSheets(pages).length,
-    paddingBlankCount,
+    autoFillCount,
     emptyTextCount,
     emptyImageCount,
     highPriorityCount: issues.filter((issue) => issue.level === 'warn').length,
@@ -1323,6 +1377,13 @@ function renderTeacherPanels() {
   if (dom.enlargeAllImagesBtn) dom.enlargeAllImagesBtn.disabled = report.imageReadyCount === 0;
   dom.setAllTextNormalBtn.disabled = !state.book.spreads.length;
   dom.setAllTextLargeBtn.disabled = !state.book.spreads.length;
+  if (dom.moveAllTextLeftBtn) dom.moveAllTextLeftBtn.disabled = !state.book.spreads.length;
+  if (dom.moveAllTextRightBtn) dom.moveAllTextRightBtn.disabled = !state.book.spreads.length;
+  if (dom.moveAllTextUpBtn) dom.moveAllTextUpBtn.disabled = !state.book.spreads.length;
+  if (dom.moveAllTextDownBtn) dom.moveAllTextDownBtn.disabled = !state.book.spreads.length;
+  if (dom.resetAllTextPositionBtn) dom.resetAllTextPositionBtn.disabled = !state.book.spreads.length;
+  if (dom.decreaseAllIndentBtn) dom.decreaseAllIndentBtn.disabled = !state.book.spreads.length;
+  if (dom.increaseAllIndentBtn) dom.increaseAllIndentBtn.disabled = !state.book.spreads.length;
 
   dom.teacherIssueList.innerHTML = '';
   if (!report.issues.length) {
@@ -1902,6 +1963,56 @@ function bindTopEvents() {
     });
   }
 
+  if (dom.moveAllTextLeftBtn) {
+    dom.moveAllTextLeftBtn.addEventListener('click', () => {
+      shiftAllTextPosition(-8, 0);
+      renderAll();
+    });
+  }
+
+  if (dom.moveAllTextRightBtn) {
+    dom.moveAllTextRightBtn.addEventListener('click', () => {
+      shiftAllTextPosition(8, 0);
+      renderAll();
+    });
+  }
+
+  if (dom.moveAllTextUpBtn) {
+    dom.moveAllTextUpBtn.addEventListener('click', () => {
+      shiftAllTextPosition(0, -8);
+      renderAll();
+    });
+  }
+
+  if (dom.moveAllTextDownBtn) {
+    dom.moveAllTextDownBtn.addEventListener('click', () => {
+      shiftAllTextPosition(0, 8);
+      renderAll();
+    });
+  }
+
+  if (dom.resetAllTextPositionBtn) {
+    dom.resetAllTextPositionBtn.addEventListener('click', () => {
+      resetAllTextPosition();
+      renderAll();
+      alert('모든 글 페이지의 좌우/상하 위치를 초기화했습니다.');
+    });
+  }
+
+  if (dom.decreaseAllIndentBtn) {
+    dom.decreaseAllIndentBtn.addEventListener('click', () => {
+      adjustAllBodyIndent(-4);
+      renderAll();
+    });
+  }
+
+  if (dom.increaseAllIndentBtn) {
+    dom.increaseAllIndentBtn.addEventListener('click', () => {
+      adjustAllBodyIndent(4);
+      renderAll();
+    });
+  }
+
   bindGlobalShortcuts();
 }
 
@@ -2073,7 +2184,6 @@ function buildLogicalPages() {
   const pages = [];
 
   pages.push({
-    pageNo: 1,
     kind: 'cover',
     title: state.book.cover.title,
     subtitle: state.book.cover.subtitle,
@@ -2084,7 +2194,6 @@ function buildLogicalPages() {
     const printGutterMm = Math.round(Math.max(0, Number(spread.leftInnerGutter || DEFAULT_INNER_GUTTER)) * 0.75 * 10) / 10;
 
     pages.push({
-      pageNo: pages.length + 1,
       kind: 'text',
       title: spread.leftTitle,
       body: spread.leftBody,
@@ -2104,7 +2213,6 @@ function buildLogicalPages() {
     });
 
     pages.push({
-      pageNo: pages.length + 1,
       kind: 'image',
       imageSrc: spread.rightImage,
       scale: spread.rightImageScale,
@@ -2118,29 +2226,101 @@ function buildLogicalPages() {
     });
   });
 
-  const backCoverStudentName = normalizeString(
-    (state.book.submission && state.book.submission.studentName) ||
-    (dom.submitStudentNameInput && dom.submitStudentNameInput.value) ||
-    '',
-    ''
-  ).trim();
+  const backCoverPage = buildBackCoverPage();
+  const fillerCount = (4 - ((pages.length + 1) % 4)) % 4;
+  pages.push(...buildAutoFillPages(fillerCount));
+  pages.push(backCoverPage);
 
-  pages.push({
-    pageNo: pages.length + 1,
-    kind: 'blank',
-    title: '뒷표지',
-    authorName: backCoverStudentName
+  return renumberLogicalPages(pages);
+}
+
+function renumberLogicalPages(pages) {
+  pages.forEach((page, index) => {
+    page.pageNo = index + 1;
   });
+  return pages;
+}
 
-  while (pages.length % 4 !== 0) {
-    pages.push({
-      pageNo: pages.length + 1,
-      kind: 'blank',
-      title: '빈 페이지'
-    });
+function buildAutoFillPages(count) {
+  const pages = [];
+  const builders = [buildStorySummaryPage, buildImageGalleryPage];
+
+  for (let index = 0; index < count; index += 1) {
+    pages.push(builders[index % builders.length]());
   }
 
   return pages;
+}
+
+function buildStorySummaryPage() {
+  const entries = state.book.spreads.map((spread, index) => ({
+    index: index + 1,
+    title: normalizeString(spread.leftTitle, `${index + 1}번째 펼침`).trim(),
+    body: normalizeString(spread.leftBody, '').trim()
+  })).filter((entry) => entry.title || entry.body);
+
+  return {
+    kind: 'story-summary',
+    title: '이야기 전체 보기',
+    entries
+  };
+}
+
+function buildImageGalleryPage() {
+  const entries = state.book.spreads.map((spread, index) => ({
+    index: index + 1,
+    title: normalizeString(spread.leftTitle, `${index + 1}번째 펼침`).trim(),
+    imageSrc: spread.rightImage
+  })).filter((entry) => entry.imageSrc);
+
+  return {
+    kind: 'image-gallery',
+    title: '도안 모아보기',
+    entries
+  };
+}
+
+function buildBackCoverPage() {
+  return {
+    kind: 'back-cover',
+    title: '뒷표지',
+    ...buildBackCoverInfo()
+  };
+}
+
+function buildBackCoverInfo() {
+  const source = state.book && state.book.submission ? state.book.submission : {};
+  const studentName = normalizeString(
+    source.studentName || (dom.submitStudentNameInput && dom.submitStudentNameInput.value) || '',
+    ''
+  ).trim();
+  const studentNumber = normalizeString(
+    source.studentNumber || (dom.submitStudentNumberInput && dom.submitStudentNumberInput.value) || '',
+    ''
+  ).trim();
+  const className = normalizeString(
+    source.className || (dom.submitClassInput && dom.submitClassInput.value) || '',
+    ''
+  ).trim();
+  const schoolName = normalizeString(
+    source.schoolName || (dom.submitSchoolInput && dom.submitSchoolInput.value) || '',
+    ''
+  ).trim();
+
+  return {
+    bookTitle: normalizeString(state.book.cover.title || state.book.title || source.bookTitle, '새 책').trim(),
+    authorName: studentName,
+    studentNumber,
+    className,
+    schoolName,
+    printedDate: formatKoreanDate(source.submittedAt || '')
+  };
+}
+
+function formatKoreanDate(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.`;
 }
 
 function buildBookletSheets(pages) {
@@ -2641,21 +2821,54 @@ function renderPrintPage(page, slotLabel) {
     `;
   }
 
-  if (page.kind === 'blank' && page.title === '뒷표지') {
+  if (page.kind === 'story-summary') {
     return `
-      <div
-        class="print-page blank-page"
-        style="
-          justify-content:flex-end;
-          align-items:flex-end;
-          padding:6mm 8mm 8mm 8mm;
-        "
-      >
-        ${
-          page.authorName
-            ? `<div style="font-size:14px; font-weight:700; color:#111827;">${escapeHtml(page.authorName)}</div>`
-            : ''
-        }
+      <div class="print-page story-summary-page" style="padding:7mm; display:flex; flex-direction:column;">
+        <div class="page-meta">${pageMeta} · 이야기 전체</div>
+        <h3 style="font-size:16px; margin-bottom:4mm;">${escapeHtml(page.title || '이야기 전체 보기')}</h3>
+        <div style="font-size:8.5px; line-height:1.45; columns:2; column-gap:6mm; overflow:hidden;">
+          ${page.entries && page.entries.length
+            ? page.entries.map((entry) => `
+                <section style="break-inside:avoid; margin:0 0 3mm;">
+                  <strong style="display:block; font-size:9.5px; margin-bottom:1mm;">${escapeHtml(entry.index + '. ' + (entry.title || '제목 없음'))}</strong>
+                  <p style="font-size:8.5px; line-height:1.45; margin:0; white-space:pre-wrap;">${escapeHtml(entry.body || '')}</p>
+                </section>
+              `).join('')
+            : '<div class="empty">아직 모아 볼 이야기가 없습니다.</div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  if (page.kind === 'image-gallery') {
+    return `
+      <div class="print-page image-gallery-page" style="padding:7mm; display:flex; flex-direction:column;">
+        <div class="page-meta">${pageMeta} · 도안 모음</div>
+        <h3 style="font-size:16px; margin-bottom:4mm;">${escapeHtml(page.title || '도안 모아보기')}</h3>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:3mm; min-height:0; flex:1 1 auto;">
+          ${page.entries && page.entries.length
+            ? page.entries.map((entry) => `
+                <figure style="margin:0; min-height:0; display:grid; grid-template-rows:minmax(0, 1fr) auto; gap:1mm; border:0.25mm solid #e5e7eb; padding:1.5mm;">
+                  <img src="${escapeAttr(entry.imageSrc)}" alt="도안 ${entry.index}" style="position:static; width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; transform:none;" />
+                  <figcaption style="font-size:7.5px; line-height:1.25; text-align:center; color:#475569;">${escapeHtml(entry.index + '. ' + (entry.title || '도안'))}</figcaption>
+                </figure>
+              `).join('')
+            : '<div class="empty">아직 모아 볼 도안이 없습니다.</div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  if (page.kind === 'back-cover') {
+    const schoolLine = [page.schoolName, page.className, page.studentNumber ? page.studentNumber + '번' : ''].filter(Boolean).join(' · ');
+    return `
+      <div class="print-page back-cover-page" style="justify-content:flex-end; align-items:stretch; padding:8mm;">
+        <div style="margin-top:auto; border-top:0.35mm solid #111827; padding-top:4mm; display:grid; gap:2mm;">
+          <div style="font-size:11px; color:#64748b;">${escapeHtml(page.bookTitle || state.book.title || '나의 책')}</div>
+          <div style="font-size:18px; font-weight:800; color:#111827;">글/그림: ${escapeHtml(page.authorName || '________')}</div>
+          ${schoolLine ? `<div style="font-size:11px; color:#334155;">${escapeHtml(schoolLine)}</div>` : ''}
+          ${page.printedDate ? `<div style="font-size:9px; color:#94a3b8;">${escapeHtml(page.printedDate)}</div>` : ''}
+        </div>
       </div>
     `;
   }
@@ -2877,6 +3090,26 @@ function applyTextSizeToAllSpreads(size) {
   });
 }
 
+function shiftAllTextPosition(deltaX, deltaY) {
+  state.book.spreads.forEach((spread) => {
+    spread.leftTextOffsetX = clampNumber(toNumber(spread.leftTextOffsetX, 0) + deltaX, -160, 160);
+    spread.leftTextOffsetY = clampNumber(toNumber(spread.leftTextOffsetY, 0) + deltaY, -160, 160);
+  });
+}
+
+function resetAllTextPosition() {
+  state.book.spreads.forEach((spread) => {
+    spread.leftTextOffsetX = 0;
+    spread.leftTextOffsetY = 0;
+  });
+}
+
+function adjustAllBodyIndent(delta) {
+  state.book.spreads.forEach((spread) => {
+    spread.leftBodyIndent = clampNumber(toNumber(spread.leftBodyIndent, 0) + delta, 0, 80);
+  });
+}
+
 function bindGlobalShortcuts() {
   document.addEventListener('keydown', (event) => {
     const key = String(event.key || '').toLowerCase();
@@ -3032,6 +3265,8 @@ function injectInteractiveImageStyles() {
 
     .book-reading-cover,
     .book-reading-text,
+    .book-reading-summary,
+    .book-reading-gallery,
     .book-reading-back-cover {
       min-height: 0;
       overflow: hidden;
@@ -3045,15 +3280,86 @@ function injectInteractiveImageStyles() {
     }
 
     .book-reading-cover h4,
-    .book-reading-text h4 {
+    .book-reading-text h4,
+    .book-reading-summary h4,
+    .book-reading-gallery h4 {
       margin: 0 0 6px;
       line-height: 1.25;
     }
 
     .book-reading-cover p,
-    .book-reading-text p {
+    .book-reading-text p,
+    .book-reading-summary p {
       margin: 0;
       white-space: pre-wrap;
+    }
+
+    .book-reading-summary {
+      font-size: 11px;
+      line-height: 1.45;
+      display: grid;
+      gap: 6px;
+      align-content: start;
+    }
+
+    .book-reading-summary section {
+      display: grid;
+      gap: 2px;
+    }
+
+    .book-reading-gallery {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 6px;
+    }
+
+    .book-reading-gallery > div {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .book-reading-gallery figure {
+      margin: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 3px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .book-reading-gallery figure img {
+      position: static;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transform: none;
+    }
+
+    .book-reading-gallery figcaption {
+      font-size: 10px;
+      line-height: 1.25;
+      text-align: center;
+      color: #64748b;
+    }
+
+    .book-reading-back-cover {
+      display: grid;
+      align-content: end;
+      gap: 6px;
+      border-top: 2px solid #111827;
+      padding-top: 10px;
+      font-size: 13px;
+    }
+
+    .book-reading-back-cover span,
+    .book-reading-back-cover small {
+      display: block;
     }
 
     .book-reading-image-area,

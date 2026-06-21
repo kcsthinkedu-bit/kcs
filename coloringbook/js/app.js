@@ -157,7 +157,10 @@ function createInitialBook() {
     cover: {
       title: '새 책 제목',
       subtitle: '여기에 부제를 적으세요.',
-      imageSrc: ''
+      imageSrc: '',
+      imageX: 0,
+      imageY: 0,
+      imageScale: 1
     },
     spreads: [createSpread(1)]
   };
@@ -341,6 +344,7 @@ function renderEditor() {
     const coverImageMeta = document.getElementById('coverImageMeta');
     const coverPasteZone = document.getElementById('coverPasteZone');
     const removeCoverImageBtn = document.getElementById('removeCoverImageBtn');
+    const centerCoverImageBtn = document.getElementById('centerCoverImageBtn');
 
     coverTitleInput.value = state.book.cover.title;
     coverSubtitleInput.value = state.book.cover.subtitle;
@@ -352,6 +356,7 @@ function renderEditor() {
         ? '표지 이미지가 들어가 있습니다. 새 파일을 넣으면 교체됩니다.'
         : '표지 이미지는 선택 사항입니다. 없으면 텍스트 중심 표지로 출력됩니다.';
       removeCoverImageBtn.disabled = !state.book.cover.imageSrc;
+      if (centerCoverImageBtn) centerCoverImageBtn.disabled = !state.book.cover.imageSrc;
     };
 
     bindImeSafeTextField(
@@ -380,6 +385,7 @@ function renderEditor() {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
       state.book.cover.imageSrc = await fileToDataUrl(file);
+      centerCoverImage();
       renderAll();
       event.target.value = '';
     });
@@ -388,6 +394,7 @@ function renderEditor() {
       const pasted = await getImageFromPaste(event);
       if (!pasted) return;
       state.book.cover.imageSrc = pasted;
+      centerCoverImage();
       renderAll();
     });
 
@@ -395,6 +402,13 @@ function renderEditor() {
       state.book.cover.imageSrc = '';
       renderAll();
     });
+
+    if (centerCoverImageBtn) {
+      centerCoverImageBtn.addEventListener('click', () => {
+        centerCoverImage();
+        renderAll();
+      });
+    }
 
     syncCoverMeta();
     return;
@@ -740,10 +754,17 @@ function renderPreview() {
   if (state.active.type === 'cover') {
     const wrap = document.createElement('div');
     wrap.className = 'preview-cover';
+    const coverTransform = buildCoverImageTransform(state.book.cover);
     wrap.innerHTML = `
       <div class="preview-caption">표지 · ${state.book.cover.imageSrc ? '이미지 있음' : '텍스트 중심 표지'}</div>
       <div class="preview-cover-page">
-        <div class="preview-cover-image" style="background-image:url('${escapeAttr(state.book.cover.imageSrc)}')"></div>
+        <div class="preview-cover-image">
+          ${
+            state.book.cover.imageSrc
+              ? `<img src="${escapeAttr(state.book.cover.imageSrc)}" style="transform:${coverTransform};" alt="표지 이미지" />`
+              : '<div class="preview-empty">표지 이미지 없음</div>'
+          }
+        </div>
         <div class="preview-cover-text" style="text-align:center;">
         <h3 style="text-align:center;">${escapeHtml(state.book.cover.title || '제목 없음')}</h3>
         <p style="text-align:center;">${escapeHtml(state.book.cover.subtitle || '')}</p>
@@ -1093,10 +1114,11 @@ function renderReadingPageContent(page) {
   if (!page) return '<div class="preview-empty">페이지 없음</div>';
 
   if (page.kind === 'cover') {
+    const coverTransform = buildCoverImageTransform(page);
     return `
       <div class="book-reading-cover">
         <div class="book-reading-image-area">
-          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" alt="표지 이미지" />` : '<div class="preview-empty">표지 이미지 없음</div>'}
+          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:cover; transform:${coverTransform};" alt="표지 이미지" />` : '<div class="preview-empty">표지 이미지 없음</div>'}
         </div>
         <h4>${escapeHtml(page.title || '표지')}</h4>
         <p>${escapeHtml(page.subtitle || '')}</p>
@@ -2077,12 +2099,28 @@ function buildImageTransform(spread) {
   return `translate(calc(-50% + ${Number(spread.rightImageX || 0)}px), calc(-50% + ${Number(spread.rightImageY || 0)}px)) rotate(${normalizeImageRotation(spread.rightImageRotation)}deg) scale(${Number(spread.rightImageScale || 1)})`;
 }
 
+function buildCoverImageTransform(cover) {
+  const imageX = clampNumber(toNumber(cover && cover.imageX, 0), -400, 400);
+  const imageY = clampNumber(toNumber(cover && cover.imageY, 0), -400, 400);
+  const imageScale = clampNumber(toNumber(cover && cover.imageScale, 1), 0.2, 3);
+  return `translate(calc(-50% + ${imageX}px), calc(-50% + ${imageY}px)) scale(${imageScale})`;
+}
+
+function centerCoverImage() {
+  state.book.cover.imageX = 0;
+  state.book.cover.imageY = 0;
+  state.book.cover.imageScale = 1;
+}
+
 function normalizeCover(cover) {
   const safeCover = isPlainObject(cover) ? cover : {};
   return {
     title: normalizeString(safeCover.title, '제목 없음'),
     subtitle: normalizeString(safeCover.subtitle, ''),
-    imageSrc: typeof safeCover.imageSrc === 'string' ? safeCover.imageSrc : ''
+    imageSrc: typeof safeCover.imageSrc === 'string' ? safeCover.imageSrc : '',
+    imageX: clampNumber(toNumber(safeCover.imageX, 0), -400, 400),
+    imageY: clampNumber(toNumber(safeCover.imageY, 0), -400, 400),
+    imageScale: clampNumber(toNumber(safeCover.imageScale, 1), 0.2, 3)
   };
 }
 
@@ -2187,7 +2225,10 @@ function buildLogicalPages() {
     kind: 'cover',
     title: state.book.cover.title,
     subtitle: state.book.cover.subtitle,
-    imageSrc: state.book.cover.imageSrc
+    imageSrc: state.book.cover.imageSrc,
+    imageX: state.book.cover.imageX,
+    imageY: state.book.cover.imageY,
+    imageScale: state.book.cover.imageScale
   });
 
   state.book.spreads.forEach((spread) => {
@@ -2543,6 +2584,10 @@ function openPrintWindow() {
         overflow: hidden;
       }
 
+      .image-page {
+        padding: 0;
+      }
+
       .image-page .image-stage.no-guide {
         border-color: transparent;
         background: #fff;
@@ -2624,6 +2669,10 @@ function openPrintWindow() {
     background: #fff !important;
   }
 
+  .image-page {
+    padding: 0 !important;
+  }
+
   .cover-image-box {
     margin-top: 0 !important;
   }
@@ -2692,11 +2741,12 @@ function renderPrintPage(page, slotLabel) {
   const pageMeta = page.pageNo ? `책 페이지 ${page.pageNo}` : '보조 페이지';
 
   if (page.kind === 'cover') {
+  const coverTransform = buildCoverImageTransform(page);
   return `
     <div class="print-page cover-page">
       <div class="page-meta">${pageMeta} · 표지</div>
       <div class="cover-image-box">
-        ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="transform: translate(-50%, -50%) scale(1);" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
+        ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:cover; transform:${coverTransform};" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
       </div>
       <div class="cover-text-box">
         <h3>${escapeHtml(page.title || '표지')}</h3>
@@ -2777,16 +2827,10 @@ function renderPrintPage(page, slotLabel) {
   }
 
   if (page.kind === 'image') {
-    const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
     const imageScale = Math.max(Number(page.scale || 1), state.book.paper === 'B4' ? B4_MIN_IMAGE_SCALE : 1);
     const imageRotation = normalizeImageRotation(page.rotation);
     const guideClass = page.guideVisible === false ? ' no-guide' : '';
     const frameInsetMm = Math.round(normalizeFrameInset(page.frameInset) * 0.25 * 10) / 10;
-    const gutterStyle = String(slotLabel || '').includes('왼쪽')
-      ? `padding-right:${gutterMm}mm;`
-      : String(slotLabel || '').includes('오른쪽')
-        ? `padding-left:${gutterMm}mm;`
-        : '';
 
     return `
       <div class="print-page image-page">
@@ -2796,7 +2840,6 @@ function renderPrintPage(page, slotLabel) {
             display:flex;
             flex-direction:column;
             box-sizing:border-box;
-            ${gutterStyle}
           "
         >
           <div class="page-meta">${pageMeta} · 이미지 페이지</div>
@@ -3159,6 +3202,22 @@ function injectInteractiveImageStyles() {
       border-radius: 10px;
     }
 
+    .preview-cover-image {
+      position: relative;
+      overflow: hidden;
+      background: #f1f5f9;
+    }
+
+    .preview-cover-image img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: center center;
+    }
+
     .preview-image-stage.no-guide {
       background: #fff !important;
       border-color: transparent !important;
@@ -3445,17 +3504,17 @@ function injectInteractiveImageStyles() {
     }
 
     body.teacher-mode .teacher-print-focus {
-      order: 1;
+      order: 0;
       border-color: #c4b5fd;
       box-shadow: 0 14px 34px rgba(79, 70, 229, 0.1);
     }
 
     body.teacher-mode #bookReadinessReport {
-      order: 2;
+      order: 1;
     }
 
     body.teacher-mode #teacherPreviewReport {
-      order: 0;
+      order: 2;
     }
 
     body.teacher-mode #currentPreview {

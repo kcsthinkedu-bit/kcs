@@ -7,6 +7,7 @@ const DEFAULT_TEXT_FONT = 'notoSans';
 const DEFAULT_LINE_HEIGHT = 1.55;
 const B4_MIN_IMAGE_SCALE = 1.18;
 const B4_TEXT_SCALE = 1.12;
+const AUTO_FOLD_GUTTER_MM = 10;
 const TEXT_FONT_STACKS = {
   notoSans: "'Noto Sans KR', 'Malgun Gothic', sans-serif",
   nanumGothic: "'Nanum Gothic', 'Noto Sans KR', sans-serif",
@@ -766,7 +767,7 @@ function renderPreview() {
           }
         </div>
         <div class="preview-cover-text" style="text-align:center;">
-        <h3 style="text-align:center;">${escapeHtml(state.book.cover.title || '제목 없음')}</h3>
+        ${state.book.cover.title ? `<h3 style="text-align:center;">${escapeHtml(state.book.cover.title)}</h3>` : ''}
         <p style="text-align:center;">${escapeHtml(state.book.cover.subtitle || '')}</p>
         </div>
       </div>
@@ -1120,7 +1121,7 @@ function renderReadingPageContent(page) {
         <div class="book-reading-image-area">
           ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:cover; transform:${coverTransform};" alt="표지 이미지" />` : '<div class="preview-empty">표지 이미지 없음</div>'}
         </div>
-        <h4>${escapeHtml(page.title || '표지')}</h4>
+        ${page.title ? `<h4>${escapeHtml(page.title)}</h4>` : ''}
         <p>${escapeHtml(page.subtitle || '')}</p>
       </div>
     `;
@@ -1987,37 +1988,36 @@ function bindTopEvents() {
 
   if (dom.moveAllTextLeftBtn) {
     dom.moveAllTextLeftBtn.addEventListener('click', () => {
-      shiftAllTextPosition(-8, 0);
+      setAllTextHorizontalAlign('left');
       renderAll();
     });
   }
 
   if (dom.moveAllTextRightBtn) {
     dom.moveAllTextRightBtn.addEventListener('click', () => {
-      shiftAllTextPosition(8, 0);
+      setAllTextHorizontalAlign('right');
       renderAll();
     });
   }
 
   if (dom.moveAllTextUpBtn) {
     dom.moveAllTextUpBtn.addEventListener('click', () => {
-      shiftAllTextPosition(0, -8);
+      setAllTextVerticalAlign('top');
       renderAll();
     });
   }
 
   if (dom.moveAllTextDownBtn) {
     dom.moveAllTextDownBtn.addEventListener('click', () => {
-      shiftAllTextPosition(0, 8);
+      setAllTextVerticalAlign('bottom');
       renderAll();
     });
   }
 
   if (dom.resetAllTextPositionBtn) {
     dom.resetAllTextPositionBtn.addEventListener('click', () => {
-      resetAllTextPosition();
+      centerAllTextLayout();
       renderAll();
-      alert('모든 글 페이지의 좌우/상하 위치를 초기화했습니다.');
     });
   }
 
@@ -2115,7 +2115,7 @@ function centerCoverImage() {
 function normalizeCover(cover) {
   const safeCover = isPlainObject(cover) ? cover : {};
   return {
-    title: normalizeString(safeCover.title, '제목 없음'),
+    title: normalizeString(safeCover.title, ''),
     subtitle: normalizeString(safeCover.subtitle, ''),
     imageSrc: typeof safeCover.imageSrc === 'string' ? safeCover.imageSrc : '',
     imageX: clampNumber(toNumber(safeCover.imageX, 0), -400, 400),
@@ -2494,6 +2494,18 @@ function openPrintWindow() {
         grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm;
         column-gap: ${gapMm}mm;
         margin: 0;
+        position: relative;
+      }
+
+      .sheet-face::after {
+        content: "";
+        position: absolute;
+        top: 4mm;
+        bottom: 4mm;
+        left: 50%;
+        border-left: 0.25mm dashed rgba(100, 116, 139, 0.32);
+        transform: translateX(-50%);
+        pointer-events: none;
       }
 
       .sheet-slot {
@@ -2655,6 +2667,10 @@ function openPrintWindow() {
     margin: 0 !important;
   }
 
+  .sheet-face::after {
+    border-left-color: rgba(100, 116, 139, 0.24) !important;
+  }
+
   .sheet-slot {
     width: ${slotWidthMm}mm !important;
     height: ${contentHeightMm}mm !important;
@@ -2729,6 +2745,21 @@ function renderPrintFace(facePages, faceLabel) {
   `;
 }
 
+function getFoldGutterStyle(slotLabel, requestedMm = 0) {
+  const requested = Number(requestedMm);
+  const gutterMm = Math.max(AUTO_FOLD_GUTTER_MM, Number.isFinite(requested) ? requested : 0);
+
+  if (String(slotLabel || '').includes('왼쪽')) {
+    return `padding-right:${gutterMm}mm;`;
+  }
+
+  if (String(slotLabel || '').includes('오른쪽')) {
+    return `padding-left:${gutterMm}mm;`;
+  }
+
+  return '';
+}
+
 function renderPrintPage(page, slotLabel) {
   if (!page) {
     return `
@@ -2749,7 +2780,7 @@ function renderPrintPage(page, slotLabel) {
         ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:cover; transform:${coverTransform};" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
       </div>
       <div class="cover-text-box">
-        <h3>${escapeHtml(page.title || '표지')}</h3>
+        ${page.title ? `<h3>${escapeHtml(page.title)}</h3>` : ''}
         <p>${escapeHtml(page.subtitle || '')}</p>
       </div>
     </div>
@@ -2777,11 +2808,7 @@ function renderPrintPage(page, slotLabel) {
     const printTextScale = state.book.paper === 'B4' ? B4_TEXT_SCALE : 1;
     const titleFontSize = Number(page.fontSize || 24) * printTextScale;
     const bodyFontSize = Math.max(16, titleFontSize - 4);
-    const gutterStyle = String(slotLabel || '').includes('왼쪽')
-      ? `padding-right:${gutterMm}mm;`
-      : String(slotLabel || '').includes('오른쪽')
-        ? `padding-left:${gutterMm}mm;`
-        : '';
+    const gutterStyle = getFoldGutterStyle(slotLabel, gutterMm);
 
     return `
       <div class="print-page text-page">
@@ -2831,6 +2858,7 @@ function renderPrintPage(page, slotLabel) {
     const imageRotation = normalizeImageRotation(page.rotation);
     const guideClass = page.guideVisible === false ? ' no-guide' : '';
     const frameInsetMm = Math.round(normalizeFrameInset(page.frameInset) * 0.25 * 10) / 10;
+    const gutterStyle = getFoldGutterStyle(slotLabel, AUTO_FOLD_GUTTER_MM);
 
     return `
       <div class="print-page image-page">
@@ -2840,6 +2868,7 @@ function renderPrintPage(page, slotLabel) {
             display:flex;
             flex-direction:column;
             box-sizing:border-box;
+            ${gutterStyle}
           "
         >
           <div class="page-meta">${pageMeta} · 이미지 페이지</div>
@@ -3133,15 +3162,26 @@ function applyTextSizeToAllSpreads(size) {
   });
 }
 
-function shiftAllTextPosition(deltaX, deltaY) {
+function setAllTextHorizontalAlign(align) {
+  const safeAlign = ['left', 'center', 'right'].includes(align) ? align : 'left';
   state.book.spreads.forEach((spread) => {
-    spread.leftTextOffsetX = clampNumber(toNumber(spread.leftTextOffsetX, 0) + deltaX, -160, 160);
-    spread.leftTextOffsetY = clampNumber(toNumber(spread.leftTextOffsetY, 0) + deltaY, -160, 160);
+    spread.leftTitleAlign = safeAlign;
+    spread.leftTextAlign = safeAlign;
   });
 }
 
-function resetAllTextPosition() {
+function setAllTextVerticalAlign(align) {
+  const safeAlign = ['top', 'center', 'bottom'].includes(align) ? align : 'top';
   state.book.spreads.forEach((spread) => {
+    spread.leftVerticalAlign = safeAlign;
+  });
+}
+
+function centerAllTextLayout() {
+  state.book.spreads.forEach((spread) => {
+    spread.leftTitleAlign = 'center';
+    spread.leftTextAlign = 'center';
+    spread.leftVerticalAlign = 'center';
     spread.leftTextOffsetX = 0;
     spread.leftTextOffsetY = 0;
   });

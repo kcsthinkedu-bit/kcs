@@ -251,23 +251,45 @@
         </label>
 
         <label class="field">
-          제목 아래로 이동
-          <input id="titleOffsetInput" type="number" min="0" max="200" step="2" value="0" />
+          제목 위치
+          <select id="titleOffsetInput">
+            <option value="0">기본</option>
+            <option value="24">조금 아래</option>
+            <option value="48">아래</option>
+            <option value="72">많이 아래</option>
+          </select>
         </label>
 
         <label class="field">
-          글 전체 좌우 이동
-          <input id="textOffsetXInput" type="number" min="-160" max="160" step="2" value="0" />
+          글 좌우 위치
+          <select id="textOffsetXInput">
+            <option value="-80">왼쪽 많이</option>
+            <option value="-40">왼쪽 조금</option>
+            <option value="0">가운데</option>
+            <option value="40">오른쪽 조금</option>
+            <option value="80">오른쪽 많이</option>
+          </select>
         </label>
 
         <label class="field">
-          글 전체 상하 이동
-          <input id="textOffsetYInput" type="number" min="-160" max="160" step="2" value="0" />
+          글 상하 위치
+          <select id="textOffsetYInput">
+            <option value="-80">위쪽 많이</option>
+            <option value="-40">위쪽 조금</option>
+            <option value="0">가운데</option>
+            <option value="40">아래쪽 조금</option>
+            <option value="80">아래쪽 많이</option>
+          </select>
         </label>
 
         <label class="field">
           본문 들여쓰기
-          <input id="bodyIndentInput" type="number" min="0" max="80" step="2" value="0" />
+          <select id="bodyIndentInput">
+            <option value="0">없음</option>
+            <option value="20">조금</option>
+            <option value="40">보통</option>
+            <option value="60">많이</option>
+          </select>
         </label>
 
         <label class="field">
@@ -320,18 +342,37 @@
 
       <div class="inline-fields teacher-only-control">
         <label class="field">
-          크기 배율
-          <input id="imageScaleInput" type="number" min="0.2" max="5" step="0.05" />
+          도안 크기
+          <select id="imageScaleInput">
+            <option value="0.75">작게</option>
+            <option value="1">기본</option>
+            <option value="1.18">조금 크게</option>
+            <option value="1.35">크게</option>
+            <option value="1.6">아주 크게</option>
+            <option value="2">가득 크게</option>
+          </select>
         </label>
 
         <label class="field">
-          X 위치
-          <input id="imageXInput" type="number" min="-800" max="800" step="1" />
+          도안 좌우 위치
+          <select id="imageXInput">
+            <option value="-120">왼쪽 많이</option>
+            <option value="-60">왼쪽 조금</option>
+            <option value="0">가운데</option>
+            <option value="60">오른쪽 조금</option>
+            <option value="120">오른쪽 많이</option>
+          </select>
         </label>
 
         <label class="field">
-          Y 위치
-          <input id="imageYInput" type="number" min="-800" max="800" step="1" />
+          도안 상하 위치
+          <select id="imageYInput">
+            <option value="-120">위쪽 많이</option>
+            <option value="-60">위쪽 조금</option>
+            <option value="0">가운데</option>
+            <option value="60">아래쪽 조금</option>
+            <option value="120">아래쪽 많이</option>
+          </select>
         </label>
 
         <label class="field">
@@ -344,7 +385,14 @@
 
         <label class="field">
           도안 박스 여백
-          <input id="frameInsetInput" type="number" min="-60" max="120" step="2" value="0" />
+          <select id="frameInsetInput">
+            <option value="-40">종이 끝까지</option>
+            <option value="-20">더 넓게</option>
+            <option value="0">기본</option>
+            <option value="20">안쪽으로</option>
+            <option value="40">여백 크게</option>
+            <option value="80">아주 크게</option>
+          </select>
         </label>
       </div>
 

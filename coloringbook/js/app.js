@@ -170,7 +170,7 @@ function createInitialBook() {
 function createSpread(index) {
   return {
     id: 'spread_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-    leftTitle: index + '번째 펼침',
+    leftTitle: '',
     leftBody: '여기에 본문 내용을 적거나 붙여넣으세요.',
     leftFontSize: 24,
     leftFontWeight: '400',
@@ -470,18 +470,18 @@ function renderEditor() {
   if (titleAlignInput) titleAlignInput.value = spread.leftTitleAlign || spread.leftTextAlign || 'left';
   if (textAlignInput) textAlignInput.value = spread.leftTextAlign || 'left';
   if (verticalAlignInput) verticalAlignInput.value = spread.leftVerticalAlign || 'top';
-  if (titleOffsetInput) titleOffsetInput.value = spread.leftTitleOffsetY || 0;
-  if (textOffsetXInput) textOffsetXInput.value = spread.leftTextOffsetX || 0;
-  if (textOffsetYInput) textOffsetYInput.value = spread.leftTextOffsetY || 0;
-  if (bodyIndentInput) bodyIndentInput.value = spread.leftBodyIndent || 0;
+  setNumberSelectValue(titleOffsetInput, spread.leftTitleOffsetY || 0);
+  setNumberSelectValue(textOffsetXInput, spread.leftTextOffsetX || 0);
+  setNumberSelectValue(textOffsetYInput, spread.leftTextOffsetY || 0);
+  setNumberSelectValue(bodyIndentInput, spread.leftBodyIndent || 0);
   if (leadScaleInput) leadScaleInput.value = String(normalizeLeadScale(spread.leftLeadScale));
   if (innerGutterInput) innerGutterInput.value = spread.leftInnerGutter ?? DEFAULT_INNER_GUTTER;
   if (imageRotationInput) imageRotationInput.value = String(normalizeImageRotation(spread.rightImageRotation));
-  imageScaleInput.value = spread.rightImageScale;
-  imageXInput.value = spread.rightImageX;
-  imageYInput.value = spread.rightImageY;
+  setNumberSelectValue(imageScaleInput, spread.rightImageScale);
+  setNumberSelectValue(imageXInput, spread.rightImageX);
+  setNumberSelectValue(imageYInput, spread.rightImageY);
   if (guideVisibleInput) guideVisibleInput.value = spread.rightGuideVisible === false ? 'hide' : 'show';
-  if (frameInsetInput) frameInsetInput.value = normalizeFrameInset(spread.rightFrameInset);
+  setNumberSelectValue(frameInsetInput, normalizeFrameInset(spread.rightFrameInset));
 
   const syncSpreadMeta = () => {
     const bodyStats = getTextStats(spread.leftBody);
@@ -579,7 +579,7 @@ function renderEditor() {
   }
 
   if (titleOffsetInput) {
-    titleOffsetInput.addEventListener('input', () => {
+    titleOffsetInput.addEventListener('change', () => {
       spread.leftTitleOffsetY = toNumber(titleOffsetInput.value, 0);
       renderPreview();
       renderTeacherPanels();
@@ -587,7 +587,7 @@ function renderEditor() {
   }
 
   if (textOffsetXInput) {
-    textOffsetXInput.addEventListener('input', () => {
+    textOffsetXInput.addEventListener('change', () => {
       spread.leftTextOffsetX = toNumber(textOffsetXInput.value, 0);
       renderPreview();
       renderTeacherPanels();
@@ -595,7 +595,7 @@ function renderEditor() {
   }
 
   if (textOffsetYInput) {
-    textOffsetYInput.addEventListener('input', () => {
+    textOffsetYInput.addEventListener('change', () => {
       spread.leftTextOffsetY = toNumber(textOffsetYInput.value, 0);
       renderPreview();
       renderTeacherPanels();
@@ -603,7 +603,7 @@ function renderEditor() {
   }
 
   if (bodyIndentInput) {
-    bodyIndentInput.addEventListener('input', () => {
+    bodyIndentInput.addEventListener('change', () => {
       spread.leftBodyIndent = Math.max(0, toNumber(bodyIndentInput.value, 0));
       renderPreview();
       renderTeacherPanels();
@@ -675,21 +675,21 @@ function renderEditor() {
     });
   }
 
-  imageScaleInput.addEventListener('input', () => {
+  imageScaleInput.addEventListener('change', () => {
     spread.rightImageScale = toNumber(imageScaleInput.value, 1);
     renderPreview();
     renderTeacherPanels();
     syncSpreadMeta();
   });
 
-  imageXInput.addEventListener('input', () => {
+  imageXInput.addEventListener('change', () => {
     spread.rightImageX = toNumber(imageXInput.value, 0);
     renderPreview();
     renderTeacherPanels();
     syncSpreadMeta();
   });
 
-  imageYInput.addEventListener('input', () => {
+  imageYInput.addEventListener('change', () => {
     spread.rightImageY = toNumber(imageYInput.value, 0);
     renderPreview();
     renderTeacherPanels();
@@ -706,7 +706,7 @@ function renderEditor() {
   }
 
   if (frameInsetInput) {
-    frameInsetInput.addEventListener('input', () => {
+    frameInsetInput.addEventListener('change', () => {
       spread.rightFrameInset = normalizeFrameInset(frameInsetInput.value);
       renderPreview();
       renderTeacherPanels();
@@ -717,8 +717,8 @@ function renderEditor() {
   centerImageBtn.addEventListener('click', () => {
     spread.rightImageX = 0;
     spread.rightImageY = 0;
-    imageXInput.value = 0;
-    imageYInput.value = 0;
+    setNumberSelectValue(imageXInput, 0);
+    setNumberSelectValue(imageYInput, 0);
     renderPreview();
     renderTeacherPanels();
     syncSpreadMeta();
@@ -729,9 +729,9 @@ function renderEditor() {
     spread.rightImageX = 0;
     spread.rightImageY = 0;
     spread.rightImageRotation = 0;
-    imageScaleInput.value = 1;
-    imageXInput.value = 0;
-    imageYInput.value = 0;
+    setNumberSelectValue(imageScaleInput, 1);
+    setNumberSelectValue(imageXInput, 0);
+    setNumberSelectValue(imageYInput, 0);
     if (imageRotationInput) imageRotationInput.value = '0';
     renderPreview();
     renderTeacherPanels();
@@ -787,6 +787,7 @@ function renderPreview() {
 
   const titleAlign = spread.leftTitleAlign || spread.leftTextAlign || 'left';
   const bodyAlign = spread.leftTextAlign || 'left';
+  const printableTitle = getPrintableSpreadTitle(spread.leftTitle);
   const previewGutterPx = Math.max(0, Number(spread.leftInnerGutter || DEFAULT_INNER_GUTTER));
   const fontStack = getTextFontStack(spread.leftFontFamily);
   const lineHeight = normalizeLineHeight(spread.leftLineHeight);
@@ -823,17 +824,19 @@ function renderPreview() {
             transform: translate(${textOffsetX}px, ${textOffsetY}px);
           "
         >
-          <h3
-            style="
-              font-size:${Number(spread.leftFontSize || 24)}px;
-              font-weight:${escapeAttr(spread.leftFontWeight || '400')};
-              text-align:${escapeAttr(titleAlign)};
-              margin-top:${Number(spread.leftTitleOffsetY || 0)}px;
-              margin-bottom:10px;
-            "
-          >
-            ${escapeHtml(spread.leftTitle || '제목 없음')}
-          </h3>
+          ${printableTitle ? `
+            <h3
+              style="
+                font-size:${Number(spread.leftFontSize || 24)}px;
+                font-weight:${escapeAttr(spread.leftFontWeight || '400')};
+                text-align:${escapeAttr(titleAlign)};
+                margin-top:${Number(spread.leftTitleOffsetY || 0)}px;
+                margin-bottom:10px;
+              "
+            >
+              ${escapeHtml(printableTitle)}
+            </h3>
+          ` : ''}
           <p
             style="
               font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px;
@@ -949,9 +952,9 @@ function syncImageControlInputs(spread) {
   const imageYInput = document.getElementById('imageYInput');
   const spreadImageMeta = document.getElementById('spreadImageMeta');
 
-  if (imageScaleInput) imageScaleInput.value = String(Math.round(toNumber(spread.rightImageScale, 1) * 100) / 100);
-  if (imageXInput) imageXInput.value = String(Math.round(toNumber(spread.rightImageX, 0)));
-  if (imageYInput) imageYInput.value = String(Math.round(toNumber(spread.rightImageY, 0)));
+  setNumberSelectValue(imageScaleInput, Math.round(toNumber(spread.rightImageScale, 1) * 100) / 100);
+  setNumberSelectValue(imageXInput, Math.round(toNumber(spread.rightImageX, 0)));
+  setNumberSelectValue(imageYInput, Math.round(toNumber(spread.rightImageY, 0)));
   if (spreadImageMeta) {
     spreadImageMeta.textContent = buildImageStatusText(
       spread.rightImage,
@@ -1134,7 +1137,7 @@ function renderReadingPageContent(page) {
     const bodyFontSize = Math.max(12, titleFontSize - 3);
     return `
       <div class="book-reading-text" style="font-family:${fontStack};">
-        <h4 style="font-size:${titleFontSize}px; text-align:${escapeAttr(page.titleAlign || 'left')};">${escapeHtml(page.title || '')}</h4>
+        ${page.title ? `<h4 style="font-size:${titleFontSize}px; text-align:${escapeAttr(page.titleAlign || 'left')};">${escapeHtml(page.title)}</h4>` : ''}
         <p style="font-size:${bodyFontSize}px; line-height:${lineHeight}; text-align:${escapeAttr(page.textAlign || 'left')};">${renderBodyContentHtml(page.body || '', page.leadScale || 1)}</p>
       </div>
     `;
@@ -1163,7 +1166,7 @@ function renderReadingPageContent(page) {
         ${page.entries && page.entries.length
           ? page.entries.map((entry) => `
               <section>
-                <strong>${escapeHtml(entry.index + '. ' + (entry.title || '제목 없음'))}</strong>
+                <strong>${escapeHtml(entry.title ? entry.index + '. ' + entry.title : String(entry.index))}</strong>
                 <p>${escapeHtml(entry.body || '').replace(/\n/g, '<br />')}</p>
               </section>
             `).join('')
@@ -1181,7 +1184,7 @@ function renderReadingPageContent(page) {
             ? page.entries.map((entry) => `
                 <figure>
                   <img src="${escapeAttr(entry.imageSrc)}" alt="도안 ${entry.index}" />
-                  <figcaption>${escapeHtml(entry.index + '. ' + (entry.title || '도안'))}</figcaption>
+                  <figcaption>${escapeHtml(entry.title ? entry.index + '. ' + entry.title : String(entry.index))}</figcaption>
                 </figure>
               `).join('')
             : '<div class="preview-empty">아직 모아 볼 도안이 없습니다.</div>'}
@@ -1473,21 +1476,11 @@ function buildTeacherReport() {
   }
 
   state.book.spreads.forEach((spread, index) => {
-    const title = normalizeString(spread.leftTitle, '').trim();
     const body = normalizeString(spread.leftBody, '').trim();
     const hasImage = !!spread.rightImage;
     if (hasImage) imageReadyCount += 1;
 
     const bodyStats = getTextStats(body);
-    if (!title) {
-      issues.push({
-        targetType: 'spread',
-        targetId: spread.id,
-        title: `펼침 ${index + 1} 제목이 비어 있습니다`,
-        description: '왼쪽 페이지 제목을 넣어야 책 순서 목록과 인쇄 페이지 구분이 쉬워집니다.'
-      });
-    }
-
     if (bodyStats.chars < 10) {
       issues.push({
         targetType: 'spread',
@@ -1506,7 +1499,7 @@ function buildTeacherReport() {
       });
     }
 
-    if (title && bodyStats.chars >= 10 && hasImage) {
+    if (bodyStats.chars >= 10 && hasImage) {
       completeSpreadCount += 1;
     }
   });
@@ -2053,6 +2046,15 @@ function normalizeString(value, fallback = '') {
   return String(value);
 }
 
+function isDefaultSpreadTitle(value) {
+  return /^\d+번째 펼침$/.test(normalizeString(value, '').trim());
+}
+
+function getPrintableSpreadTitle(value) {
+  const title = normalizeString(value, '').trim();
+  return title && !isDefaultSpreadTitle(title) ? title : '';
+}
+
 function normalizeTextFont(value) {
   const key = normalizeString(value, DEFAULT_TEXT_FONT);
   return Object.prototype.hasOwnProperty.call(TEXT_FONT_STACKS, key) ? key : DEFAULT_TEXT_FONT;
@@ -2133,7 +2135,7 @@ function normalizeSpread(item, index) {
 
   return {
     id: normalizeString(safeItem.id, 'spread_' + (index + 1)),
-    leftTitle: normalizeString(safeItem.leftTitle, `${index + 1}번째 펼침`),
+    leftTitle: getPrintableSpreadTitle(safeItem.leftTitle),
     leftBody: normalizeString(safeItem.leftBody, ''),
     leftFontSize: toNumber(safeItem.leftFontSize, 24),
     leftFontWeight: normalizeString(safeItem.leftFontWeight, '400'),
@@ -2233,10 +2235,11 @@ function buildLogicalPages() {
 
   state.book.spreads.forEach((spread) => {
     const printGutterMm = Math.round(Math.max(0, Number(spread.leftInnerGutter || DEFAULT_INNER_GUTTER)) * 0.75 * 10) / 10;
+    const printableTitle = getPrintableSpreadTitle(spread.leftTitle);
 
     pages.push({
       kind: 'text',
-      title: spread.leftTitle,
+      title: printableTitle,
       body: spread.leftBody,
       fontSize: spread.leftFontSize,
       fontWeight: spread.leftFontWeight,
@@ -2262,7 +2265,7 @@ function buildLogicalPages() {
       rotation: spread.rightImageRotation,
       guideVisible: spread.rightGuideVisible,
       frameInset: spread.rightFrameInset,
-      title: spread.leftTitle + ' 이미지',
+      title: printableTitle ? printableTitle + ' 이미지' : '도안 이미지',
       innerGutterMm: printGutterMm
     });
   });
@@ -2296,7 +2299,7 @@ function buildAutoFillPages(count) {
 function buildStorySummaryPage() {
   const entries = state.book.spreads.map((spread, index) => ({
     index: index + 1,
-    title: normalizeString(spread.leftTitle, `${index + 1}번째 펼침`).trim(),
+    title: getPrintableSpreadTitle(spread.leftTitle),
     body: normalizeString(spread.leftBody, '').trim()
   })).filter((entry) => entry.title || entry.body);
 
@@ -2310,7 +2313,7 @@ function buildStorySummaryPage() {
 function buildImageGalleryPage() {
   const entries = state.book.spreads.map((spread, index) => ({
     index: index + 1,
-    title: normalizeString(spread.leftTitle, `${index + 1}번째 펼침`).trim(),
+    title: getPrintableSpreadTitle(spread.leftTitle),
     imageSrc: spread.rightImage
   })).filter((entry) => entry.imageSrc);
 
@@ -2825,17 +2828,19 @@ function renderPrintPage(page, slotLabel) {
           "
         >
           <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
-          <h3
-            style="
-              font-size:${titleFontSize}px;
-              font-weight:${escapeAttr(page.fontWeight || '400')};
-              text-align:${escapeAttr(titleAlign)};
-              margin-top:${Number(page.titleOffsetY || 0)}px;
-              margin-bottom:10px;
-            "
-          >
-            ${escapeHtml(page.title || '')}
-          </h3>
+          ${page.title ? `
+            <h3
+              style="
+                font-size:${titleFontSize}px;
+                font-weight:${escapeAttr(page.fontWeight || '400')};
+                text-align:${escapeAttr(titleAlign)};
+                margin-top:${Number(page.titleOffsetY || 0)}px;
+                margin-bottom:10px;
+              "
+            >
+              ${escapeHtml(page.title)}
+            </h3>
+          ` : ''}
           <p
             style="
               font-size:${bodyFontSize}px;
@@ -2902,7 +2907,7 @@ function renderPrintPage(page, slotLabel) {
           ${page.entries && page.entries.length
             ? page.entries.map((entry) => `
                 <section style="break-inside:avoid; margin:0 0 3mm;">
-                  <strong style="display:block; font-size:9.5px; margin-bottom:1mm;">${escapeHtml(entry.index + '. ' + (entry.title || '제목 없음'))}</strong>
+                  <strong style="display:block; font-size:9.5px; margin-bottom:1mm;">${escapeHtml(entry.title ? entry.index + '. ' + entry.title : String(entry.index))}</strong>
                   <p style="font-size:8.5px; line-height:1.45; margin:0; white-space:pre-wrap;">${escapeHtml(entry.body || '')}</p>
                 </section>
               `).join('')
@@ -2922,7 +2927,7 @@ function renderPrintPage(page, slotLabel) {
             ? page.entries.map((entry) => `
                 <figure style="margin:0; min-height:0; display:grid; grid-template-rows:minmax(0, 1fr) auto; gap:1mm; border:0.25mm solid #e5e7eb; padding:1.5mm;">
                   <img src="${escapeAttr(entry.imageSrc)}" alt="도안 ${entry.index}" style="position:static; width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; transform:none;" />
-                  <figcaption style="font-size:7.5px; line-height:1.25; text-align:center; color:#475569;">${escapeHtml(entry.index + '. ' + (entry.title || '도안'))}</figcaption>
+                  <figcaption style="font-size:7.5px; line-height:1.25; text-align:center; color:#475569;">${escapeHtml(entry.title ? entry.index + '. ' + entry.title : String(entry.index))}</figcaption>
                 </figure>
               `).join('')
             : '<div class="empty">아직 모아 볼 도안이 없습니다.</div>'}
@@ -3016,6 +3021,23 @@ async function getImageFromPaste(event) {
 function toNumber(value, fallback) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function setNumberSelectValue(select, value) {
+  if (!select || !select.options) return;
+
+  const target = toNumber(value, 0);
+  const optionValues = Array.from(select.options)
+    .map((option) => toNumber(option.value, NaN))
+    .filter((number) => Number.isFinite(number));
+
+  if (!optionValues.length) return;
+
+  const closest = optionValues.reduce((best, current) => (
+    Math.abs(current - target) < Math.abs(best - target) ? current : best
+  ), optionValues[0]);
+
+  select.value = String(closest);
 }
 
 function getTextStats(text) {

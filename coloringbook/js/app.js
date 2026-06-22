@@ -56,16 +56,18 @@ function getStoredPrintOffset() {
     const raw = localStorage.getItem(PRINT_OFFSET_STORAGE_KEY);
     const data = raw ? JSON.parse(raw) : {};
     return {
+      center: normalizePrintOffset(data.center),
       x: normalizePrintOffset(data.x),
       y: normalizePrintOffset(data.y)
     };
   } catch (error) {
-    return { x: 0, y: 0 };
+    return { center: 0, x: 0, y: 0 };
   }
 }
 
 function setStoredPrintOffset(offset) {
   const safeOffset = {
+    center: normalizePrintOffset(offset && offset.center),
     x: normalizePrintOffset(offset && offset.x),
     y: normalizePrintOffset(offset && offset.y)
   };
@@ -81,6 +83,7 @@ function setStoredPrintOffset(offset) {
 
 function syncPrintOffsetInputs() {
   const offset = getStoredPrintOffset();
+  if (dom.printCenterOffsetInput) dom.printCenterOffsetInput.value = String(offset.center);
   if (dom.printOffsetXInput) dom.printOffsetXInput.value = String(offset.x);
   if (dom.printOffsetYInput) dom.printOffsetYInput.value = String(offset.y);
 }
@@ -186,6 +189,7 @@ const dom = {
   resetAllTextPositionBtn: document.getElementById('resetAllTextPositionBtn'),
   decreaseAllIndentBtn: document.getElementById('decreaseAllIndentBtn'),
   increaseAllIndentBtn: document.getElementById('increaseAllIndentBtn'),
+  printCenterOffsetInput: document.getElementById('printCenterOffsetInput'),
   printOffsetXInput: document.getElementById('printOffsetXInput'),
   printOffsetYInput: document.getElementById('printOffsetYInput'),
   resetPrintOffsetBtn: document.getElementById('resetPrintOffsetBtn'),
@@ -2000,12 +2004,19 @@ function bindTopEvents() {
 
   const handlePrintOffsetChange = () => {
     const offset = setStoredPrintOffset({
+      center: dom.printCenterOffsetInput ? dom.printCenterOffsetInput.value : 0,
       x: dom.printOffsetXInput ? dom.printOffsetXInput.value : 0,
       y: dom.printOffsetYInput ? dom.printOffsetYInput.value : 0
     });
+    if (dom.printCenterOffsetInput) dom.printCenterOffsetInput.value = String(offset.center);
     if (dom.printOffsetXInput) dom.printOffsetXInput.value = String(offset.x);
     if (dom.printOffsetYInput) dom.printOffsetYInput.value = String(offset.y);
   };
+
+  if (dom.printCenterOffsetInput) {
+    dom.printCenterOffsetInput.addEventListener('input', handlePrintOffsetChange);
+    dom.printCenterOffsetInput.addEventListener('change', handlePrintOffsetChange);
+  }
 
   if (dom.printOffsetXInput) {
     dom.printOffsetXInput.addEventListener('input', handlePrintOffsetChange);
@@ -2019,7 +2030,7 @@ function bindTopEvents() {
 
   if (dom.resetPrintOffsetBtn) {
     dom.resetPrintOffsetBtn.addEventListener('click', () => {
-      setStoredPrintOffset({ x: 0, y: 0 });
+      setStoredPrintOffset({ center: 0, x: 0, y: 0 });
       syncPrintOffsetInputs();
     });
   }
@@ -2536,6 +2547,7 @@ function openPrintWindow() {
   const coverMaxWidthMm = paper === 'B4' ? 134 : 118;
   const slotWidthMm = (contentWidthMm - gapMm) / 2;
   const printOffset = getStoredPrintOffset();
+  const printCenterOffsetMm = printOffset.center;
   const printOffsetXMm = printOffset.x;
   const printOffsetYMm = printOffset.y;
 
@@ -2641,6 +2653,7 @@ function openPrintWindow() {
         column-gap: ${gapMm}mm;
         margin: 0;
         position: relative;
+        transform: translateX(${printCenterOffsetMm}mm);
       }
 
       .sheet-face::after {
@@ -2824,6 +2837,7 @@ function openPrintWindow() {
     grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm !important;
     column-gap: ${gapMm}mm !important;
     margin: 0 !important;
+    transform: translateX(${printCenterOffsetMm}mm) !important;
   }
 
   .sheet-face::after {
@@ -2867,7 +2881,7 @@ function openPrintWindow() {
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음 · 가운데 선 고정 · 내용 보정 X ${printOffsetXMm}mm / Y ${printOffsetYMm}mm</div>
+      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음 · 중심선 보정 ${printCenterOffsetMm}mm · 내용 보정 X ${printOffsetXMm}mm / Y ${printOffsetYMm}mm</div>
     </div>
 
     <div class="print-stack">

@@ -2163,7 +2163,7 @@ function normalizeFrameInset(value) {
 }
 
 function getPrintSafeImageScale(value) {
-  return clampNumber(toNumber(value, 1), 0.2, 1);
+  return clampNumber(toNumber(value, 1), 0.2, 2);
 }
 
 function buildImageTransform(spread) {
@@ -2690,6 +2690,14 @@ function openPrintWindow() {
         max-width: 100%;
         max-height: 100%;
         transform-origin: center center;
+      }
+
+      .image-page .image-stage img {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        object-fit: contain;
       }
 
       .blank-page {
@@ -3389,6 +3397,15 @@ function injectInteractiveImageStyles() {
     }
 
     .preview-image-stage img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
+      transform-origin: center center;
       user-select: none;
       touch-action: none;
     }
@@ -3588,13 +3605,27 @@ function injectInteractiveImageStyles() {
       overflow: hidden;
     }
 
-    .book-reading-image-area img,
+    .book-reading-image-area img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
+      transform-origin: center center;
+    }
+
     .book-reading-image-stage img {
       position: absolute;
       top: 50%;
       left: 50%;
-      max-width: 100%;
-      max-height: 100%;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
       transform: translate(-50%, -50%);
       transform-origin: center center;
     }

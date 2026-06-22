@@ -8,6 +8,7 @@ const DEFAULT_LINE_HEIGHT = 1.55;
 const B4_TEXT_SCALE = 1.12;
 const PRINT_IMAGE_SAFE_MARGIN_MM = 5;
 const PRINT_FOLD_SAFE_MARGIN_MM = 10;
+const PRINT_IMAGE_HORIZONTAL_EXPAND_MM = 5;
 const TEXT_FONT_STACKS = {
   notoSans: "'Noto Sans KR', 'Malgun Gothic', sans-serif",
   nanumGothic: "'Nanum Gothic', 'Noto Sans KR', sans-serif",
@@ -2464,7 +2465,7 @@ function openPrintWindow() {
   const contentHeightMm = paper === 'B4' ? 250 : 210;
   const gapMm = 0;
   const pagePaddingMm = paper === 'B4' ? 7 : 6;
-  const coverMaxWidthMm = paper === 'B4' ? 124 : 108;
+  const coverMaxWidthMm = paper === 'B4' ? 134 : 118;
   const slotWidthMm = (contentWidthMm - gapMm) / 2;
 
   const html = `<!DOCTYPE html>
@@ -2840,7 +2841,8 @@ function buildPrintPadding(baseMm, slotSide) {
 
 function buildPrintStageMargin(baseMm, slotSide) {
   const padding = getFoldPaddingBySlot(slotSide);
-  return `${baseMm}mm ${baseMm + padding.right}mm ${baseMm}mm ${baseMm + padding.left}mm`;
+  const horizontalBase = Math.max(0, baseMm - PRINT_IMAGE_HORIZONTAL_EXPAND_MM);
+  return `${baseMm}mm ${horizontalBase + padding.right}mm ${baseMm}mm ${horizontalBase + padding.left}mm`;
 }
 
 function renderPrintFace(facePages, faceLabel) {

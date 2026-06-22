@@ -7,8 +7,6 @@ const DEFAULT_TEXT_FONT = 'notoSans';
 const DEFAULT_LINE_HEIGHT = 1.55;
 const B4_TEXT_SCALE = 1.12;
 const PRINT_IMAGE_SAFE_MARGIN_MM = 5;
-const PRINT_FOLD_SAFE_MARGIN_MM = 0;
-const PRINT_FOLD_MARGIN_LIMIT_MM = 15;
 const PRINT_IMAGE_HORIZONTAL_EXPAND_MM = 5;
 const PRINT_OFFSET_STORAGE_KEY = 'kcs-print-offset-mm';
 const PRINT_OFFSET_LIMIT_MM = 20;
@@ -53,29 +51,23 @@ function normalizePrintOffset(value) {
   return Math.round(clampNumber(toNumber(value, 0), -PRINT_OFFSET_LIMIT_MM, PRINT_OFFSET_LIMIT_MM) * 10) / 10;
 }
 
-function normalizePrintFoldMargin(value) {
-  return Math.round(clampNumber(toNumber(value, PRINT_FOLD_SAFE_MARGIN_MM), 0, PRINT_FOLD_MARGIN_LIMIT_MM) * 10) / 10;
-}
-
 function getStoredPrintOffset() {
   try {
     const raw = localStorage.getItem(PRINT_OFFSET_STORAGE_KEY);
     const data = raw ? JSON.parse(raw) : {};
     return {
       x: normalizePrintOffset(data.x),
-      y: normalizePrintOffset(data.y),
-      fold: normalizePrintFoldMargin(data.fold)
+      y: normalizePrintOffset(data.y)
     };
   } catch (error) {
-    return { x: 0, y: 0, fold: PRINT_FOLD_SAFE_MARGIN_MM };
+    return { x: 0, y: 0 };
   }
 }
 
 function setStoredPrintOffset(offset) {
   const safeOffset = {
     x: normalizePrintOffset(offset && offset.x),
-    y: normalizePrintOffset(offset && offset.y),
-    fold: normalizePrintFoldMargin(offset && offset.fold)
+    y: normalizePrintOffset(offset && offset.y)
   };
 
   try {
@@ -91,7 +83,6 @@ function syncPrintOffsetInputs() {
   const offset = getStoredPrintOffset();
   if (dom.printOffsetXInput) dom.printOffsetXInput.value = String(offset.x);
   if (dom.printOffsetYInput) dom.printOffsetYInput.value = String(offset.y);
-  if (dom.printFoldMarginInput) dom.printFoldMarginInput.value = String(offset.fold);
 }
 
 
@@ -197,7 +188,6 @@ const dom = {
   increaseAllIndentBtn: document.getElementById('increaseAllIndentBtn'),
   printOffsetXInput: document.getElementById('printOffsetXInput'),
   printOffsetYInput: document.getElementById('printOffsetYInput'),
-  printFoldMarginInput: document.getElementById('printFoldMarginInput'),
   resetPrintOffsetBtn: document.getElementById('resetPrintOffsetBtn'),
   teacherPreviewReport: document.getElementById('teacherPreviewReport'),
   coverEditorTemplate: document.getElementById('coverEditorTemplate'),
@@ -2011,12 +2001,10 @@ function bindTopEvents() {
   const handlePrintOffsetChange = () => {
     const offset = setStoredPrintOffset({
       x: dom.printOffsetXInput ? dom.printOffsetXInput.value : 0,
-      y: dom.printOffsetYInput ? dom.printOffsetYInput.value : 0,
-      fold: dom.printFoldMarginInput ? dom.printFoldMarginInput.value : PRINT_FOLD_SAFE_MARGIN_MM
+      y: dom.printOffsetYInput ? dom.printOffsetYInput.value : 0
     });
     if (dom.printOffsetXInput) dom.printOffsetXInput.value = String(offset.x);
     if (dom.printOffsetYInput) dom.printOffsetYInput.value = String(offset.y);
-    if (dom.printFoldMarginInput) dom.printFoldMarginInput.value = String(offset.fold);
   };
 
   if (dom.printOffsetXInput) {
@@ -2029,14 +2017,9 @@ function bindTopEvents() {
     dom.printOffsetYInput.addEventListener('change', handlePrintOffsetChange);
   }
 
-  if (dom.printFoldMarginInput) {
-    dom.printFoldMarginInput.addEventListener('input', handlePrintOffsetChange);
-    dom.printFoldMarginInput.addEventListener('change', handlePrintOffsetChange);
-  }
-
   if (dom.resetPrintOffsetBtn) {
     dom.resetPrintOffsetBtn.addEventListener('click', () => {
-      setStoredPrintOffset({ x: 0, y: 0, fold: PRINT_FOLD_SAFE_MARGIN_MM });
+      setStoredPrintOffset({ x: 0, y: 0 });
       syncPrintOffsetInputs();
     });
   }
@@ -2555,7 +2538,6 @@ function openPrintWindow() {
   const printOffset = getStoredPrintOffset();
   const printOffsetXMm = printOffset.x;
   const printOffsetYMm = printOffset.y;
-  const printFoldMarginMm = printOffset.fold;
 
   const html = `<!DOCTYPE html>
   <html lang="ko">
@@ -2659,7 +2641,6 @@ function openPrintWindow() {
         column-gap: ${gapMm}mm;
         margin: 0;
         position: relative;
-        transform: translate(${printOffsetXMm}mm, ${printOffsetYMm}mm);
       }
 
       .sheet-face::after {
@@ -2679,6 +2660,7 @@ function openPrintWindow() {
         height: ${contentHeightMm}mm;
         min-width: 0;
         min-height: 0;
+        transform: translate(${printOffsetXMm}mm, ${printOffsetYMm}mm);
       }
 
       .print-page {
@@ -2686,7 +2668,7 @@ function openPrintWindow() {
         height: ${contentHeightMm}mm;
         border: 0.3mm solid #cbd5e1;
         background: #fff;
-        padding: ${pagePaddingMm}mm calc(${pagePaddingMm}mm + var(--fold-padding-right, 0mm)) ${pagePaddingMm}mm calc(${pagePaddingMm}mm + var(--fold-padding-left, 0mm));
+        padding: ${pagePaddingMm}mm;
         overflow: hidden;
         position: relative;
         display: flex;
@@ -2842,7 +2824,6 @@ function openPrintWindow() {
     grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm !important;
     column-gap: ${gapMm}mm !important;
     margin: 0 !important;
-    transform: translate(${printOffsetXMm}mm, ${printOffsetYMm}mm) !important;
   }
 
   .sheet-face::after {
@@ -2852,12 +2833,13 @@ function openPrintWindow() {
   .sheet-slot {
     width: ${slotWidthMm}mm !important;
     height: ${contentHeightMm}mm !important;
+    transform: translate(${printOffsetXMm}mm, ${printOffsetYMm}mm) !important;
   }
 
   .print-page {
     width: ${slotWidthMm}mm !important;
     height: ${contentHeightMm}mm !important;
-    padding: ${pagePaddingMm}mm calc(${pagePaddingMm}mm + var(--fold-padding-right, 0mm)) ${pagePaddingMm}mm calc(${pagePaddingMm}mm + var(--fold-padding-left, 0mm)) !important;
+    padding: ${pagePaddingMm}mm !important;
     border: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
@@ -2885,7 +2867,7 @@ function openPrintWindow() {
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음 · 위치 보정 X ${printOffsetXMm}mm / Y ${printOffsetYMm}mm · 접는선 여백 ${printFoldMarginMm}mm</div>
+      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음 · 가운데 선 고정 · 내용 보정 X ${printOffsetXMm}mm / Y ${printOffsetYMm}mm</div>
     </div>
 
     <div class="print-stack">
@@ -2912,29 +2894,13 @@ function openPrintWindow() {
   win.document.close();
 }
 
-function getFoldPaddingBySlot(slotSide) {
-  const side = slotSide === 'right' ? 'right' : 'left';
-  const foldMargin = normalizePrintFoldMargin(getStoredPrintOffset().fold);
-  return {
-    left: side === 'right' ? foldMargin : 0,
-    right: side === 'left' ? foldMargin : 0
-  };
+function buildPrintPadding(baseMm) {
+  return `${baseMm}mm`;
 }
 
-function buildPrintFoldVars(slotSide) {
-  const padding = getFoldPaddingBySlot(slotSide);
-  return `--fold-padding-left:${padding.left}mm; --fold-padding-right:${padding.right}mm;`;
-}
-
-function buildPrintPadding(baseMm, slotSide) {
-  const padding = getFoldPaddingBySlot(slotSide);
-  return `${baseMm}mm ${baseMm + padding.right}mm ${baseMm}mm ${baseMm + padding.left}mm`;
-}
-
-function buildPrintStageMargin(baseMm, slotSide) {
-  const padding = getFoldPaddingBySlot(slotSide);
+function buildPrintStageMargin(baseMm) {
   const horizontalBase = Math.max(0, baseMm - PRINT_IMAGE_HORIZONTAL_EXPAND_MM);
-  return `${baseMm}mm ${horizontalBase + padding.right}mm ${baseMm}mm ${horizontalBase + padding.left}mm`;
+  return `${baseMm}mm ${horizontalBase}mm`;
 }
 
 function renderPrintFace(facePages, faceLabel) {
@@ -2962,9 +2928,8 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
 
   if (page.kind === 'cover') {
   const coverTransform = buildCoverImageTransform(page);
-  const foldVars = buildPrintFoldVars(slotSide);
   return `
-    <div class="print-page cover-page" style="${foldVars}">
+    <div class="print-page cover-page">
       <div class="page-meta">${pageMeta} · 표지</div>
       <div class="cover-image-box">
         ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:contain; transform:${coverTransform};" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
@@ -2997,10 +2962,9 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
     const printTextScale = state.book.paper === 'B4' ? B4_TEXT_SCALE : 1;
     const titleFontSize = Number(page.fontSize || 24) * printTextScale;
     const bodyFontSize = Math.max(16, titleFontSize - 4);
-    const foldVars = buildPrintFoldVars(slotSide);
 
     return `
-      <div class="print-page text-page" style="${foldVars}">
+      <div class="print-page text-page">
         <div
           style="
             height:100%;
@@ -3049,11 +3013,10 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
     const guideClass = page.guideVisible === false ? ' no-guide' : '';
     const frameInsetMm = Math.round(normalizeFrameInset(page.frameInset) * 0.25 * 10) / 10;
     const imageSafeMarginMm = Math.max(PRINT_IMAGE_SAFE_MARGIN_MM, frameInsetMm);
-    const foldVars = buildPrintFoldVars(slotSide);
-    const imageStageMargin = buildPrintStageMargin(imageSafeMarginMm, slotSide);
+    const imageStageMargin = buildPrintStageMargin(imageSafeMarginMm);
 
     return `
-      <div class="print-page image-page" style="${foldVars}">
+      <div class="print-page image-page">
         <div
           style="
             height:100%;
@@ -3085,10 +3048,9 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
   }
 
   if (page.kind === 'story-summary') {
-    const foldVars = buildPrintFoldVars(slotSide);
-    const storyPadding = buildPrintPadding(7, slotSide);
+    const storyPadding = buildPrintPadding(7);
     return `
-      <div class="print-page story-summary-page" style="${foldVars} padding:${storyPadding}; display:flex; flex-direction:column;">
+      <div class="print-page story-summary-page" style="padding:${storyPadding}; display:flex; flex-direction:column;">
         <div class="page-meta">${pageMeta} · 이야기 전체</div>
         <h3 style="font-size:16px; margin-bottom:4mm;">${escapeHtml(page.title || '이야기 전체 보기')}</h3>
         <div style="font-size:8.5px; line-height:1.45; columns:2; column-gap:6mm; overflow:hidden;">
@@ -3106,10 +3068,9 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
   }
 
   if (page.kind === 'image-gallery') {
-    const foldVars = buildPrintFoldVars(slotSide);
-    const galleryPadding = buildPrintPadding(7, slotSide);
+    const galleryPadding = buildPrintPadding(7);
     return `
-      <div class="print-page image-gallery-page" style="${foldVars} padding:${galleryPadding}; display:flex; flex-direction:column;">
+      <div class="print-page image-gallery-page" style="padding:${galleryPadding}; display:flex; flex-direction:column;">
         <div class="page-meta">${pageMeta} · 도안 모음</div>
         <h3 style="font-size:16px; margin-bottom:4mm;">${escapeHtml(page.title || '도안 모아보기')}</h3>
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:3mm; min-height:0; flex:1 1 auto;">
@@ -3128,10 +3089,9 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
 
   if (page.kind === 'back-cover') {
     const schoolLine = [page.schoolName, page.className, page.studentNumber ? page.studentNumber + '번' : ''].filter(Boolean).join(' · ');
-    const foldVars = buildPrintFoldVars(slotSide);
-    const backCoverPadding = buildPrintPadding(8, slotSide);
+    const backCoverPadding = buildPrintPadding(8);
     return `
-      <div class="print-page back-cover-page" style="${foldVars} justify-content:flex-end; align-items:stretch; padding:${backCoverPadding};">
+      <div class="print-page back-cover-page" style="justify-content:flex-end; align-items:stretch; padding:${backCoverPadding};">
         <div style="margin-top:auto; border-top:0.35mm solid #111827; padding-top:4mm; display:grid; gap:2mm;">
           <div style="font-size:11px; color:#64748b;">${escapeHtml(page.bookTitle || state.book.title || '나의 책')}</div>
           <div style="font-size:18px; font-weight:800; color:#111827;">글/그림: ${escapeHtml(page.authorName || '________')}</div>

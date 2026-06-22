@@ -94,6 +94,26 @@
             <button id="increaseAllIndentBtn" class="toolbar-btn" type="button">전체 들여쓰기 늘리기</button>
           </div>
 
+          <div class="teacher-print-offset-box">
+            <h4>인쇄 위치 보정</h4>
+            <p class="muted">프린터가 B4를 한쪽으로 밀어 찍을 때만 조정합니다. 오른쪽으로 밀리면 좌우 보정에 음수, 왼쪽으로 밀리면 양수를 넣으세요.</p>
+            <div class="inline-fields">
+              <label class="field">
+                좌우 보정(mm)
+                <input id="printOffsetXInput" type="number" min="-20" max="20" step="0.5" value="0" />
+              </label>
+              <label class="field">
+                상하 보정(mm)
+                <input id="printOffsetYInput" type="number" min="-20" max="20" step="0.5" value="0" />
+              </label>
+              <label class="field">
+                접는선 여백(mm)
+                <input id="printFoldMarginInput" type="number" min="0" max="15" step="0.5" value="0" />
+              </label>
+            </div>
+            <button id="resetPrintOffsetBtn" class="toolbar-btn" type="button">인쇄 보정 초기화</button>
+          </div>
+
           <div class="teacher-issue-box">
             <h4>보완이 필요한 페이지</h4>
             <div id="teacherIssueList" class="teacher-issue-list"></div>
@@ -445,6 +465,6 @@
     </section>
   </div>
 
-  <script src="./js/app.js?v=20260622-wide-print-frame"></script>
+  <script src="./js/app.js?v=20260622-print-offset-fold-zero"></script>
 </body>
 </html>

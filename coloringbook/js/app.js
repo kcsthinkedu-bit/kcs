@@ -7,8 +7,11 @@ const DEFAULT_TEXT_FONT = 'notoSans';
 const DEFAULT_LINE_HEIGHT = 1.55;
 const B4_TEXT_SCALE = 1.12;
 const PRINT_IMAGE_SAFE_MARGIN_MM = 5;
-const PRINT_FOLD_SAFE_MARGIN_MM = 10;
+const PRINT_FOLD_SAFE_MARGIN_MM = 0;
+const PRINT_FOLD_MARGIN_LIMIT_MM = 15;
 const PRINT_IMAGE_HORIZONTAL_EXPAND_MM = 5;
+const PRINT_OFFSET_STORAGE_KEY = 'kcs-print-offset-mm';
+const PRINT_OFFSET_LIMIT_MM = 20;
 const TEXT_FONT_STACKS = {
   notoSans: "'Noto Sans KR', 'Malgun Gothic', sans-serif",
   nanumGothic: "'Nanum Gothic', 'Noto Sans KR', sans-serif",
@@ -44,6 +47,51 @@ function setStoredTeacherPassword(password) {
   } catch (error) {
     console.error(error);
   }
+}
+
+function normalizePrintOffset(value) {
+  return Math.round(clampNumber(toNumber(value, 0), -PRINT_OFFSET_LIMIT_MM, PRINT_OFFSET_LIMIT_MM) * 10) / 10;
+}
+
+function normalizePrintFoldMargin(value) {
+  return Math.round(clampNumber(toNumber(value, PRINT_FOLD_SAFE_MARGIN_MM), 0, PRINT_FOLD_MARGIN_LIMIT_MM) * 10) / 10;
+}
+
+function getStoredPrintOffset() {
+  try {
+    const raw = localStorage.getItem(PRINT_OFFSET_STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    return {
+      x: normalizePrintOffset(data.x),
+      y: normalizePrintOffset(data.y),
+      fold: normalizePrintFoldMargin(data.fold)
+    };
+  } catch (error) {
+    return { x: 0, y: 0, fold: PRINT_FOLD_SAFE_MARGIN_MM };
+  }
+}
+
+function setStoredPrintOffset(offset) {
+  const safeOffset = {
+    x: normalizePrintOffset(offset && offset.x),
+    y: normalizePrintOffset(offset && offset.y),
+    fold: normalizePrintFoldMargin(offset && offset.fold)
+  };
+
+  try {
+    localStorage.setItem(PRINT_OFFSET_STORAGE_KEY, JSON.stringify(safeOffset));
+  } catch (error) {
+    console.error(error);
+  }
+
+  return safeOffset;
+}
+
+function syncPrintOffsetInputs() {
+  const offset = getStoredPrintOffset();
+  if (dom.printOffsetXInput) dom.printOffsetXInput.value = String(offset.x);
+  if (dom.printOffsetYInput) dom.printOffsetYInput.value = String(offset.y);
+  if (dom.printFoldMarginInput) dom.printFoldMarginInput.value = String(offset.fold);
 }
 
 
@@ -147,6 +195,10 @@ const dom = {
   resetAllTextPositionBtn: document.getElementById('resetAllTextPositionBtn'),
   decreaseAllIndentBtn: document.getElementById('decreaseAllIndentBtn'),
   increaseAllIndentBtn: document.getElementById('increaseAllIndentBtn'),
+  printOffsetXInput: document.getElementById('printOffsetXInput'),
+  printOffsetYInput: document.getElementById('printOffsetYInput'),
+  printFoldMarginInput: document.getElementById('printFoldMarginInput'),
+  resetPrintOffsetBtn: document.getElementById('resetPrintOffsetBtn'),
   teacherPreviewReport: document.getElementById('teacherPreviewReport'),
   coverEditorTemplate: document.getElementById('coverEditorTemplate'),
   spreadEditorTemplate: document.getElementById('spreadEditorTemplate')
@@ -1956,6 +2008,39 @@ function bindTopEvents() {
     });
   }
 
+  const handlePrintOffsetChange = () => {
+    const offset = setStoredPrintOffset({
+      x: dom.printOffsetXInput ? dom.printOffsetXInput.value : 0,
+      y: dom.printOffsetYInput ? dom.printOffsetYInput.value : 0,
+      fold: dom.printFoldMarginInput ? dom.printFoldMarginInput.value : PRINT_FOLD_SAFE_MARGIN_MM
+    });
+    if (dom.printOffsetXInput) dom.printOffsetXInput.value = String(offset.x);
+    if (dom.printOffsetYInput) dom.printOffsetYInput.value = String(offset.y);
+    if (dom.printFoldMarginInput) dom.printFoldMarginInput.value = String(offset.fold);
+  };
+
+  if (dom.printOffsetXInput) {
+    dom.printOffsetXInput.addEventListener('input', handlePrintOffsetChange);
+    dom.printOffsetXInput.addEventListener('change', handlePrintOffsetChange);
+  }
+
+  if (dom.printOffsetYInput) {
+    dom.printOffsetYInput.addEventListener('input', handlePrintOffsetChange);
+    dom.printOffsetYInput.addEventListener('change', handlePrintOffsetChange);
+  }
+
+  if (dom.printFoldMarginInput) {
+    dom.printFoldMarginInput.addEventListener('input', handlePrintOffsetChange);
+    dom.printFoldMarginInput.addEventListener('change', handlePrintOffsetChange);
+  }
+
+  if (dom.resetPrintOffsetBtn) {
+    dom.resetPrintOffsetBtn.addEventListener('click', () => {
+      setStoredPrintOffset({ x: 0, y: 0, fold: PRINT_FOLD_SAFE_MARGIN_MM });
+      syncPrintOffsetInputs();
+    });
+  }
+
   if (dom.jumpFirstIssueBtn) {
     dom.jumpFirstIssueBtn.addEventListener('click', () => {
       const report = buildTeacherReport();
@@ -2467,6 +2552,10 @@ function openPrintWindow() {
   const pagePaddingMm = paper === 'B4' ? 7 : 6;
   const coverMaxWidthMm = paper === 'B4' ? 134 : 118;
   const slotWidthMm = (contentWidthMm - gapMm) / 2;
+  const printOffset = getStoredPrintOffset();
+  const printOffsetXMm = printOffset.x;
+  const printOffsetYMm = printOffset.y;
+  const printFoldMarginMm = printOffset.fold;
 
   const html = `<!DOCTYPE html>
   <html lang="ko">
@@ -2570,6 +2659,7 @@ function openPrintWindow() {
         column-gap: ${gapMm}mm;
         margin: 0;
         position: relative;
+        transform: translate(${printOffsetXMm}mm, ${printOffsetYMm}mm);
       }
 
       .sheet-face::after {
@@ -2752,6 +2842,7 @@ function openPrintWindow() {
     grid-template-columns: ${slotWidthMm}mm ${slotWidthMm}mm !important;
     column-gap: ${gapMm}mm !important;
     margin: 0 !important;
+    transform: translate(${printOffsetXMm}mm, ${printOffsetYMm}mm) !important;
   }
 
   .sheet-face::after {
@@ -2794,7 +2885,7 @@ function openPrintWindow() {
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음으로 인쇄하세요. 도안은 글씨가 잘리지 않도록 안전 여백을 두고 맞춥니다.</div>
+      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음 · 위치 보정 X ${printOffsetXMm}mm / Y ${printOffsetYMm}mm · 접는선 여백 ${printFoldMarginMm}mm</div>
     </div>
 
     <div class="print-stack">
@@ -2823,9 +2914,10 @@ function openPrintWindow() {
 
 function getFoldPaddingBySlot(slotSide) {
   const side = slotSide === 'right' ? 'right' : 'left';
+  const foldMargin = normalizePrintFoldMargin(getStoredPrintOffset().fold);
   return {
-    left: side === 'right' ? PRINT_FOLD_SAFE_MARGIN_MM : 0,
-    right: side === 'left' ? PRINT_FOLD_SAFE_MARGIN_MM : 0
+    left: side === 'right' ? foldMargin : 0,
+    right: side === 'left' ? foldMargin : 0
   };
 }
 
@@ -3726,6 +3818,7 @@ async function init() {
   injectInteractiveImageStyles();
   setMode('student');
   bindTopEvents();
+  syncPrintOffsetInputs();
   renderAll();
   await handleInitialRemoteLoad();
 }

@@ -99,8 +99,12 @@
             <p class="muted">프린터가 B4를 한쪽으로 밀어 찍을 때만 조정합니다. 오른쪽으로 밀리면 좌우 보정에 음수, 왼쪽으로 밀리면 양수를 넣으세요.</p>
             <div class="inline-fields">
               <label class="field">
-                중심선 보정(mm)
-                <input id="printCenterOffsetInput" type="number" min="-20" max="20" step="0.5" value="0" />
+                앞면 중심선 보정(mm)
+                <input id="printFrontCenterOffsetInput" type="number" min="-20" max="20" step="0.5" value="0" />
+              </label>
+              <label class="field">
+                뒷면 중심선 보정(mm)
+                <input id="printBackCenterOffsetInput" type="number" min="-20" max="20" step="0.5" value="0" />
               </label>
               <label class="field">
                 좌우 보정(mm)
@@ -465,6 +469,6 @@
     </section>
   </div>
 
-  <script src="./js/app.js?v=20260622-centerline-calibration"></script>
+  <script src="./js/app.js?v=20260622-duplex-centerline-calibration"></script>
 </body>
 </html>

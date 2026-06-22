@@ -1152,7 +1152,7 @@ function renderReadingPageContent(page) {
     return `
       <div class="book-reading-cover">
         <div class="book-reading-image-area">
-          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:cover; transform:${coverTransform};" alt="표지 이미지" />` : '<div class="preview-empty">표지 이미지 없음</div>'}
+          ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:contain; transform:${coverTransform};" alt="표지 이미지" />` : '<div class="preview-empty">표지 이미지 없음</div>'}
         </div>
         ${page.title ? `<h4>${escapeHtml(page.title)}</h4>` : ''}
         <p>${escapeHtml(page.subtitle || '')}</p>
@@ -2865,7 +2865,7 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
     <div class="print-page cover-page" style="${foldVars}">
       <div class="page-meta">${pageMeta} · 표지</div>
       <div class="cover-image-box">
-        ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:cover; transform:${coverTransform};" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
+        ${page.imageSrc ? `<img src="${escapeAttr(page.imageSrc)}" style="width:100%; height:100%; object-fit:contain; transform:${coverTransform};" alt="표지 이미지" />` : `<div class="empty">표지 이미지 없음</div>`}
       </div>
       <div class="cover-text-box">
         ${page.title ? `<h3>${escapeHtml(page.title)}</h3>` : ''}
@@ -3371,7 +3371,7 @@ function injectInteractiveImageStyles() {
       left: 50%;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       transform-origin: center center;
     }
 

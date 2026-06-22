@@ -5,9 +5,9 @@ const REVIEW_SAVE_ENDPOINT = '/api/submissions/review-save';
 const DEFAULT_INNER_GUTTER = 32;
 const DEFAULT_TEXT_FONT = 'notoSans';
 const DEFAULT_LINE_HEIGHT = 1.55;
-const B4_MIN_IMAGE_SCALE = 1.18;
 const B4_TEXT_SCALE = 1.12;
 const AUTO_FOLD_GUTTER_MM = 10;
+const PRINT_IMAGE_SAFE_MARGIN_MM = 5;
 const TEXT_FONT_STACKS = {
   notoSans: "'Noto Sans KR', 'Malgun Gothic', sans-serif",
   nanumGothic: "'Nanum Gothic', 'Noto Sans KR', sans-serif",
@@ -1144,7 +1144,7 @@ function renderReadingPageContent(page) {
   }
 
   if (page.kind === 'image') {
-    const imageScale = Math.max(Number(page.scale || 1), state.book.paper === 'B4' ? B4_MIN_IMAGE_SCALE : 1);
+    const imageScale = getPrintSafeImageScale(page.scale);
     const imageRotation = normalizeImageRotation(page.rotation);
     const frameInset = normalizeFrameInset(page.frameInset);
     const guideClass = page.guideVisible === false ? ' no-guide' : '';
@@ -1958,7 +1958,7 @@ function bindTopEvents() {
       const count = enlargeAllImages();
       if (count) {
         renderAll();
-        alert(`${count}개의 이미지 페이지를 크게 맞췄습니다. 인쇄 배열에서 잘리는 부분이 없는지 한 번 확인해 주세요.`);
+        alert(`${count}개의 이미지 페이지를 안전 맞춤으로 정리했습니다. 그림 안 글씨가 잘리는지 인쇄 배열에서 한 번 확인해 주세요.`);
       }
     });
   }
@@ -2095,6 +2095,10 @@ function rotateImage(value, delta) {
 
 function normalizeFrameInset(value) {
   return Math.round(clampNumber(toNumber(value, 0), -60, 120));
+}
+
+function getPrintSafeImageScale(value) {
+  return clampNumber(toNumber(value, 1), 0.2, 1);
 }
 
 function buildImageTransform(spread) {
@@ -2710,7 +2714,7 @@ function openPrintWindow() {
     <div class="screen-toolbar">
       <button class="primary" onclick="window.print()">인쇄하기</button>
       <button onclick="window.close()">닫기</button>
-      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음으로 인쇄하세요. B4는 그림과 글을 자동 확대하지만, 프린터 용지도 B4로 맞춰야 크게 나옵니다.</div>
+      <div class="print-note">${paper} 가로 · 배율 100% · 여백 없음으로 인쇄하세요. 도안은 글씨가 잘리지 않도록 안전 여백을 두고 맞춥니다.</div>
     </div>
 
     <div class="print-stack">
@@ -2859,10 +2863,11 @@ function renderPrintPage(page, slotLabel) {
   }
 
   if (page.kind === 'image') {
-    const imageScale = Math.max(Number(page.scale || 1), state.book.paper === 'B4' ? B4_MIN_IMAGE_SCALE : 1);
+    const imageScale = getPrintSafeImageScale(page.scale);
     const imageRotation = normalizeImageRotation(page.rotation);
     const guideClass = page.guideVisible === false ? ' no-guide' : '';
     const frameInsetMm = Math.round(normalizeFrameInset(page.frameInset) * 0.25 * 10) / 10;
+    const imageSafeMarginMm = Math.max(PRINT_IMAGE_SAFE_MARGIN_MM, frameInsetMm);
     const gutterStyle = getFoldGutterStyle(slotLabel, AUTO_FOLD_GUTTER_MM);
 
     return `
@@ -2884,7 +2889,7 @@ function renderPrintPage(page, slotLabel) {
               min-height:0;
               position:relative;
               overflow:hidden;
-              margin:${frameInsetMm}mm;
+              margin:${imageSafeMarginMm}mm;
             "
           >
             ${
@@ -3166,11 +3171,11 @@ function resetAllImages() {
   return count;
 }
 
-function enlargeAllImages(targetScale = 1.18) {
+function enlargeAllImages(targetScale = 1) {
   let count = 0;
   state.book.spreads.forEach((spread) => {
     if (!spread.rightImage) return;
-    spread.rightImageScale = Math.max(toNumber(spread.rightImageScale, 1), targetScale);
+    spread.rightImageScale = targetScale;
     spread.rightImageX = 0;
     spread.rightImageY = 0;
     count += 1;

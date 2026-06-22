@@ -6,7 +6,6 @@ const DEFAULT_INNER_GUTTER = 32;
 const DEFAULT_TEXT_FONT = 'notoSans';
 const DEFAULT_LINE_HEIGHT = 1.55;
 const B4_TEXT_SCALE = 1.12;
-const AUTO_FOLD_GUTTER_MM = 10;
 const PRINT_IMAGE_SAFE_MARGIN_MM = 5;
 const TEXT_FONT_STACKS = {
   notoSans: "'Noto Sans KR', 'Malgun Gothic', sans-serif",
@@ -565,6 +564,12 @@ function renderEditor() {
   if (textAlignInput) {
     textAlignInput.addEventListener('change', () => {
       spread.leftTextAlign = textAlignInput.value;
+      if (textAlignInput.value === 'center') {
+        spread.leftTitleAlign = 'center';
+        spread.leftTextOffsetX = 0;
+        if (titleAlignInput) titleAlignInput.value = 'center';
+        setNumberSelectValue(textOffsetXInput, 0);
+      }
       renderPreview();
       renderTeacherPanels();
     });
@@ -573,6 +578,10 @@ function renderEditor() {
   if (verticalAlignInput) {
     verticalAlignInput.addEventListener('change', () => {
       spread.leftVerticalAlign = verticalAlignInput.value;
+      if (verticalAlignInput.value === 'center') {
+        spread.leftTextOffsetY = 0;
+        setNumberSelectValue(textOffsetYInput, 0);
+      }
       renderPreview();
       renderTeacherPanels();
     });
@@ -588,7 +597,14 @@ function renderEditor() {
 
   if (textOffsetXInput) {
     textOffsetXInput.addEventListener('change', () => {
-      spread.leftTextOffsetX = toNumber(textOffsetXInput.value, 0);
+      const offsetX = toNumber(textOffsetXInput.value, 0);
+      spread.leftTextOffsetX = offsetX;
+      if (offsetX === 0) {
+        spread.leftTextAlign = 'center';
+        spread.leftTitleAlign = 'center';
+        if (textAlignInput) textAlignInput.value = 'center';
+        if (titleAlignInput) titleAlignInput.value = 'center';
+      }
       renderPreview();
       renderTeacherPanels();
     });
@@ -596,7 +612,12 @@ function renderEditor() {
 
   if (textOffsetYInput) {
     textOffsetYInput.addEventListener('change', () => {
-      spread.leftTextOffsetY = toNumber(textOffsetYInput.value, 0);
+      const offsetY = toNumber(textOffsetYInput.value, 0);
+      spread.leftTextOffsetY = offsetY;
+      if (offsetY === 0) {
+        spread.leftVerticalAlign = 'center';
+        if (verticalAlignInput) verticalAlignInput.value = 'center';
+      }
       renderPreview();
       renderTeacherPanels();
     });
@@ -789,6 +810,9 @@ function renderPreview() {
   const bodyAlign = spread.leftTextAlign || 'left';
   const printableTitle = getPrintableSpreadTitle(spread.leftTitle);
   const previewGutterPx = Math.max(0, Number(spread.leftInnerGutter || DEFAULT_INNER_GUTTER));
+  const isPreviewCentered = bodyAlign === 'center';
+  const previewTextPaddingLeft = isPreviewCentered ? Math.max(12, Math.round(previewGutterPx / 2)) : 12;
+  const previewTextPaddingRight = isPreviewCentered ? Math.max(12, Math.round(previewGutterPx / 2)) : previewGutterPx;
   const fontStack = getTextFontStack(spread.leftFontFamily);
   const lineHeight = normalizeLineHeight(spread.leftLineHeight);
   const textOffsetX = toNumber(spread.leftTextOffsetX, 0);
@@ -796,7 +820,7 @@ function renderPreview() {
   const bodyIndent = Math.max(0, toNumber(spread.leftBodyIndent, 0));
   const leadScale = normalizeLeadScale(spread.leftLeadScale);
   const frameInset = normalizeFrameInset(spread.rightFrameInset);
-  const imageStageLeft = previewGutterPx + frameInset;
+  const imageStageLeft = frameInset;
   const guideClass = spread.rightGuideVisible === false ? ' no-guide' : '';
   const imageTransform = buildImageTransform(spread);
 
@@ -817,8 +841,8 @@ function renderPreview() {
                   ? 'flex-end'
                   : 'flex-start'
             };
-            padding-left: 12px;
-            padding-right: ${previewGutterPx}px;
+            padding-left: ${previewTextPaddingLeft}px;
+            padding-right: ${previewTextPaddingRight}px;
             box-sizing: border-box;
             font-family: ${fontStack};
             transform: translate(${textOffsetX}px, ${textOffsetY}px);
@@ -2507,12 +2531,13 @@ function openPrintWindow() {
       .sheet-face::after {
         content: "";
         position: absolute;
-        top: 4mm;
-        bottom: 4mm;
+        top: 0;
+        bottom: 0;
         left: 50%;
         border-left: 0.25mm dashed rgba(100, 116, 139, 0.32);
         transform: translateX(-50%);
         pointer-events: none;
+        z-index: 10;
       }
 
       .sheet-slot {
@@ -2752,21 +2777,6 @@ function renderPrintFace(facePages, faceLabel) {
   `;
 }
 
-function getFoldGutterStyle(slotLabel, requestedMm = 0) {
-  const requested = Number(requestedMm);
-  const gutterMm = Math.max(AUTO_FOLD_GUTTER_MM, Number.isFinite(requested) ? requested : 0);
-
-  if (String(slotLabel || '').includes('왼쪽')) {
-    return `padding-right:${gutterMm}mm;`;
-  }
-
-  if (String(slotLabel || '').includes('오른쪽')) {
-    return `padding-left:${gutterMm}mm;`;
-  }
-
-  return '';
-}
-
 function renderPrintPage(page, slotLabel) {
   if (!page) {
     return `
@@ -2805,7 +2815,6 @@ function renderPrintPage(page, slotLabel) {
 
     const textAlign = ['left', 'center', 'right'].includes(page.textAlign) ? page.textAlign : 'left';
     const titleAlign = ['left', 'center', 'right'].includes(page.titleAlign) ? page.titleAlign : textAlign;
-    const gutterMm = Math.max(0, Number(page.innerGutterMm || 0));
     const fontStack = getTextFontStack(page.fontFamily);
     const lineHeight = normalizeLineHeight(page.lineHeight);
     const textOffsetX = toNumber(page.textOffsetX, 0);
@@ -2815,7 +2824,6 @@ function renderPrintPage(page, slotLabel) {
     const printTextScale = state.book.paper === 'B4' ? B4_TEXT_SCALE : 1;
     const titleFontSize = Number(page.fontSize || 24) * printTextScale;
     const bodyFontSize = Math.max(16, titleFontSize - 4);
-    const gutterStyle = getFoldGutterStyle(slotLabel, gutterMm);
 
     return `
       <div class="print-page text-page">
@@ -2828,7 +2836,6 @@ function renderPrintPage(page, slotLabel) {
             box-sizing:border-box;
             font-family:${fontStack};
             transform:translate(${textOffsetX}px, ${textOffsetY}px);
-            ${gutterStyle}
           "
         >
           <div class="page-meta">${pageMeta} · 텍스트 페이지</div>
@@ -2868,7 +2875,6 @@ function renderPrintPage(page, slotLabel) {
     const guideClass = page.guideVisible === false ? ' no-guide' : '';
     const frameInsetMm = Math.round(normalizeFrameInset(page.frameInset) * 0.25 * 10) / 10;
     const imageSafeMarginMm = Math.max(PRINT_IMAGE_SAFE_MARGIN_MM, frameInsetMm);
-    const gutterStyle = getFoldGutterStyle(slotLabel, AUTO_FOLD_GUTTER_MM);
 
     return `
       <div class="print-page image-page">
@@ -2878,7 +2884,6 @@ function renderPrintPage(page, slotLabel) {
             display:flex;
             flex-direction:column;
             box-sizing:border-box;
-            ${gutterStyle}
           "
         >
           <div class="page-meta">${pageMeta} · 이미지 페이지</div>
@@ -3194,6 +3199,7 @@ function setAllTextHorizontalAlign(align) {
   state.book.spreads.forEach((spread) => {
     spread.leftTitleAlign = safeAlign;
     spread.leftTextAlign = safeAlign;
+    spread.leftTextOffsetX = 0;
   });
 }
 
@@ -3201,6 +3207,8 @@ function setAllTextVerticalAlign(align) {
   const safeAlign = ['top', 'center', 'bottom'].includes(align) ? align : 'top';
   state.book.spreads.forEach((spread) => {
     spread.leftVerticalAlign = safeAlign;
+    spread.leftTextOffsetY = 0;
+    if (safeAlign === 'center') spread.leftTitleOffsetY = 0;
   });
 }
 
@@ -3209,8 +3217,10 @@ function centerAllTextLayout() {
     spread.leftTitleAlign = 'center';
     spread.leftTextAlign = 'center';
     spread.leftVerticalAlign = 'center';
+    spread.leftTitleOffsetY = 0;
     spread.leftTextOffsetX = 0;
     spread.leftTextOffsetY = 0;
+    spread.leftBodyIndent = 0;
   });
 }
 

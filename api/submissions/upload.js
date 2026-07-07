@@ -1,84 +1,78 @@
 import { put } from '@vercel/blob';
-
-function safePathPart(value, fallback) {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, ' ')
-    .replace(/\s+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return cleaned || fallback;
-}
-
-function readBody(body) {
-  if (!body) return {};
-  if (typeof body === 'string') {
-    try {
-      return JSON.parse(body);
-    } catch (error) {
-      return {};
-    }
-  }
-  return body;
-}
+import {
+  findClassByCode,
+  normalizeClassCode,
+  readBody,
+  safePathPart,
+  safeString
+} from '../_lib/school-store.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'POST 요청만 허용됩니다.' });
+    return res.status(405).json({ error: 'POST 요청만 사용할 수 있습니다.' });
   }
 
   try {
-    const expectedSubmissionCode = String(process.env.SUBMISSION_CODE || '').trim();
-    if (!expectedSubmissionCode) {
-      return res.status(500).json({ error: '서버 제출코드 설정이 없습니다.' });
-    }
-
     const raw = readBody(req.body);
     const submission = raw && raw.submission ? raw.submission : {};
     const book = raw && raw.book ? raw.book : raw;
 
     if (!submission.className) {
-      return res.status(400).json({ error: '학급명이 필요합니다.' });
+      return res.status(400).json({ error: '학급명을 입력해 주세요.' });
     }
 
     if (!submission.studentName) {
-      return res.status(400).json({ error: '학생 이름이 필요합니다.' });
+      return res.status(400).json({ error: '학생 이름을 입력해 주세요.' });
     }
 
-    const submissionCode = String(submission.submissionCode || '').trim();
+    const submissionCode = normalizeClassCode(submission.submissionCode);
     if (!submissionCode) {
-      return res.status(400).json({ error: '제출코드가 필요합니다.' });
+      return res.status(400).json({ error: '학급 코드가 필요합니다.' });
     }
 
-    if (submissionCode !== expectedSubmissionCode) {
-      return res.status(403).json({ error: '제출코드가 올바르지 않습니다.' });
+    const classInfo = await findClassByCode(submissionCode);
+    const legacySubmissionCode = normalizeClassCode(process.env.SUBMISSION_CODE || '');
+    const isLegacyCode = !classInfo && legacySubmissionCode && submissionCode === legacySubmissionCode;
+
+    if (!classInfo && !isLegacyCode) {
+      return res.status(403).json({ error: '학급 코드가 맞지 않습니다. 선생님이 만든 학급 코드를 다시 확인해 주세요.' });
     }
 
     if (!book || !book.cover || !Array.isArray(book.spreads)) {
-      return res.status(400).json({ error: '현재 KCS 책 JSON 형식이 필요합니다.' });
+      return res.status(400).json({ error: '현재 책 JSON 형식이 필요합니다.' });
     }
 
     const now = new Date();
     const stamp = now.toISOString().replace(/[:.]/g, '-');
-    const schoolPart = safePathPart(submission.schoolName || 'school', 'school');
-    const classPart = safePathPart(submission.className || 'class', 'class');
-    const studentPart = safePathPart(submission.studentName || 'student', 'student');
-    const numberPart = safePathPart(submission.studentNumber || 'no-number', 'no-number');
+    const schoolName = safeString(submission.schoolName) || safeString(classInfo && classInfo.schoolName);
+    const className = safeString(submission.className) || safeString(classInfo && classInfo.className);
+    const studentName = safeString(submission.studentName);
+    const studentNumber = safeString(submission.studentNumber);
+
+    const studentPart = safePathPart(studentName || 'student', 'student');
+    const numberPart = safePathPart(studentNumber || 'no-number', 'no-number');
 
     const payload = {
       ...book,
       submission: {
-        schoolName: String(submission.schoolName || '').trim(),
-        className: String(submission.className || '').trim(),
-        studentName: String(submission.studentName || '').trim(),
-        studentNumber: String(submission.studentNumber || '').trim(),
+        schoolName,
+        className,
+        studentName,
+        studentNumber,
         submissionCode,
-        bookTitle: String(submission.bookTitle || book.title || '').trim(),
-        paper: String(submission.paper || book.paper || 'A4').trim(),
+        classCode: classInfo ? classInfo.code : submissionCode,
+        teacherId: classInfo ? classInfo.teacherId : '',
+        teacherName: classInfo ? classInfo.teacherName : '',
+        bookTitle: safeString(submission.bookTitle || book.title),
+        paper: safeString(submission.paper || book.paper || 'A4'),
         submittedAt: submission.submittedAt || now.toISOString()
       }
     };
 
-    const pathname = `submissions/${schoolPart}/${classPart}/${stamp}-${studentPart}-${numberPart}.json`;
+    const pathname = classInfo
+      ? `submissions/${safePathPart(classInfo.teacherId, 'teacher')}/${classInfo.code}/${stamp}-${studentPart}-${numberPart}.json`
+      : `submissions/${safePathPart(schoolName || 'school', 'school')}/${safePathPart(className || 'class', 'class')}/${stamp}-${studentPart}-${numberPart}.json`;
+
     const blob = await put(pathname, JSON.stringify(payload, null, 2), {
       access: 'public',
       addRandomSuffix: true,

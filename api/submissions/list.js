@@ -1,8 +1,9 @@
 import { list } from '@vercel/blob';
-
-function safeString(value) {
-  return typeof value === 'string' ? value : '';
-}
+import {
+  getTeacherFromRequest,
+  normalizeClassCode,
+  safeString
+} from '../_lib/school-store.js';
 
 function safeTime(value) {
   const time = new Date(value || 0).getTime();
@@ -15,10 +16,10 @@ function getTeacherPassword(req) {
 
 function buildStudentKey(item) {
   return [
-    safeString(item.schoolName).trim().toLowerCase(),
-    safeString(item.className).trim().toLowerCase(),
-    safeString(item.studentName).trim().toLowerCase(),
-    safeString(item.studentNumber).trim().toLowerCase()
+    safeString(item.schoolName).toLowerCase(),
+    safeString(item.className).toLowerCase(),
+    safeString(item.studentName).toLowerCase(),
+    safeString(item.studentNumber).toLowerCase()
   ].join('::');
 }
 
@@ -42,7 +43,9 @@ function buildItem(blob, data, kind) {
   const className = safeString(submission.className);
   const studentName = safeString(submission.studentName);
   const studentNumber = safeString(submission.studentNumber);
-  const submissionCode = safeString(submission.submissionCode);
+  const submissionCode = normalizeClassCode(submission.submissionCode || submission.classCode);
+  const classCode = normalizeClassCode(submission.classCode || submission.submissionCode);
+  const teacherId = safeString(submission.teacherId);
   const title = safeString((data && data.title) || submission.bookTitle);
   const paper = safeString((data && data.paper) || submission.paper);
   const sourceUrl = safeString(review.sourceUrl);
@@ -68,6 +71,8 @@ function buildItem(blob, data, kind) {
     studentName,
     studentNumber,
     submissionCode,
+    classCode,
+    teacherId,
     submittedAt: safeString(submission.submittedAt) || safeString(blob.uploadedAt),
     sourceUrl,
     studentKey: buildStudentKey({
@@ -80,85 +85,101 @@ function buildItem(blob, data, kind) {
   };
 }
 
+async function listItems(prefixes, kind) {
+  const results = await Promise.all(prefixes.map((prefix) => list({ prefix })));
+  const blobs = results.flatMap((result) => Array.isArray(result.blobs) ? result.blobs : []);
+  return await Promise.all(blobs.map(async (blob) => buildItem(blob, await readBlobJson(blob), kind)));
+}
+
+function finishItems(items) {
+  const reviewCountBySourceUrl = new Map();
+  items.forEach((item) => {
+    if (item.kind !== 'review' || !item.sourceUrl) return;
+    reviewCountBySourceUrl.set(item.sourceUrl, (reviewCountBySourceUrl.get(item.sourceUrl) || 0) + 1);
+  });
+
+  const latestTimeByStudent = new Map();
+  items.forEach((item) => {
+    const current = latestTimeByStudent.get(item.studentKey) || 0;
+    const next = safeTime(item.createdAt);
+    if (next > current) {
+      latestTimeByStudent.set(item.studentKey, next);
+    }
+  });
+
+  const finishedItems = items
+    .map((item) => {
+      const latestStudentTime = latestTimeByStudent.get(item.studentKey) || 0;
+      const reviewCount = item.kind === 'submission' ? (reviewCountBySourceUrl.get(item.url) || 0) : 0;
+      const reviewed = item.kind === 'review' || reviewCount > 0;
+
+      return {
+        ...item,
+        reviewCount,
+        reviewed,
+        isLatestForStudent: safeTime(item.createdAt) === latestStudentTime,
+        kindLabel: item.kind === 'review' ? '선생님 수정본' : '학생 원본',
+        statusLabel: reviewed ? '검토완료' : '검토필요'
+      };
+    })
+    .sort((a, b) => {
+      const aGroup = latestTimeByStudent.get(a.studentKey) || 0;
+      const bGroup = latestTimeByStudent.get(b.studentKey) || 0;
+      if (bGroup !== aGroup) return bGroup - aGroup;
+      return safeTime(b.createdAt) - safeTime(a.createdAt);
+    });
+
+  const classes = Array.from(new Set(finishedItems.map((item) => item.className).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ko-KR'));
+
+  return { items: finishedItems, classes };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'GET 요청만 허용됩니다.' });
+    return res.status(405).json({ error: 'GET 요청만 사용할 수 있습니다.' });
   }
 
   try {
-    const expectedTeacherPassword = String(process.env.TEACHER_ACCESS_PASSWORD || '').trim();
-    const expectedSubmissionCode = String(process.env.SUBMISSION_CODE || '').trim();
+    const teacher = getTeacherFromRequest(req);
+    let submissionItems = [];
+    let reviewItems = [];
 
-    if (!expectedTeacherPassword) {
-      return res.status(500).json({ error: '서버 선생님 비밀번호 설정이 없습니다.' });
-    }
+    if (teacher) {
+      [submissionItems, reviewItems] = await Promise.all([
+        listItems([`submissions/${teacher.teacherId}/`], 'submission'),
+        listItems([`reviews/${teacher.teacherId}/`], 'review')
+      ]);
+    } else {
+      const expectedTeacherPassword = String(process.env.TEACHER_ACCESS_PASSWORD || '').trim();
+      const expectedSubmissionCode = normalizeClassCode(process.env.SUBMISSION_CODE || '');
 
-    if (!expectedSubmissionCode) {
-      return res.status(500).json({ error: '서버 제출코드 설정이 없습니다.' });
-    }
-
-    const teacherPassword = getTeacherPassword(req);
-    if (teacherPassword !== expectedTeacherPassword) {
-      return res.status(401).json({ error: '선생님 비밀번호가 올바르지 않습니다.' });
-    }
-
-    const [submissionResult, reviewResult] = await Promise.all([
-      list({ prefix: 'submissions/' }),
-      list({ prefix: 'reviews/' })
-    ]);
-
-    const submissionBlobs = Array.isArray(submissionResult.blobs) ? submissionResult.blobs.slice() : [];
-    const reviewBlobs = Array.isArray(reviewResult.blobs) ? reviewResult.blobs.slice() : [];
-
-    const [submissionItemsRaw, reviewItemsRaw] = await Promise.all([
-      Promise.all(submissionBlobs.map(async (blob) => buildItem(blob, await readBlobJson(blob), 'submission'))),
-      Promise.all(reviewBlobs.map(async (blob) => buildItem(blob, await readBlobJson(blob), 'review')))
-    ]);
-
-    const submissionItems = submissionItemsRaw.filter((item) => item.submissionCode === expectedSubmissionCode);
-    const reviewItems = reviewItemsRaw.filter((item) => item.submissionCode === expectedSubmissionCode);
-
-    const reviewCountBySourceUrl = new Map();
-    reviewItems.forEach((item) => {
-      if (!item.sourceUrl) return;
-      reviewCountBySourceUrl.set(item.sourceUrl, (reviewCountBySourceUrl.get(item.sourceUrl) || 0) + 1);
-    });
-
-    const latestTimeByStudent = new Map();
-    [...submissionItems, ...reviewItems].forEach((item) => {
-      const current = latestTimeByStudent.get(item.studentKey) || 0;
-      const next = safeTime(item.createdAt);
-      if (next > current) {
-        latestTimeByStudent.set(item.studentKey, next);
+      if (!expectedTeacherPassword) {
+        return res.status(500).json({ error: '서버 선생님 비밀번호 설정이 없습니다.' });
       }
-    });
 
-    const items = [...submissionItems, ...reviewItems]
-      .map((item) => {
-        const latestStudentTime = latestTimeByStudent.get(item.studentKey) || 0;
-        const reviewCount = item.kind === 'submission' ? (reviewCountBySourceUrl.get(item.url) || 0) : 0;
-        const reviewed = item.kind === 'review' || reviewCount > 0;
+      if (!expectedSubmissionCode) {
+        return res.status(500).json({ error: '서버 제출코드 설정이 없습니다.' });
+      }
 
-        return {
-          ...item,
-          reviewCount,
-          reviewed,
-          isLatestForStudent: safeTime(item.createdAt) === latestStudentTime,
-          kindLabel: item.kind === 'review' ? '선생님 수정본' : '학생 원본',
-          statusLabel: reviewed ? '검토완료' : '검토필요'
-        };
-      })
-      .sort((a, b) => {
-        const aGroup = latestTimeByStudent.get(a.studentKey) || 0;
-        const bGroup = latestTimeByStudent.get(b.studentKey) || 0;
-        if (bGroup !== aGroup) return bGroup - aGroup;
-        return safeTime(b.createdAt) - safeTime(a.createdAt);
-      });
+      const teacherPassword = getTeacherPassword(req);
+      if (teacherPassword !== expectedTeacherPassword) {
+        return res.status(401).json({ error: '선생님 비밀번호가 맞지 않습니다.' });
+      }
 
-    const classes = Array.from(new Set(items.map((item) => item.className).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ko-KR'));
+      [submissionItems, reviewItems] = await Promise.all([
+        listItems(['submissions/'], 'submission'),
+        listItems(['reviews/'], 'review')
+      ]);
+
+      submissionItems = submissionItems.filter((item) => item.submissionCode === expectedSubmissionCode);
+      reviewItems = reviewItems.filter((item) => item.submissionCode === expectedSubmissionCode);
+    }
+
+    const { items, classes } = finishItems([...submissionItems, ...reviewItems]);
 
     return res.status(200).json({
       ok: true,
+      teacher: teacher || null,
       count: items.length,
       classes,
       items

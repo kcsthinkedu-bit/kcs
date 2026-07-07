@@ -3,310 +3,578 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KCS 선생님 제출함</title>
+  <title>책편집도우미 선생님 관리</title>
   <style>
     :root {
-      --bg: #f4f7fb;
+      --bg: #f5f7fb;
       --panel: #ffffff;
-      --line: #d8e1f0;
-      --text: #1f2937;
+      --ink: #172033;
       --muted: #667085;
+      --line: #d7dfec;
       --primary: #2563eb;
-      --teacher: #7c3aed;
-      --teacher-soft: #ede9fe;
-      --green: #16a34a;
-      --green-soft: #dcfce7;
-      --orange: #ea580c;
-      --orange-soft: #ffedd5;
-      --blue-soft: #dbeafe;
-      --blue-text: #1d4ed8;
-      --red: #dc2626;
-      --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+      --primary-dark: #1d4ed8;
+      --green: #15803d;
+      --green-soft: #e9f8ee;
+      --amber: #b45309;
+      --amber-soft: #fff4df;
+      --red: #b91c1c;
+      --red-soft: #fff1f2;
+      --soft: #eef4ff;
+      --shadow: 0 12px 30px rgba(18, 31, 56, 0.08);
     }
+
     * { box-sizing: border-box; }
+
     html, body {
       margin: 0;
-      padding: 0;
+      min-height: 100%;
       background: var(--bg);
-      color: var(--text);
-      font-family: "Noto Sans KR", sans-serif;
+      color: var(--ink);
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
     }
+
+    body {
+      padding: 18px;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
     .shell {
-      max-width: 1320px;
+      width: min(1360px, 100%);
       margin: 0 auto;
-      padding: 24px 18px 60px;
-    }
-    .hero, .panel, .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-    }
-    .hero {
-      padding: 24px;
-      margin-bottom: 18px;
       display: grid;
       gap: 16px;
     }
-    .hero h1 {
-      margin: 0;
-      font-size: 32px;
+
+    .topbar,
+    .panel,
+    .item-card,
+    .auth-card,
+    .class-card,
+    .student-row {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
     }
-    .hero p, .muted, .meta {
-      color: var(--muted);
-      line-height: 1.8;
-    }
-    .top-row, .actions, .stats, .filters {
+
+    .topbar {
+      padding: 18px;
       display: flex;
-      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
       flex-wrap: wrap;
-      align-items: center;
     }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      min-height: 34px;
-      padding: 0 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 800;
-      background: var(--teacher-soft);
-      color: #5b21b6;
+
+    .brand {
+      display: grid;
+      gap: 4px;
     }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 34px);
+      letter-spacing: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .top-actions,
+    .row,
+    .filters,
+    .button-row,
+    .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .btn {
-      min-height: 44px;
-      padding: 0 16px;
-      border-radius: 12px;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 8px;
       border: 1px solid var(--line);
       background: #fff;
-      color: var(--text);
+      color: var(--ink);
       font-weight: 800;
-      text-decoration: none;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
+      gap: 6px;
+      white-space: nowrap;
     }
+
+    .btn:hover {
+      border-color: #aebbd0;
+    }
+
     .btn.primary {
       background: var(--primary);
       border-color: var(--primary);
       color: #fff;
     }
+
+    .btn.primary:hover {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+    }
+
     .btn.danger {
-      background: #fff5f5;
-      border-color: #fecaca;
-      color: #b91c1c;
+      color: var(--red);
+      border-color: #fecdd3;
+      background: var(--red-soft);
     }
+
+    .btn.ghost {
+      background: transparent;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
     .panel {
-      padding: 20px;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
     }
+
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .auth-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    .auth-card {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .auth-card h2,
+    .auth-card h3,
+    .class-card h3,
+    .item-card h3 {
+      margin: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: 3px solid rgba(37, 99, 235, 0.16);
+      border-color: var(--primary);
+    }
+
+    .status {
+      min-height: 24px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .status.error { color: var(--red); }
+    .status.success { color: var(--green); }
+
+    .account-strip {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      padding: 14px;
+      background: var(--soft);
+      border: 1px solid #c9dafc;
+      border-radius: 8px;
+    }
+
     .stats {
-      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
     }
+
     .stat {
-      min-width: 160px;
-      padding: 16px;
-      border: 1px solid #e6edf8;
-      border-radius: 18px;
+      border: 1px solid #e1e8f4;
+      border-radius: 8px;
       background: #fbfdff;
+      padding: 14px;
+      min-height: 78px;
     }
+
     .stat strong {
       display: block;
       font-size: 24px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-    .filters {
-      margin-bottom: 18px;
-    }
-    .filter-field {
+
+    .class-grid {
       display: grid;
-      gap: 6px;
-      min-width: 180px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .class-card {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .code {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      min-height: 46px;
+      padding: 0 16px;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .filters {
+      align-items: end;
+    }
+
+    .filters .field {
       flex: 1 1 180px;
+      min-width: 170px;
     }
-    .filter-field label {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--muted);
-    }
-    .filter-field input,
-    .filter-field select {
-      min-height: 44px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 0 12px;
-      font: inherit;
-      background: #fff;
-      color: var(--text);
-    }
+
     .grid {
       display: grid;
-      gap: 16px;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 12px;
     }
-    .card {
-      padding: 18px;
+
+    .item-card {
+      padding: 14px;
       display: grid;
       gap: 12px;
     }
-    .card h3 {
-      margin: 0;
-      font-size: 20px;
-      line-height: 1.4;
+
+    .item-title {
+      display: grid;
+      gap: 5px;
     }
+
     .meta-list {
       display: grid;
-      gap: 6px;
-      font-size: 14px;
+      gap: 5px;
       color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
     }
-    .links {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .tag-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+
     .tag {
       display: inline-flex;
       align-items: center;
-      min-height: 30px;
-      padding: 0 12px;
+      min-height: 28px;
+      padding: 0 10px;
       border-radius: 999px;
       font-size: 12px;
-      font-weight: 800;
+      font-weight: 900;
       border: 1px solid transparent;
     }
-    .tag.submission {
-      background: var(--blue-soft);
-      color: var(--blue-text);
+
+    .tag.origin {
+      background: #e8f1ff;
+      color: #1d4ed8;
     }
+
     .tag.review {
-      background: var(--teacher-soft);
+      background: #f0eaff;
       color: #6d28d9;
     }
-    .tag.latest {
+
+    .tag.done {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .tag.todo {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .tag.dark {
       background: #111827;
       color: #fff;
     }
-    .tag.done {
-      background: var(--green-soft);
-      color: #166534;
-    }
-    .tag.todo {
-      background: var(--orange-soft);
-      color: #9a3412;
-    }
+
     .empty {
-      padding: 22px;
+      padding: 18px;
       border: 1px dashed var(--line);
-      border-radius: 18px;
-      background: #f8fbff;
+      border-radius: 8px;
+      background: #fbfdff;
       color: var(--muted);
+      font-weight: 700;
     }
-    .loading { color: var(--primary); }
-    .error { color: #991b1b; }
-    .small-note {
-      font-size: 13px;
-      color: var(--muted);
+
+    .student-list {
+      display: grid;
+      gap: 8px;
     }
-    @media (max-width: 768px) {
-      .hero h1 { font-size: 26px; }
-      .shell { padding: 14px 12px 40px; }
-      .filter-field { min-width: 100%; }
+
+    .student-row {
+      padding: 12px;
+      box-shadow: none;
+      display: grid;
+      grid-template-columns: minmax(140px, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 10px; }
+      .topbar { align-items: stretch; }
+      .top-actions, .button-row { width: 100%; }
+      .btn { flex: 1 1 auto; }
+      .student-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
-    <section class="hero">
-      <div class="top-row">
-        <span class="badge">선생님 전용 제출함</span>
-        <a class="btn" href="/">시작 페이지</a>
-        <a class="btn" href="/coloringbook/">편집기로 이동</a>
+    <header class="topbar">
+      <div class="brand">
+        <h1>책편집도우미 선생님 관리</h1>
+        <div class="muted">학급 코드를 만들고, 학생들이 제출한 책을 확인합니다.</div>
+      </div>
+      <nav class="top-actions" aria-label="바로가기">
+        <a class="btn ghost" href="/">처음 화면</a>
+        <a class="btn" href="/coloringbook/">편집기 열기</a>
+        <button id="logoutBtn" class="btn danger hidden" type="button">로그아웃</button>
+      </nav>
+    </header>
+
+    <section id="authPanel" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>선생님 계정</h2>
+          <div class="muted">가입 후 학급 코드를 만들면 학생 제출이 선생님 계정으로 모입니다.</div>
+        </div>
       </div>
 
-      <div>
-        <h1>KCS 학생 작품 제출 목록</h1>
-        <p>선생님 비밀번호를 통과한 뒤, 현재 제출코드에 해당하는 학생 원본과 선생님 수정본만 볼 수 있습니다.</p>
-      </div>
+      <div class="auth-grid">
+        <form id="loginForm" class="auth-card">
+          <h3>로그인</h3>
+          <label class="field">
+            이메일
+            <input id="loginEmail" type="email" autocomplete="email" required />
+          </label>
+          <label class="field">
+            비밀번호
+            <input id="loginPassword" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="btn primary" type="submit">로그인</button>
+        </form>
 
-      <div class="actions">
-        <button id="refreshBtn" class="btn primary" type="button">목록 새로고침</button>
-        <span id="statusText" class="muted">선생님 인증 후 목록을 불러옵니다.</span>
+        <form id="registerForm" class="auth-card">
+          <h3>처음 사용하기</h3>
+          <div class="form-grid">
+            <label class="field">
+              이름
+              <input id="registerName" type="text" autocomplete="name" required />
+            </label>
+            <label class="field">
+              학교/기관
+              <input id="registerSchool" type="text" autocomplete="organization" />
+            </label>
+          </div>
+          <label class="field">
+            이메일
+            <input id="registerEmail" type="email" autocomplete="email" required />
+          </label>
+          <label class="field">
+            비밀번호
+            <input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+          <button class="btn primary" type="submit">가입하고 시작</button>
+        </form>
       </div>
+      <div id="authStatus" class="status" role="status" aria-live="polite"></div>
     </section>
 
-    <section class="panel">
-      <div id="statsRow" class="stats"></div>
+    <main id="dashboard" class="hidden">
+      <section class="panel">
+        <div id="accountStrip" class="account-strip"></div>
 
-      <div class="filters">
-        <div class="filter-field">
-          <label for="searchInput">검색</label>
-          <input id="searchInput" type="text" placeholder="학생명, 제목, 학교, 학급 검색" />
+        <div class="stats" id="statsRow"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>학급 코드</h2>
+            <div class="muted">학생 제출창의 학급 코드 칸에 넣을 코드입니다.</div>
+          </div>
+          <button id="refreshAllBtn" class="btn" type="button">새로고침</button>
         </div>
 
-        <div class="filter-field">
-          <label for="classFilter">학급</label>
-          <select id="classFilter">
-            <option value="all">전체 학급</option>
-          </select>
+        <form id="classForm" class="form-grid">
+          <label class="field">
+            학교/기관
+            <input id="classSchoolInput" type="text" placeholder="예: 당진초등학교" />
+          </label>
+          <label class="field">
+            학급/수업명
+            <input id="classNameInput" type="text" placeholder="예: 3학년 2반" required />
+          </label>
+          <label class="field">
+            직접 정할 코드
+            <input id="classCodeInput" type="text" inputmode="latin" autocomplete="off" placeholder="비우면 자동 생성" />
+          </label>
+          <button class="btn primary" type="submit">학급 코드 만들기</button>
+        </form>
+
+        <div id="classStatus" class="status" role="status" aria-live="polite"></div>
+        <div id="classGrid" class="class-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>학생 작품 제출함</h2>
+            <div class="muted">학생 원본과 선생님 수정본을 함께 확인합니다.</div>
+          </div>
         </div>
 
-        <div class="filter-field">
-          <label for="kindFilter">구분</label>
-          <select id="kindFilter">
-            <option value="all">전체</option>
-            <option value="submission">학생 원본</option>
-            <option value="review">선생님 수정본</option>
-          </select>
+        <div class="filters">
+          <label class="field">
+            검색
+            <input id="searchInput" type="text" placeholder="학생 이름, 제목, 학교, 학급" />
+          </label>
+          <label class="field">
+            학급
+            <select id="classFilter">
+              <option value="all">전체 학급</option>
+            </select>
+          </label>
+          <label class="field">
+            종류
+            <select id="kindFilter">
+              <option value="all">전체</option>
+              <option value="submission">학생 원본</option>
+              <option value="review">선생님 수정본</option>
+            </select>
+          </label>
+          <label class="field">
+            상태
+            <select id="statusFilter">
+              <option value="all">전체</option>
+              <option value="reviewed">검토완료</option>
+              <option value="pending">검토필요</option>
+            </select>
+          </label>
         </div>
 
-        <div class="filter-field">
-          <label for="statusFilter">검토 상태</label>
-          <select id="statusFilter">
-            <option value="all">전체</option>
-            <option value="reviewed">검토완료</option>
-            <option value="pending">검토필요</option>
-          </select>
+        <div id="submissionStatus" class="status" role="status" aria-live="polite"></div>
+        <div id="submissionList" class="grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>학생 목록</h2>
+            <div class="muted">제출된 작품을 기준으로 자동 정리됩니다.</div>
+          </div>
         </div>
-      </div>
-
-      <div class="small-note">목록/삭제는 선생님 비밀번호가 맞을 때만 동작합니다.</div>
-
-      <div id="submissionList" class="grid" style="margin-top:16px;"></div>
-    </section>
+        <div id="studentList" class="student-list"></div>
+      </section>
+    </main>
   </div>
 
   <script>
-    const TEACHER_PASSWORD_STORAGE_KEY = 'kcs-teacher-password';
+    const AUTH_TOKEN_KEY = 'kcs-teacher-auth-token';
+    const TEACHER_PROFILE_KEY = 'kcs-teacher-profile';
 
-    const refreshBtn = document.getElementById('refreshBtn');
-    const statusText = document.getElementById('statusText');
+    const authPanel = document.getElementById('authPanel');
+    const dashboard = document.getElementById('dashboard');
+    const authStatus = document.getElementById('authStatus');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const accountStrip = document.getElementById('accountStrip');
+    const refreshAllBtn = document.getElementById('refreshAllBtn');
+    const classForm = document.getElementById('classForm');
+    const classSchoolInput = document.getElementById('classSchoolInput');
+    const classNameInput = document.getElementById('classNameInput');
+    const classCodeInput = document.getElementById('classCodeInput');
+    const classStatus = document.getElementById('classStatus');
+    const classGrid = document.getElementById('classGrid');
     const statsRow = document.getElementById('statsRow');
-    const submissionList = document.getElementById('submissionList');
     const searchInput = document.getElementById('searchInput');
     const classFilter = document.getElementById('classFilter');
     const kindFilter = document.getElementById('kindFilter');
     const statusFilter = document.getElementById('statusFilter');
+    const submissionStatus = document.getElementById('submissionStatus');
+    const submissionList = document.getElementById('submissionList');
+    const studentList = document.getElementById('studentList');
 
     const state = {
-      allItems: [],
-      classes: []
+      token: '',
+      teacher: null,
+      classes: [],
+      items: []
     };
-
-    function fmt(value) {
-      if (!value) return '-';
-      try {
-        return new Date(value).toLocaleString('ko-KR');
-      } catch (error) {
-        return value;
-      }
-    }
 
     function escapeHtml(value) {
       return String(value || '')
@@ -317,106 +585,256 @@
         .replaceAll("'", '&#39;');
     }
 
-    function getStoredTeacherPassword() {
-  try {
-    return localStorage.getItem(TEACHER_PASSWORD_STORAGE_KEY) || '';
-  } catch (error) {
-    return '';
-  }
-}
-
-function setStoredTeacherPassword(password) {
-  try {
-    if (password) {
-      localStorage.setItem(TEACHER_PASSWORD_STORAGE_KEY, password);
-    } else {
-      localStorage.removeItem(TEACHER_PASSWORD_STORAGE_KEY);
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-
-    function promptTeacherPassword() {
-      const value = window.prompt('선생님 비밀번호를 입력하세요.');
-      return String(value || '').trim();
+    function setStatus(node, message, tone = '') {
+      node.textContent = message || '';
+      node.className = tone ? `status ${tone}` : 'status';
     }
 
-    async function fetchWithTeacherAuth(url, options = {}, reprompt = true) {
-      let password = getStoredTeacherPassword();
-
-      if (!password) {
-        password = promptTeacherPassword();
-        if (!password) {
-          throw new Error('선생님 비밀번호가 필요합니다.');
-        }
-        setStoredTeacherPassword(password);
+    function fmtDate(value) {
+      if (!value) return '-';
+      try {
+        return new Date(value).toLocaleString('ko-KR');
+      } catch (error) {
+        return value;
       }
+    }
 
-      let response = await fetch(url, {
+    function normalizeCode(value) {
+      return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+
+    function getStoredProfile() {
+      try {
+        return JSON.parse(localStorage.getItem(TEACHER_PROFILE_KEY) || 'null');
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function saveAuth(result) {
+      state.token = result.token || '';
+      state.teacher = result.teacher || null;
+      localStorage.setItem(AUTH_TOKEN_KEY, state.token);
+      localStorage.setItem(TEACHER_PROFILE_KEY, JSON.stringify(state.teacher || {}));
+    }
+
+    function clearAuth() {
+      state.token = '';
+      state.teacher = null;
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(TEACHER_PROFILE_KEY);
+    }
+
+    function loadStoredAuth() {
+      state.token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      state.teacher = getStoredProfile();
+    }
+
+    function renderShell() {
+      const signedIn = !!state.token;
+      authPanel.classList.toggle('hidden', signedIn);
+      dashboard.classList.toggle('hidden', !signedIn);
+      logoutBtn.classList.toggle('hidden', !signedIn);
+
+      if (!signedIn) return;
+
+      const teacherName = state.teacher && state.teacher.name ? state.teacher.name : '선생님';
+      const email = state.teacher && state.teacher.email ? state.teacher.email : '';
+      const school = state.teacher && state.teacher.schoolName ? state.teacher.schoolName : '';
+      accountStrip.innerHTML = `
+        <div>
+          <strong>${escapeHtml(teacherName)}</strong>
+          <div class="muted">${escapeHtml([school, email].filter(Boolean).join(' · '))}</div>
+        </div>
+        <a class="btn primary" href="/coloringbook/">학생용 편집기 열기</a>
+      `;
+
+      if (!classSchoolInput.value && school) {
+        classSchoolInput.value = school;
+      }
+    }
+
+    async function parseResponse(response) {
+      const text = await response.text();
+      let result = {};
+      try {
+        result = text ? JSON.parse(text) : {};
+      } catch (error) {
+        result = { error: text };
+      }
+      if (!response.ok) {
+        throw new Error(result && result.error ? result.error : '요청을 처리하지 못했습니다.');
+      }
+      return result;
+    }
+
+    async function apiFetch(url, options = {}) {
+      const response = await fetch(url, {
         ...options,
         headers: {
           ...(options.headers || {}),
-          'x-teacher-password': password
+          Authorization: `Bearer ${state.token}`
         }
       });
 
-      if (response.status === 401 && reprompt) {
-        setStoredTeacherPassword('');
-        password = promptTeacherPassword();
-        if (!password) {
-          throw new Error('선생님 비밀번호가 필요합니다.');
-        }
-        setStoredTeacherPassword(password);
-
-        response = await fetch(url, {
-          ...options,
-          headers: {
-            ...(options.headers || {}),
-            'x-teacher-password': password
-          }
-        });
+      if (response.status === 401) {
+        clearAuth();
+        renderShell();
+        throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
       }
 
       return response;
     }
 
-    function fillClassOptions(classes) {
-      const current = classFilter.value;
-      classFilter.innerHTML = '<option value="all">전체 학급</option>' + classes.map((name) => (
-        `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
-      )).join('');
-
-      if (classes.includes(current)) {
-        classFilter.value = current;
-      } else {
-        classFilter.value = 'all';
-      }
+    async function login(email, password) {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      return await parseResponse(response);
     }
 
-    function renderStats(items) {
-      const total = items.length;
-      const originalCount = items.filter((item) => item.kind === 'submission').length;
-      const reviewCount = items.filter((item) => item.kind === 'review').length;
-      const latestCount = items.filter((item) => item.isLatestForStudent).length;
-      const reviewedCount = items.filter((item) => item.kind === 'submission' && item.reviewed).length;
+    async function register(data) {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await parseResponse(response);
+    }
 
-      statsRow.innerHTML = [
-        { label: '전체 항목', value: total },
-        { label: '학생 원본', value: originalCount },
-        { label: '선생님 수정본', value: reviewCount },
-        { label: '학생별 최신 묶음', value: latestCount },
-        { label: '검토완료 원본', value: reviewedCount }
-      ].map((item) => `
+    async function loadClasses() {
+      const response = await apiFetch('/api/classes/list', { cache: 'no-store' });
+      const result = await parseResponse(response);
+      state.teacher = result.teacher || state.teacher;
+      state.classes = Array.isArray(result.classes) ? result.classes : [];
+      localStorage.setItem(TEACHER_PROFILE_KEY, JSON.stringify(state.teacher || {}));
+      renderShell();
+      renderClasses();
+      fillClassFilter();
+    }
+
+    async function createClass() {
+      const payload = {
+        schoolName: classSchoolInput.value.trim(),
+        className: classNameInput.value.trim(),
+        code: normalizeCode(classCodeInput.value)
+      };
+
+      if (!payload.className) {
+        throw new Error('학급명을 입력해 주세요.');
+      }
+
+      const response = await apiFetch('/api/classes/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return await parseResponse(response);
+    }
+
+    async function loadSubmissions() {
+      const response = await apiFetch('/api/submissions/list', { cache: 'no-store' });
+      const result = await parseResponse(response);
+      state.items = Array.isArray(result.items) ? result.items : [];
+      renderStats();
+      renderClasses();
+      fillClassFilter();
+      renderSubmissions();
+      renderStudents();
+      setStatus(submissionStatus, `${state.items.length}건을 불러왔습니다.`);
+    }
+
+    async function loadDashboard() {
+      renderShell();
+      setStatus(classStatus, '학급 정보를 불러오는 중입니다.');
+      setStatus(submissionStatus, '제출 작품을 불러오는 중입니다.');
+      await loadClasses();
+      await loadSubmissions();
+      setStatus(classStatus, '');
+    }
+
+    function getClassKeyFromItem(item) {
+      return normalizeCode(item.classCode || item.submissionCode) || item.className || 'no-class';
+    }
+
+    function getClassLabel(classInfo) {
+      return [classInfo.schoolName, classInfo.className].filter(Boolean).join(' · ') || classInfo.code;
+    }
+
+    function countItemsForClass(code) {
+      const safeCode = normalizeCode(code);
+      return state.items.filter((item) => normalizeCode(item.classCode || item.submissionCode) === safeCode).length;
+    }
+
+    function renderClasses() {
+      if (!state.classes.length) {
+        classGrid.innerHTML = '<div class="empty">아직 만든 학급 코드가 없습니다.</div>';
+        return;
+      }
+
+      classGrid.innerHTML = state.classes.map((classInfo) => `
+        <article class="class-card">
+          <div class="code">${escapeHtml(classInfo.code)}</div>
+          <h3>${escapeHtml(classInfo.className || '학급명 없음')}</h3>
+          <div class="muted">${escapeHtml(classInfo.schoolName || '학교/기관 미입력')}</div>
+          <div class="muted">제출 ${countItemsForClass(classInfo.code)}건 · 생성 ${escapeHtml(fmtDate(classInfo.createdAt))}</div>
+          <div class="button-row">
+            <button class="btn" type="button" data-copy-code="${escapeHtml(classInfo.code)}">코드 복사</button>
+            <button class="btn" type="button" data-filter-code="${escapeHtml(classInfo.code)}">이 학급 보기</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderStats() {
+      const originals = state.items.filter((item) => item.kind === 'submission');
+      const reviews = state.items.filter((item) => item.kind === 'review');
+      const reviewed = originals.filter((item) => item.reviewed);
+      const students = collectStudents();
+
+      const stats = [
+        ['학급', state.classes.length],
+        ['학생', students.length],
+        ['학생 원본', originals.length],
+        ['선생님 수정본', reviews.length],
+        ['검토완료', reviewed.length]
+      ];
+
+      statsRow.innerHTML = stats.map(([label, value]) => `
         <div class="stat">
-          <strong>${item.value}</strong>
-          <div class="meta">${item.label}</div>
+          <strong>${value}</strong>
+          <span class="muted">${label}</span>
         </div>
       `).join('');
     }
 
-    function matchesSearch(item, query) {
+    function fillClassFilter() {
+      const current = classFilter.value || 'all';
+      const classOptions = new Map();
+
+      state.classes.forEach((classInfo) => {
+        classOptions.set(normalizeCode(classInfo.code), getClassLabel(classInfo));
+      });
+
+      state.items.forEach((item) => {
+        const key = getClassKeyFromItem(item);
+        if (!classOptions.has(key)) {
+          classOptions.set(key, [item.schoolName, item.className].filter(Boolean).join(' · ') || key);
+        }
+      });
+
+      classFilter.innerHTML = '<option value="all">전체 학급</option>' + Array.from(classOptions.entries()).map(([key, label]) => (
+        `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`
+      )).join('');
+
+      if (current !== 'all' && classOptions.has(current)) {
+        classFilter.value = current;
+      }
+    }
+
+    function itemMatchesSearch(item, query) {
       if (!query) return true;
       const haystack = [
         item.title,
@@ -424,153 +842,258 @@ function setStoredTeacherPassword(password) {
         item.className,
         item.studentName,
         item.studentNumber,
-        item.pathname
+        item.classCode,
+        item.submissionCode
       ].join(' ').toLowerCase();
       return haystack.includes(query);
     }
 
     function getFilteredItems() {
-      const query = (searchInput.value || '').trim().toLowerCase();
-      const classValue = classFilter.value;
-      const kindValue = kindFilter.value;
-      const statusValue = statusFilter.value;
+      const query = searchInput.value.trim().toLowerCase();
+      const selectedClass = classFilter.value;
+      const kind = kindFilter.value;
+      const status = statusFilter.value;
 
-      return state.allItems.filter((item) => {
-        if (!matchesSearch(item, query)) return false;
-        if (classValue !== 'all' && item.className !== classValue) return false;
-        if (kindValue !== 'all' && item.kind !== kindValue) return false;
-
-        if (statusValue === 'reviewed' && !item.reviewed) return false;
-        if (statusValue === 'pending') {
-          if (item.kind !== 'submission' || item.reviewed) return false;
-        }
-
+      return state.items.filter((item) => {
+        if (!itemMatchesSearch(item, query)) return false;
+        if (selectedClass !== 'all' && getClassKeyFromItem(item) !== selectedClass) return false;
+        if (kind !== 'all' && item.kind !== kind) return false;
+        if (status === 'reviewed' && !item.reviewed) return false;
+        if (status === 'pending' && (item.kind !== 'submission' || item.reviewed)) return false;
         return true;
       });
     }
 
-    function renderList() {
+    function renderSubmissions() {
       const items = getFilteredItems();
-      renderStats(state.allItems);
 
       if (!items.length) {
-        submissionList.innerHTML = '<div class="empty">현재 조건에 맞는 항목이 없습니다.</div>';
+        submissionList.innerHTML = '<div class="empty">현재 조건에 맞는 제출물이 없습니다.</div>';
         return;
       }
 
-      submissionList.innerHTML = items.map((item) => `
-        <article class="card">
-          <div class="tag-row">
-            <span class="tag ${item.kind === 'review' ? 'review' : 'submission'}">${escapeHtml(item.kindLabel)}</span>
-            <span class="tag ${item.reviewed ? 'done' : 'todo'}">${escapeHtml(item.statusLabel)}</span>
-            ${item.isLatestForStudent ? '<span class="tag latest">최신</span>' : ''}
-          </div>
-
-          <div>
-            <h3>${escapeHtml(item.title || '제목 없는 책')}</h3>
-            <div class="meta">
-              ${escapeHtml(item.schoolName || '학교 미입력')} ·
-              ${escapeHtml(item.className || '학급 미입력')} ·
-              ${escapeHtml(item.studentName || '이름 미입력')}
-              ${item.studentNumber ? '(' + escapeHtml(item.studentNumber) + ')' : ''}
+      submissionList.innerHTML = items.map((item) => {
+        const title = item.title || '제목 없는 책';
+        const classLabel = [item.schoolName, item.className].filter(Boolean).join(' · ') || '학급 정보 없음';
+        const studentLabel = [item.studentName || '이름 없음', item.studentNumber ? `(${item.studentNumber})` : ''].join(' ');
+        return `
+          <article class="item-card">
+            <div class="tag-row">
+              <span class="tag ${item.kind === 'review' ? 'review' : 'origin'}">${escapeHtml(item.kindLabel || (item.kind === 'review' ? '선생님 수정본' : '학생 원본'))}</span>
+              <span class="tag ${item.reviewed ? 'done' : 'todo'}">${escapeHtml(item.statusLabel || (item.reviewed ? '검토완료' : '검토필요'))}</span>
+              ${item.isLatestForStudent ? '<span class="tag dark">최신</span>' : ''}
             </div>
-          </div>
+            <div class="item-title">
+              <h3>${escapeHtml(title)}</h3>
+              <div class="muted">${escapeHtml(classLabel)} · ${escapeHtml(studentLabel)}</div>
+            </div>
+            <div class="meta-list">
+              <div>학급 코드: ${escapeHtml(item.classCode || item.submissionCode || '-')}</div>
+              <div>기록 시각: ${escapeHtml(fmtDate(item.createdAt || item.uploadedAt))}</div>
+              <div>용지: ${escapeHtml(item.paper || 'A4')} · 펼침 ${escapeHtml(String(item.spreadCount || 0))}</div>
+              ${item.kind === 'submission'
+                ? `<div>연결된 수정본: ${escapeHtml(String(item.reviewCount || 0))}건</div>`
+                : `<div>원본 연결: ${item.sourceUrl ? '있음' : '없음'}</div>`}
+            </div>
+            <div class="button-row">
+              <a class="btn primary" href="${escapeHtml(item.editUrl || item.url)}" target="_blank" rel="noopener">열기</a>
+              <a class="btn" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">JSON 보기</a>
+              <button class="btn danger" type="button" data-delete-path="${escapeHtml(item.pathname || '')}" data-delete-title="${escapeHtml(title)}">삭제</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
 
-          <div class="meta-list">
-            <div>작성 구분: ${escapeHtml(item.kindLabel)}</div>
-            <div>기록 시각: ${escapeHtml(fmt(item.createdAt || item.uploadedAt))}</div>
-            <div>용지: ${escapeHtml(item.paper || 'A4')} · 펼침 수: ${escapeHtml(String(item.spreadCount || 0))}</div>
-            <div>저장 경로: ${escapeHtml(item.pathname || '')}</div>
-            ${item.kind === 'submission'
-              ? `<div>연결된 수정본 수: ${escapeHtml(String(item.reviewCount || 0))}</div>`
-              : `<div>원본 연결: ${item.sourceUrl ? '있음' : '없음'}</div>`}
-          </div>
+    function collectStudents() {
+      const map = new Map();
 
-          <div class="links">
-            <a class="btn primary" href="${item.editUrl}" target="_blank" rel="noopener">열기</a>
-            <a class="btn" href="${item.url}" target="_blank" rel="noopener">JSON 보기</a>
-            <button class="btn danger" type="button" data-delete-path="${escapeHtml(item.pathname || '')}" data-delete-title="${escapeHtml(item.title || '제목 없는 책')}">삭제</button>
+      state.items.forEach((item) => {
+        if (!item.studentName) return;
+        const key = [
+          getClassKeyFromItem(item),
+          item.studentName,
+          item.studentNumber || ''
+        ].join('::');
+
+        const current = map.get(key) || {
+          classCode: item.classCode || item.submissionCode,
+          className: item.className,
+          schoolName: item.schoolName,
+          studentName: item.studentName,
+          studentNumber: item.studentNumber,
+          count: 0,
+          latestAt: ''
+        };
+
+        current.count += 1;
+        const nextTime = new Date(item.createdAt || item.uploadedAt || 0).getTime();
+        const currentTime = new Date(current.latestAt || 0).getTime();
+        if (nextTime > currentTime) current.latestAt = item.createdAt || item.uploadedAt || '';
+        map.set(key, current);
+      });
+
+      return Array.from(map.values()).sort((a, b) => {
+        const classCompare = String(a.className || '').localeCompare(String(b.className || ''), 'ko-KR');
+        if (classCompare !== 0) return classCompare;
+        return String(a.studentName || '').localeCompare(String(b.studentName || ''), 'ko-KR');
+      });
+    }
+
+    function renderStudents() {
+      const students = collectStudents();
+      renderStats();
+
+      if (!students.length) {
+        studentList.innerHTML = '<div class="empty">아직 제출한 학생이 없습니다.</div>';
+        return;
+      }
+
+      studentList.innerHTML = students.map((student) => `
+        <div class="student-row">
+          <div>
+            <strong>${escapeHtml(student.studentName)}${student.studentNumber ? ` (${escapeHtml(student.studentNumber)})` : ''}</strong>
+            <div class="muted">${escapeHtml([student.schoolName, student.className].filter(Boolean).join(' · ') || '학급 정보 없음')} · ${escapeHtml(student.classCode || '-')}</div>
           </div>
-        </article>
+          <div class="tag-row">
+            <span class="tag origin">제출 ${student.count}건</span>
+            <span class="tag done">${escapeHtml(fmtDate(student.latestAt))}</span>
+          </div>
+        </div>
       `).join('');
     }
 
-    async function loadSubmissions() {
-      statusText.textContent = '선생님 인증 후 목록을 불러오는 중입니다.';
-      statusText.className = 'muted loading';
-      refreshBtn.disabled = true;
-
+    async function copyText(value) {
       try {
-        const response = await fetchWithTeacherAuth('/api/submissions/list', { cache: 'no-store' });
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result && result.error ? result.error : '제출 목록을 불러오지 못했습니다.');
-        }
-
-        state.allItems = Array.isArray(result.items) ? result.items : [];
-        state.classes = Array.isArray(result.classes) ? result.classes : [];
-
-        fillClassOptions(state.classes);
-        renderList();
-
-        statusText.textContent = `현재 ${result.count || 0}건을 불러왔습니다.`;
-        statusText.className = 'muted';
+        await navigator.clipboard.writeText(value);
+        setStatus(classStatus, `${value} 코드를 복사했습니다.`, 'success');
       } catch (error) {
-        console.error(error);
-        statsRow.innerHTML = '';
-        submissionList.innerHTML = `<div class="empty error">${escapeHtml(error && error.message ? error.message : '제출 목록을 불러오지 못했습니다.')}</div>`;
-        statusText.textContent = '오류가 발생했습니다.';
-        statusText.className = 'muted error';
-      } finally {
-        refreshBtn.disabled = false;
+        window.prompt('학급 코드를 복사해 주세요.', value);
       }
     }
 
     async function deleteItem(pathname, title) {
-      const ok = window.confirm(`정말 삭제할까요?\n\n${title || '제목 없는 항목'}\n${pathname}`);
+      if (!pathname) return;
+      const ok = window.confirm(`정말 삭제할까요?\n\n${title}\n${pathname}`);
       if (!ok) return;
 
-      try {
-        const response = await fetchWithTeacherAuth('/api/submissions/delete', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ pathname })
-        });
-
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result && result.error ? result.error : '삭제에 실패했습니다.');
-        }
-
-        await loadSubmissions();
-        alert('삭제되었습니다.');
-      } catch (error) {
-        console.error(error);
-        alert(error && error.message ? error.message : '삭제에 실패했습니다.');
-      }
+      const response = await apiFetch('/api/submissions/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pathname })
+      });
+      await parseResponse(response);
+      await loadSubmissions();
+      setStatus(submissionStatus, '삭제했습니다.', 'success');
     }
 
-    refreshBtn.addEventListener('click', loadSubmissions);
-    searchInput.addEventListener('input', renderList);
-    classFilter.addEventListener('change', renderList);
-    kindFilter.addEventListener('change', renderList);
-    statusFilter.addEventListener('change', renderList);
-
-    submissionList.addEventListener('click', async (event) => {
-      const button = event.target.closest('[data-delete-path]');
-      if (!button) return;
-
-      const pathname = button.getAttribute('data-delete-path') || '';
-      const title = button.getAttribute('data-delete-title') || '';
-      if (!pathname) return;
-
-      await deleteItem(pathname, title);
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setStatus(authStatus, '로그인 중입니다.');
+      try {
+        const result = await login(
+          document.getElementById('loginEmail').value.trim(),
+          document.getElementById('loginPassword').value
+        );
+        saveAuth(result);
+        setStatus(authStatus, '');
+        await loadDashboard();
+      } catch (error) {
+        setStatus(authStatus, error.message || '로그인에 실패했습니다.', 'error');
+      }
     });
 
-    loadSubmissions();
+    registerForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setStatus(authStatus, '가입 중입니다.');
+      try {
+        const result = await register({
+          name: document.getElementById('registerName').value.trim(),
+          schoolName: document.getElementById('registerSchool').value.trim(),
+          email: document.getElementById('registerEmail').value.trim(),
+          password: document.getElementById('registerPassword').value
+        });
+        saveAuth(result);
+        setStatus(authStatus, '');
+        await loadDashboard();
+      } catch (error) {
+        setStatus(authStatus, error.message || '가입에 실패했습니다.', 'error');
+      }
+    });
+
+    classForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setStatus(classStatus, '학급 코드를 만드는 중입니다.');
+      try {
+        const result = await createClass();
+        classNameInput.value = '';
+        classCodeInput.value = '';
+        setStatus(classStatus, `${result.classInfo.code} 학급 코드를 만들었습니다.`, 'success');
+        await loadClasses();
+      } catch (error) {
+        setStatus(classStatus, error.message || '학급 코드 생성에 실패했습니다.', 'error');
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      clearAuth();
+      state.classes = [];
+      state.items = [];
+      renderShell();
+      setStatus(authStatus, '로그아웃했습니다.');
+    });
+
+    refreshAllBtn.addEventListener('click', async () => {
+      refreshAllBtn.disabled = true;
+      try {
+        await loadDashboard();
+      } catch (error) {
+        setStatus(submissionStatus, error.message || '새로고침에 실패했습니다.', 'error');
+      } finally {
+        refreshAllBtn.disabled = false;
+      }
+    });
+
+    [searchInput, classFilter, kindFilter, statusFilter].forEach((node) => {
+      node.addEventListener('input', renderSubmissions);
+      node.addEventListener('change', renderSubmissions);
+    });
+
+    classGrid.addEventListener('click', async (event) => {
+      const copyButton = event.target.closest('[data-copy-code]');
+      if (copyButton) {
+        await copyText(copyButton.getAttribute('data-copy-code') || '');
+        return;
+      }
+
+      const filterButton = event.target.closest('[data-filter-code]');
+      if (filterButton) {
+        classFilter.value = normalizeCode(filterButton.getAttribute('data-filter-code'));
+        renderSubmissions();
+      }
+    });
+
+    submissionList.addEventListener('click', async (event) => {
+      const deleteButton = event.target.closest('[data-delete-path]');
+      if (!deleteButton) return;
+      try {
+        await deleteItem(
+          deleteButton.getAttribute('data-delete-path') || '',
+          deleteButton.getAttribute('data-delete-title') || '제목 없는 책'
+        );
+      } catch (error) {
+        setStatus(submissionStatus, error.message || '삭제에 실패했습니다.', 'error');
+      }
+    });
+
+    loadStoredAuth();
+    renderShell();
+
+    if (state.token) {
+      loadDashboard().catch((error) => {
+        setStatus(submissionStatus, error.message || '자료를 불러오지 못했습니다.', 'error');
+      });
+    }
   </script>
 </body>
 </html>

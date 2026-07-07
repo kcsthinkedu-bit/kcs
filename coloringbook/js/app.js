@@ -26,6 +26,7 @@ const state = {
   bookFlipIndex: 0
 };
 const TEACHER_PASSWORD_STORAGE_KEY = 'kcs-teacher-password';
+const TEACHER_AUTH_TOKEN_STORAGE_KEY = 'kcs-teacher-auth-token';
 
 function getStoredTeacherPassword() {
   try {
@@ -44,6 +45,14 @@ function setStoredTeacherPassword(password) {
     }
   } catch (error) {
     console.error(error);
+  }
+}
+
+function getStoredTeacherAuthToken() {
+  try {
+    return localStorage.getItem(TEACHER_AUTH_TOKEN_STORAGE_KEY) || '';
+  } catch (error) {
+    return '';
   }
 }
 
@@ -112,6 +121,10 @@ async function verifyTeacherPassword(password) {
 }
 
 async function ensureTeacherAccess(forcePrompt = false) {
+  if (!forcePrompt && getStoredTeacherAuthToken()) {
+    return true;
+  }
+
   let password = forcePrompt ? '' : getStoredTeacherPassword();
 
   if (password && !forcePrompt) {
@@ -135,6 +148,14 @@ async function ensureTeacherAccess(forcePrompt = false) {
 }
 
 function buildTeacherAuthHeaders(extraHeaders = {}) {
+  const token = getStoredTeacherAuthToken();
+  if (token) {
+    return {
+      ...extraHeaders,
+      Authorization: `Bearer ${token}`
+    };
+  }
+
   const password = getStoredTeacherPassword();
   if (!password) return { ...extraHeaders };
   return {
@@ -290,6 +311,10 @@ function buildReviewSubmissionInfo() {
     className: normalizeString(source.className, '').trim(),
     studentName: normalizeString(source.studentName, '').trim(),
     studentNumber: normalizeString(source.studentNumber, '').trim(),
+    submissionCode: normalizeString(source.submissionCode || source.classCode, '').trim(),
+    classCode: normalizeString(source.classCode || source.submissionCode, '').trim(),
+    teacherId: normalizeString(source.teacherId, '').trim(),
+    teacherName: normalizeString(source.teacherName, '').trim(),
     bookTitle: normalizeString(state.book.title || source.bookTitle, '').trim(),
     paper: normalizePaper(state.book.paper || source.paper),
     submittedAt: source.submittedAt || ''
@@ -330,9 +355,9 @@ async function saveTeacherReview() {
 
     const response = await fetch(REVIEW_SAVE_ENDPOINT, {
       method: 'POST',
-      headers: {
+      headers: buildTeacherAuthHeaders({
         'Content-Type': 'application/json'
-      },
+      }),
       body: JSON.stringify(payload)
     });
 
@@ -1683,7 +1708,7 @@ function renderAll() {
 
 function setSubmitStatus(message = '', tone = '') {
   if (!dom.submitStatusBox) return;
-  dom.submitStatusBox.textContent = message || '학급명과 학생 이름을 입력한 뒤 제출하면 선생님 제출함에서 바로 확인할 수 있습니다.';
+  dom.submitStatusBox.textContent = message || '선생님이 알려준 학급 코드와 학생 정보를 입력하면 선생님 제출함에서 바로 확인할 수 있습니다.';
   dom.submitStatusBox.className = 'submit-status-box' + (tone ? ` ${tone}` : '');
 }
 
@@ -1726,7 +1751,7 @@ function validateSubmissionInfo(info) {
     throw new Error('학생 이름을 입력해 주세요.');
   }
   if (!info.submissionCode) {
-    throw new Error('제출코드를 입력해 주세요.');
+    throw new Error('학급 코드를 입력해 주세요.');
   }
 }
 
@@ -1738,7 +1763,10 @@ function buildReviewSubmissionInfo() {
     className: normalizeString(source.className, '').trim(),
     studentName: normalizeString(source.studentName, '').trim(),
     studentNumber: normalizeString(source.studentNumber, '').trim(),
-    submissionCode: normalizeString(source.submissionCode, '').trim(),
+    submissionCode: normalizeString(source.submissionCode || source.classCode, '').trim(),
+    classCode: normalizeString(source.classCode || source.submissionCode, '').trim(),
+    teacherId: normalizeString(source.teacherId, '').trim(),
+    teacherName: normalizeString(source.teacherName, '').trim(),
     bookTitle: normalizeString(state.book.title || source.bookTitle, '').trim(),
     paper: normalizePaper(state.book.paper || source.paper),
     submittedAt: source.submittedAt || ''

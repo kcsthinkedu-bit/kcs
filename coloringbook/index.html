@@ -75,6 +75,12 @@
 
           <div id="teacherSummaryCards" class="teacher-summary-grid"></div>
 
+          <div class="book-concept-guide">
+            <strong>쪽수 계산 안내</strong>
+            <p>편집 화면의 펼침 1개는 왼쪽 스토리 1쪽과 오른쪽 그림 1쪽이 붙은 작업 세트입니다. 따라서 펼침 1개는 인쇄 기준 2쪽입니다.</p>
+            <p>책자 인쇄는 앞표지와 뒷표지를 포함한 전체 쪽수가 4의 배수여야 합니다. 부족한 쪽은 이야기 전체 보기나 도안 모아보기로 자동 보충됩니다.</p>
+          </div>
+
           <div id="teacherReadinessBox" class="tip-box teacher-readiness-box"></div>
 
           <div class="teacher-tools">
@@ -148,6 +154,11 @@
             <div id="bookFlipPreview" class="book-flip-preview"></div>
           </div>
           <div id="bookReadinessReport" class="teacher-preview-report"></div>
+          <div class="book-concept-guide">
+            <strong>펼침과 쪽의 차이</strong>
+            <p>펼침은 편집할 때의 스토리+그림 세트이고, 쪽은 실제 책에 인쇄되는 한 면입니다. 펼침 1개는 인쇄 기준 2쪽입니다.</p>
+            <p>앞표지와 뒷표지도 전체 쪽수에 포함되며, 종이 1장을 접으면 4쪽이 되므로 전체 쪽수는 4의 배수로 맞춥니다.</p>
+          </div>
           <div class="booklet-box">
             <h3>책 전체 순서</h3>
             <ol id="bookPreviewList" class="book-preview-list"></ol>
@@ -193,11 +204,12 @@
       <div class="editor-toolbar">
         <button id="prevSpreadBtn" class="toolbar-btn" type="button">이전 펼침</button>
         <button id="nextSpreadBtn" class="toolbar-btn" type="button">다음 펼침</button>
-        <button id="moveSpreadUpBtn" class="toolbar-btn teacher-only-control" type="button">위로 이동</button>
-        <button id="moveSpreadDownBtn" class="toolbar-btn teacher-only-control" type="button">아래로 이동</button>
-        <button id="duplicateSpreadBtn" class="toolbar-btn teacher-only-control" type="button">복제</button>
-        <button id="deleteSpreadBtn" class="toolbar-btn danger teacher-only-control" type="button">삭제</button>
+        <button id="moveSpreadUpBtn" class="toolbar-btn" type="button">펼침 위로</button>
+        <button id="moveSpreadDownBtn" class="toolbar-btn" type="button">펼침 아래로</button>
+        <button id="duplicateSpreadBtn" class="toolbar-btn" type="button">펼침 복제</button>
+        <button id="deleteSpreadBtn" class="toolbar-btn danger" type="button">펼침 삭제</button>
       </div>
+      <p class="spread-concept-note">펼침 1개는 왼쪽 스토리 1쪽과 오른쪽 그림 1쪽, 총 2쪽으로 인쇄됩니다.</p>
 
       <label class="field">
         페이지 제목
@@ -469,6 +481,6 @@
     </section>
   </div>
 
-  <script src="./js/app.js?v=20260622-duplex-centerline-calibration"></script>
+  <script src="./js/app.js?v=20260707-page-terms-guide"></script>
 </body>
 </html>

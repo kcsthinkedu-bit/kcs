@@ -80,6 +80,42 @@ button { cursor: pointer; }
   align-items: center;
 }
 
+.top-print-offset-box {
+  width: min(100%, 760px);
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.top-print-offset-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.top-print-offset-head strong {
+  font-size: 14px;
+}
+
+.top-print-offset-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.top-print-offset-fields {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(104px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.top-print-offset-fields .field {
+  margin-bottom: 0;
+}
+
 .mode-btn,
 .primary-btn,
 .ghost-btn,
@@ -280,6 +316,42 @@ body.teacher-mode .mode-btn.active {
   border-radius: 14px;
   padding: 12px;
   line-height: 1.7;
+}
+
+.book-concept-guide,
+.spread-concept-note {
+  border: 1px solid #bae6fd;
+  background: #f0f9ff;
+  color: #0f3f5f;
+  border-radius: 14px;
+  padding: 12px;
+  line-height: 1.65;
+}
+
+.book-concept-guide {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.book-concept-guide strong {
+  font-size: 13px;
+}
+
+.book-concept-guide p,
+.spread-concept-note {
+  margin: 0;
+  font-size: 12px;
+}
+
+.spread-concept-note {
+  margin: -2px 0 14px;
+}
+
+.teacher-readiness-math {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
 }
 
 .teacher-summary-grid {
@@ -685,6 +757,7 @@ body.teacher-mode .mode-btn.active {
   .editor-grid.double,
   .preview-spread-pages,
   .inline-fields,
+  .top-print-offset-fields,
   .print-face,
   .teacher-summary-grid {
     grid-template-columns: 1fr;

@@ -1134,6 +1134,9 @@ function renderBookFlipPreview() {
   dom.bookReadinessReport.innerHTML = `
     <h3>책자 점검</h3>
     <ul>
+      <li>펼침 ${report.totalSpreads}개 = 본문 ${report.spreadPageCount}쪽입니다. 펼침 1개는 스토리 1쪽 + 그림 1쪽입니다.</li>
+      <li>앞표지와 뒷표지 ${report.coverPageCount}쪽을 포함해 기본 ${report.basePageCount}쪽입니다.</li>
+      <li>4의 배수에 맞추기 위해 자동 채움 ${report.autoFillCount}쪽을 더해 최종 ${report.totalPages}쪽으로 인쇄됩니다.</li>
       <li>총 페이지: ${report.totalPages}쪽 · 책장 미리보기 ${openings.length}장면</li>
       <li>인쇄 시트: ${report.sheetCount}장 · 자동 채움 페이지 ${report.autoFillCount}쪽</li>
       <li>내용 없는 글 페이지 ${report.emptyTextCount}쪽 · 그림 없는 도안 페이지 ${report.emptyImageCount}쪽</li>
@@ -1380,6 +1383,10 @@ function buildBookReadinessReport(pages, openings) {
   });
 
   const autoFillCount = pages.filter((page) => page.kind === 'story-summary' || page.kind === 'image-gallery').length;
+  const totalSpreads = state.book.spreads.length;
+  const spreadPageCount = totalSpreads * 2;
+  const coverPageCount = 2;
+  const basePageCount = coverPageCount + spreadPageCount;
 
   openings.forEach((opening, index) => {
     if (index === 0) return;
@@ -1434,6 +1441,10 @@ function buildBookReadinessReport(pages, openings) {
   }
 
   return {
+    totalSpreads,
+    spreadPageCount,
+    coverPageCount,
+    basePageCount,
     totalPages: pages.length,
     sheetCount: buildBookletSheets(pages).length,
     autoFillCount,
@@ -1452,31 +1463,32 @@ function renderTeacherPanels() {
 
   dom.teacherSummaryCards.innerHTML = `
     <div class="teacher-stat-card">
-      <div class="teacher-card-title">전체 펼침</div>
+      <div class="teacher-card-title">펼침</div>
       <div class="teacher-card-value">${report.totalSpreads}</div>
-      <div class="teacher-card-sub">표지를 제외한 내부 펼침 수</div>
+      <div class="teacher-card-sub">1펼침 = 스토리 1쪽 + 그림 1쪽</div>
     </div>
     <div class="teacher-stat-card">
-      <div class="teacher-card-title">이미지 준비</div>
-      <div class="teacher-card-value">${report.imageReadyCount}</div>
-      <div class="teacher-card-sub">이미지가 들어간 펼침 수</div>
+      <div class="teacher-card-title">본문 쪽수</div>
+      <div class="teacher-card-value">${report.spreadPageCount}</div>
+      <div class="teacher-card-sub">${report.totalSpreads}펼침 × 2쪽</div>
     </div>
     <div class="teacher-stat-card">
-      <div class="teacher-card-title">문제 페이지</div>
-      <div class="teacher-card-value">${report.issues.length}</div>
-      <div class="teacher-card-sub">보완이 필요한 항목 수</div>
+      <div class="teacher-card-title">전체 쪽수</div>
+      <div class="teacher-card-value">${report.totalPages}</div>
+      <div class="teacher-card-sub">표지 2쪽 + 자동 보충 ${report.autoFillCount}쪽 포함</div>
     </div>
     <div class="teacher-stat-card">
-      <div class="teacher-card-title">인쇄 시트</div>
+      <div class="teacher-card-title">인쇄 종이</div>
       <div class="teacher-card-value">${report.sheetCount}</div>
-      <div class="teacher-card-sub">현재 배열 기준 예상 시트 수</div>
+      <div class="teacher-card-sub">종이 1장 = 접으면 4쪽</div>
     </div>
   `;
 
   dom.teacherReadinessBox.className = 'tip-box teacher-readiness-box ' + (report.ready ? 'good' : 'warn');
+  const pageMathHtml = `<span class="teacher-readiness-math">펼침 ${report.totalSpreads}개는 본문 ${report.spreadPageCount}쪽이고, 앞표지/뒷표지 ${report.coverPageCount}쪽을 포함해 기본 ${report.basePageCount}쪽입니다. 자동 보충 ${report.autoFillCount}쪽을 더해 최종 ${report.totalPages}쪽, 인쇄 종이 ${report.sheetCount}장으로 맞춥니다.</span>`;
   dom.teacherReadinessBox.innerHTML = report.ready
-    ? `인쇄 전 점검 완료 상태입니다. 표지와 모든 펼침의 핵심 요소가 들어가 있습니다. 총 ${report.sheetCount}시트로 인쇄됩니다.`
-    : `아직 ${report.issues.length}개의 보완 항목이 있습니다. 아래 목록에서 바로 이동해 수정한 뒤 인쇄 배열을 다시 확인하세요.`;
+    ? `인쇄 전 점검 완료 상태입니다. 표지와 모든 펼침의 핵심 요소가 들어가 있습니다. 총 ${report.sheetCount}장으로 인쇄됩니다.${pageMathHtml}`
+    : `아직 ${report.issues.length}개의 보완 항목이 있습니다. 아래 목록에서 바로 이동해 수정한 뒤 인쇄 배열을 다시 확인하세요.${pageMathHtml}`;
 
   dom.jumpFirstIssueBtn.disabled = !report.issues.length;
   if (dom.teacherPrintBookBtn) dom.teacherPrintBookBtn.disabled = !state.book.spreads.length;
@@ -1522,6 +1534,8 @@ function renderTeacherPanels() {
     <ul>
       <li>현재 책 제목: ${escapeHtml(state.book.title || '제목 없음')}</li>
       <li>용지: ${escapeHtml(state.book.paper || 'A4')} · 예상 인쇄 시트 ${report.sheetCount}장</li>
+      <li>펼침 ${report.totalSpreads}개 = 본문 ${report.spreadPageCount}쪽</li>
+      <li>앞표지/뒷표지 포함 기본 ${report.basePageCount}쪽 · 자동 보충 ${report.autoFillCount}쪽 · 최종 ${report.totalPages}쪽</li>
       <li>표지 이미지: ${report.coverHasImage ? '있음' : '없음'}</li>
       <li>본문 준비 완료 펼침: ${report.completeSpreadCount} / ${report.totalSpreads}</li>
       <li>바로 수정할 문제 항목: ${report.issues.length}개</li>
@@ -1586,10 +1600,21 @@ function buildTeacherReport() {
     }
   });
 
-  const sheetCount = buildBookletSheets(buildLogicalPages()).length;
+  const pages = buildLogicalPages();
+  const totalPages = pages.length;
+  const sheetCount = buildBookletSheets(pages).length;
+  const autoFillCount = pages.filter((page) => page.kind === 'story-summary' || page.kind === 'image-gallery').length;
+  const spreadPageCount = totalSpreads * 2;
+  const coverPageCount = 2;
+  const basePageCount = coverPageCount + spreadPageCount;
 
   return {
     totalSpreads,
+    spreadPageCount,
+    coverPageCount,
+    basePageCount,
+    totalPages,
+    autoFillCount,
     imageReadyCount,
     completeSpreadCount,
     coverHasImage,
@@ -3313,6 +3338,10 @@ function deleteActiveSpread() {
   if (currentIndex < 0) return;
   if (state.book.spreads.length <= 1) {
     alert('최소 1개의 펼침은 남아 있어야 합니다.');
+    return;
+  }
+
+  if (!window.confirm(`펼침 ${currentIndex + 1}을 삭제할까요? 왼쪽 스토리 1쪽과 오른쪽 그림 1쪽이 함께 삭제됩니다.`)) {
     return;
   }
 

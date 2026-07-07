@@ -1,26 +1,45 @@
-# 책편집도우미 Blob -> Supabase 마이그레이션
+# 책편집도우미 Supabase 전환 메모
 
-이 문서는 기존 Vercel Blob에 저장된 선생님 계정, 학급 코드, 학생 제출물 JSON을 Supabase로 옮기는 절차입니다.
+이 문서는 책편집도우미 데이터를 KCSedutech 공통 Supabase 구조로 옮기기 위한 기준입니다.
+
+## 방향
+
+책편집도우미는 별도의 `book_teachers`, `book_classes` 회원/학급 테이블을 만들지 않습니다.
+
+공통 데이터는 KCSedutech 공통 테이블을 참조합니다.
+
+- `auth.users`
+- `profiles` 또는 `user_settings`
+- `organizations` / `academies` / `schools` 계열
+- `organization_members` 또는 `academy_members`
+- `class_groups`
+- `students`
+- `service_entitlements`
+
+책편집도우미가 직접 소유하는 원본 데이터만 `book_*` 테이블로 분리합니다.
+
+- `book_projects`
+- `book_pages`
+- `book_assets`
+- `book_templates`
+- `book_exports`
+- `book_submissions`
+
+`book_projects`에는 `owner_user_id`, `organization_id`, `class_group_id`, `student_id`를 둡니다. `owner_user_id`는 `auth.users(id)`를 참조하고, 조직/학급/학생 FK는 KCSedutech 공통 테이블명을 최종 확인한 뒤 추가합니다.
 
 ## 1. Supabase SQL 적용
 
-Supabase SQL Editor에서 먼저 아래 파일 전체를 실행합니다.
+Supabase SQL Editor에서 아래 파일 전체를 실행합니다.
 
 ```text
 docs/supabase-book-helper-schema.sql
 ```
 
-생성되는 테이블:
-
-- `book_teachers`
-- `book_classes`
-- `book_submissions`
-
-`book_submissions.legacy_pathname`은 기존 Blob 경로를 기록합니다. 같은 Blob 자료를 두 번 마이그레이션하지 않기 위한 중복 방지 키입니다.
+주의: 예전에 만든 `book_teachers`, `book_classes` SQL은 더 이상 권장 구조가 아닙니다. 이미 적용했다면 당장 삭제하지 말고, 공통 Auth 마이그레이션이 끝난 뒤 정리합니다.
 
 ## 2. Vercel 환경변수
 
-Vercel 프로젝트에 아래 환경변수를 추가합니다.
+책편집도우미 제출물 저장을 Supabase로 보내려면 Vercel 프로젝트에 아래 값을 추가합니다.
 
 ```text
 SUPABASE_URL
@@ -29,22 +48,22 @@ BOOK_HELPER_AUTH_SECRET
 BOOK_HELPER_MIGRATION_SECRET
 ```
 
-`BOOK_HELPER_MIGRATION_SECRET`은 마이그레이션 API를 호출할 때만 쓰는 비밀키입니다.
+`BOOK_HELPER_USE_LEGACY_SUPABASE_AUTH`는 기본적으로 설정하지 않습니다.
 
-## 3. Dry-run으로 개수 확인
+이 값을 `true`로 켜면 예전 실험 구조인 `book_teachers`, `book_classes` 테이블을 사용하려고 합니다. KCSedutech 공통계정 구조로 갈 경우에는 켜지 않는 것이 맞습니다.
 
-실제 저장 없이 Blob에서 읽을 수 있는 자료 수를 확인합니다.
+## 3. Blob 마이그레이션
+
+현재 마이그레이션 API는 Vercel Blob에 있던 책 JSON을 `book_submissions`로 옮기는 용도입니다.
+
+먼저 dry-run으로 개수를 확인합니다.
 
 ```bash
 curl -H "x-migration-secret: YOUR_SECRET" \
   "https://YOUR_VERCEL_DOMAIN/api/admin/migrate-blob-to-supabase"
 ```
 
-응답의 `dryRun`이 `true`이고, `ready` 숫자가 Supabase로 옮길 수 있는 자료 수입니다.
-
-## 4. 실제 마이그레이션 실행
-
-dry-run 결과가 맞으면 `run=true`를 붙여 실행합니다.
+실제 실행은 `run=true`를 붙입니다.
 
 ```bash
 curl -X POST \
@@ -54,14 +73,16 @@ curl -X POST \
   "https://YOUR_VERCEL_DOMAIN/api/admin/migrate-blob-to-supabase"
 ```
 
-마이그레이션 API는 같은 `legacy_pathname`이 이미 Supabase에 있으면 새로 넣지 않습니다. 따라서 같은 요청을 다시 실행해도 중복 제출물이 생기지 않도록 설계되어 있습니다.
+응답의 `authMode`가 `common-account-references`이면 선생님/학급 Blob 자료는 Supabase로 옮기지 않고 건너뜁니다. 이 자료는 `profiles`, `organization_members`, `class_groups`, `students`와 매핑 규칙을 정한 뒤 별도 마이그레이션하는 것이 안전합니다.
 
-## 5. 확인
+## 4. 다음 단계
 
-마이그레이션 후 선생님 페이지에서 제출함을 열어 확인합니다.
+공통계정 연결 단계에서 확인할 것:
 
-```text
-/teacher/
-```
+- 현재 법인 Supabase의 실제 조직 테이블명이 `organizations`, `academies`, `schools` 중 무엇인지
+- 학급 테이블의 실제 이름과 PK가 `class_groups(id)`인지
+- 학생 테이블의 실제 이름과 PK가 `students(id)`인지
+- 책편집도우미 권한을 `service_entitlements`에 어떤 `service_key`로 넣을지
+- 기존 Blob 학급 코드와 새 `class_group_id`를 어떻게 연결할지
 
-Supabase 환경변수가 설정되어 있으면 새 제출물은 Supabase에 저장됩니다. 환경변수가 없으면 기존 Vercel Blob 방식으로 동작합니다.
+이 확인이 끝나면 `book_projects.organization_id`, `book_projects.class_group_id`, `book_projects.student_id`에 실제 FK를 추가하고, 학생 제출 시 `book_projects`와 `book_submissions`를 함께 생성하도록 서버 API를 바꾸면 됩니다.

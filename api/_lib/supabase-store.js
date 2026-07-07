@@ -4,6 +4,8 @@ const TABLES = {
   submissions: 'book_submissions'
 };
 
+const TRUTHY_VALUES = new Set(['1', 'true', 'yes', 'on']);
+
 function cleanUrl(value) {
   return String(value || '').trim().replace(/\/+$/g, '');
 }
@@ -34,6 +36,10 @@ function getSupabaseConfig() {
 export function isSupabaseConfigured() {
   const { url, key } = getSupabaseConfig();
   return !!url && !!key;
+}
+
+export function usesLegacyBookAuthTables() {
+  return TRUTHY_VALUES.has(safeString(process.env.BOOK_HELPER_USE_LEGACY_SUPABASE_AUTH).toLowerCase());
 }
 
 function makeRestUrl(path, query = {}) {

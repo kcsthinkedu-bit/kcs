@@ -7,7 +7,8 @@ import {
   isSupabaseConfigured,
   listSupabaseClassesByTeacher,
   saveSupabaseClass,
-  saveSupabaseTeacher
+  saveSupabaseTeacher,
+  usesLegacyBookAuthTables
 } from './supabase-store.js';
 
 const TOKEN_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 14;
@@ -62,6 +63,10 @@ function getSecret() {
   return safeString(process.env.BOOK_HELPER_AUTH_SECRET)
     || safeString(process.env.TEACHER_ACCESS_PASSWORD)
     || safeString(process.env.SUBMISSION_CODE);
+}
+
+function useLegacySupabaseAuthStorage() {
+  return isSupabaseConfigured() && usesLegacyBookAuthTables();
 }
 
 export function requireAuthSecret() {
@@ -174,7 +179,7 @@ export async function saveJson(pathname, data) {
 export async function findTeacherByEmail(email) {
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
-  if (isSupabaseConfigured()) {
+  if (useLegacySupabaseAuthStorage()) {
     const teacher = await findSupabaseTeacherByEmail(normalized);
     if (teacher) return teacher;
   }
@@ -184,7 +189,7 @@ export async function findTeacherByEmail(email) {
 export async function findTeacherById(teacherId) {
   const safeTeacherId = safePathPart(teacherId, '');
   if (!safeTeacherId) return null;
-  if (isSupabaseConfigured()) {
+  if (useLegacySupabaseAuthStorage()) {
     const teacher = await findSupabaseTeacherById(safeTeacherId);
     if (teacher) return teacher;
   }
@@ -192,7 +197,7 @@ export async function findTeacherById(teacherId) {
 }
 
 export async function saveTeacherRecord(teacher) {
-  if (isSupabaseConfigured()) {
+  if (useLegacySupabaseAuthStorage()) {
     return await saveSupabaseTeacher(teacher, hashText);
   }
 
@@ -215,7 +220,7 @@ export function publicTeacherProfile(teacher) {
 export async function findClassByCode(code) {
   const safeCode = normalizeClassCode(code);
   if (!safeCode) return null;
-  if (isSupabaseConfigured()) {
+  if (useLegacySupabaseAuthStorage()) {
     const classInfo = await findSupabaseClassByCode(safeCode);
     if (classInfo) return classInfo;
   }
@@ -224,7 +229,7 @@ export async function findClassByCode(code) {
 }
 
 export async function listTeacherClasses(teacherId) {
-  if (isSupabaseConfigured()) {
+  if (useLegacySupabaseAuthStorage()) {
     return await listSupabaseClassesByTeacher(teacherId);
   }
 
@@ -267,7 +272,7 @@ export async function createTeacherClass(teacher, input = {}) {
         active: true,
         createdAt: now
       };
-      if (isSupabaseConfigured()) {
+      if (useLegacySupabaseAuthStorage()) {
         await saveSupabaseClass(classInfo);
       } else {
         await saveJson(`classes/code/${nextCode}.json`, classInfo);

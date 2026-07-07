@@ -8,7 +8,8 @@ import {
   insertSupabaseSubmission,
   isSupabaseConfigured,
   saveSupabaseClass,
-  saveSupabaseTeacher
+  saveSupabaseTeacher,
+  usesLegacyBookAuthTables
 } from '../_lib/supabase-store.js';
 
 const PREFIXES = {
@@ -189,16 +190,25 @@ export default async function handler(req, res) {
   }
 
   const run = shouldRun(req, body);
+  const migrateLegacyAuthTables = usesLegacyBookAuthTables();
   const report = {
     ok: true,
     dryRun: !run,
     run,
+    authMode: migrateLegacyAuthTables ? 'legacy-book-auth-tables' : 'common-account-references',
     teachers: makeStats(),
     classes: makeStats(),
     submissions: makeStats(),
     reviews: makeStats(),
+    notes: [],
     errors: []
   };
+
+  if (!migrateLegacyAuthTables) {
+    report.notes.push(
+      'Teacher and class-group migration is paused. Map Blob teachers/classes to the KCSedutech common auth/organization/class tables before importing those records.'
+    );
+  }
 
   try {
     const [teachers, classes, submissions, reviews] = await Promise.all([
@@ -208,8 +218,15 @@ export default async function handler(req, res) {
       listAllJsonByPrefix(PREFIXES.reviews)
     ]);
 
-    await migrateTeachers(teachers, report, run);
-    await migrateClasses(classes, report, run);
+    if (migrateLegacyAuthTables) {
+      await migrateTeachers(teachers, report, run);
+      await migrateClasses(classes, report, run);
+    } else {
+      report.teachers.found = teachers.length;
+      report.teachers.skipped = teachers.length;
+      report.classes.found = classes.length;
+      report.classes.skipped = classes.length;
+    }
     await migrateBooks(submissions, report, 'submissions', 'submission', run);
     await migrateBooks(reviews, report, 'reviews', 'review', run);
 

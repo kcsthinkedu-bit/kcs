@@ -194,6 +194,8 @@ export function mapSubmissionRow(row) {
     classCode,
     teacherId: row.teacher_id || '',
     teacherName: row.teacher_name || '',
+    legacyPathname: row.legacy_pathname || '',
+    legacyUrl: row.legacy_url || '',
     submittedAt: row.submitted_at || row.created_at || '',
     sourceUrl,
     studentKey: [
@@ -262,35 +264,49 @@ export async function saveSupabaseClass(classInfo) {
   return mapClassRow(row);
 }
 
-export async function insertSupabaseSubmission(kind, payload, sourceUrl = '') {
+export async function insertSupabaseSubmission(kind, payload, sourceUrl = '', options = {}) {
   if (!isSupabaseConfigured()) return null;
+  const legacyPathname = safeString(options.legacyPathname);
+  if (legacyPathname) {
+    const existing = await selectOne(TABLES.submissions, { legacy_pathname: legacyPathname });
+    if (existing) return mapSubmissionRow(existing);
+  }
+
   const book = payload || {};
   const submission = getSubmissionFromBook(book);
   const review = getReviewFromBook(book);
   const savedAt = safeString(review.savedAt);
   const submittedAt = safeString(submission.submittedAt);
 
+  const body = {
+    kind,
+    teacher_id: safeString(submission.teacherId),
+    teacher_name: safeString(submission.teacherName),
+    class_code: normalizeClassCode(submission.classCode || submission.submissionCode),
+    submission_code: normalizeClassCode(submission.submissionCode || submission.classCode),
+    school_name: safeString(submission.schoolName),
+    class_name: safeString(submission.className),
+    student_name: safeString(submission.studentName),
+    student_number: safeString(submission.studentNumber),
+    title: safeString(book.title || submission.bookTitle),
+    paper: safeString(book.paper || submission.paper || 'A4'),
+    spread_count: Array.isArray(book.spreads) ? book.spreads.length : 0,
+    source_url: safeString(sourceUrl || review.sourceUrl),
+    legacy_pathname: legacyPathname,
+    legacy_url: safeString(options.legacyUrl),
+    book_json: book,
+    submitted_at: submittedAt || null,
+    saved_at: savedAt || null
+  };
+
+  if (options.createdAt) {
+    body.created_at = options.createdAt;
+  }
+
   const row = await supabaseRequest(TABLES.submissions, {
     method: 'POST',
     headers: { Prefer: 'return=representation' },
-    body: {
-      kind,
-      teacher_id: safeString(submission.teacherId),
-      teacher_name: safeString(submission.teacherName),
-      class_code: normalizeClassCode(submission.classCode || submission.submissionCode),
-      submission_code: normalizeClassCode(submission.submissionCode || submission.classCode),
-      school_name: safeString(submission.schoolName),
-      class_name: safeString(submission.className),
-      student_name: safeString(submission.studentName),
-      student_number: safeString(submission.studentNumber),
-      title: safeString(book.title || submission.bookTitle),
-      paper: safeString(book.paper || submission.paper || 'A4'),
-      spread_count: Array.isArray(book.spreads) ? book.spreads.length : 0,
-      source_url: safeString(sourceUrl || review.sourceUrl),
-      book_json: book,
-      submitted_at: submittedAt || null,
-      saved_at: savedAt || null
-    }
+    body
   });
 
   return mapSubmissionRow(Array.isArray(row) && row.length ? row[0] : null);
@@ -305,7 +321,7 @@ export async function listSupabaseSubmissionsByTeacher(teacherId) {
   if (!isSupabaseConfigured()) return [];
   const rows = await supabaseRequest(TABLES.submissions, {
     query: {
-      select: 'id,kind,teacher_id,teacher_name,class_code,submission_code,school_name,class_name,student_name,student_number,title,paper,spread_count,source_url,submitted_at,saved_at,created_at',
+      select: 'id,kind,teacher_id,teacher_name,class_code,submission_code,school_name,class_name,student_name,student_number,title,paper,spread_count,source_url,legacy_pathname,legacy_url,submitted_at,saved_at,created_at',
       teacher_id: `eq.${safeString(teacherId)}`,
       order: 'created_at.desc'
     }
@@ -318,7 +334,7 @@ export async function listSupabaseSubmissionsByCode(code) {
   const safeCode = normalizeClassCode(code);
   const rows = await supabaseRequest(TABLES.submissions, {
     query: {
-      select: 'id,kind,teacher_id,teacher_name,class_code,submission_code,school_name,class_name,student_name,student_number,title,paper,spread_count,source_url,submitted_at,saved_at,created_at',
+      select: 'id,kind,teacher_id,teacher_name,class_code,submission_code,school_name,class_name,student_name,student_number,title,paper,spread_count,source_url,legacy_pathname,legacy_url,submitted_at,saved_at,created_at',
       class_code: `eq.${safeCode}`,
       order: 'created_at.desc'
     }

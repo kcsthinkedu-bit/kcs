@@ -41,6 +41,8 @@ create table if not exists public.book_submissions (
   paper text default 'A4',
   spread_count integer not null default 0,
   source_url text default '',
+  legacy_pathname text default '',
+  legacy_url text default '',
   book_json jsonb not null,
   submitted_at timestamptz,
   saved_at timestamptz,
@@ -59,6 +61,16 @@ create index if not exists book_submissions_class_code_idx
 
 create index if not exists book_submissions_student_idx
   on public.book_submissions (teacher_id, class_code, student_name, student_number);
+
+alter table public.book_submissions
+  add column if not exists legacy_pathname text default '';
+
+alter table public.book_submissions
+  add column if not exists legacy_url text default '';
+
+create unique index if not exists book_submissions_legacy_pathname_uidx
+  on public.book_submissions (legacy_pathname)
+  where legacy_pathname <> '';
 
 create or replace function public.set_updated_at()
 returns trigger

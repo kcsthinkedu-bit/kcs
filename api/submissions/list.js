@@ -115,7 +115,9 @@ function finishItems(items) {
   const finishedItems = items
     .map((item) => {
       const latestStudentTime = latestTimeByStudent.get(item.studentKey) || 0;
-      const reviewCount = item.kind === 'submission' ? (reviewCountBySourceUrl.get(item.url) || 0) : 0;
+      const reviewCount = item.kind === 'submission'
+        ? (reviewCountBySourceUrl.get(item.url) || 0) + (item.legacyUrl ? (reviewCountBySourceUrl.get(item.legacyUrl) || 0) : 0)
+        : 0;
       const reviewed = item.kind === 'review' || reviewCount > 0;
 
       return {

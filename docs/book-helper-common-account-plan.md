@@ -4,19 +4,20 @@
 
 책편집도우미는 KCSedutech 공통 포털 안의 독립 서비스로 둡니다.
 
-회원, 조직, 학급, 학생, 권한은 서비스별로 새로 만들지 않고 공통 테이블을 사용합니다. 책편집도우미가 직접 소유하는 원본 데이터만 `book_*` 테이블로 분리합니다.
+회원, 기관, 학급, 학생, 권한은 서비스별로 새로 만들지 않고 KCSedutech 공통 구조를 사용합니다. 책편집도우미가 직접 소유하는 원본 데이터만 `book_*` 테이블로 분리합니다.
 
 ## 공통 테이블
 
-공통 영역에서 관리할 데이터:
+현재 KCSedutech에서 기준으로 삼을 공통 데이터:
 
 - 로그인 계정: `auth.users`
-- 사용자 설정/프로필: `profiles` 또는 `user_settings`
-- 기관/학교/학원: `organizations` / `academies` / `schools`
-- 소속 권한: `organization_members` 또는 `academy_members`
+- 기관/학교/학원: `academies`
+- 기관 멤버십: `academy_members`
 - 학급: `class_groups`
 - 학생: `students`
-- 서비스 이용권한: `service_entitlements`
+- 기능/권한: `features`, `plans`, `subscriptions`, `entitlement_grants`
+
+`organizations`, `classes`, `service_entitlements`를 책편집도우미 때문에 새로 만들지 않습니다.
 
 ## 책편집도우미 전용 테이블
 
@@ -31,16 +32,18 @@
 
 ## 연결 방식
 
-`book_projects`는 공통 테이블을 직접 복제하지 않고 ID만 참조합니다.
+`book_projects`와 `book_submissions`는 공통 테이블을 직접 복제하지 않고 ID만 참조합니다.
 
 ```text
-book_projects.owner_user_id    -> auth.users.id
-book_projects.organization_id  -> 공통 조직/학교/학원 테이블
-book_projects.class_group_id   -> class_groups.id
-book_projects.student_id       -> students.id
+book_projects.owner_user_id   -> auth.users.id
+book_projects.academy_id      -> academies.id
+book_projects.class_group_id  -> class_groups.id
+book_projects.student_id      -> students.id
+book_submissions.project_id   -> book_projects.id
+book_submissions.student_id   -> students.id
 ```
 
-서비스 권한은 `service_entitlements`에서 `book_editor` 같은 서비스 키로 관리합니다.
+책편집도우미의 기능 표시는 `feature_key = 'book_editor'`를 기본값으로 둡니다. 실제 접근 제어는 KCSedutech의 `features / entitlement_grants` 구조에 맞춰 붙입니다.
 
 ## 현재 구현 상태
 

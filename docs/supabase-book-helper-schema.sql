@@ -3,24 +3,27 @@
 --
 -- This script creates only book-editor-owned tables.
 -- It does NOT create separate book_teachers or book_classes tables.
--- Common account, organization, class, student, entitlement data should stay in:
+--
+-- KCSedutech common references:
 --   auth.users
---   profiles or user_settings
---   organizations / academies / schools
---   organization_members / academy_members
+--   academies
+--   academy_members
 --   class_groups
 --   students
---   service_entitlements
+--
+-- Service access should be aligned with the existing KCSedutech
+-- features / plans / subscriptions / entitlement_grants structure.
+-- Do not create a separate service_entitlements table from this script.
 
 create extension if not exists pgcrypto;
 
 create table if not exists public.book_projects (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid references auth.users(id) on delete set null,
-  organization_id uuid,
-  class_group_id uuid,
-  student_id uuid,
-  service_key text not null default 'book_editor',
+  academy_id uuid references public.academies(id) on delete set null,
+  class_group_id uuid references public.class_groups(id) on delete set null,
+  student_id uuid references public.students(id) on delete set null,
+  feature_key text not null default 'book_editor',
   book_type text not null default 'coloringbook'
     check (book_type in ('coloringbook', 'picturebook', 'storybook', 'worksheet')),
   title text not null default '',
@@ -73,12 +76,12 @@ create table if not exists public.book_pages (
 create table if not exists public.book_templates (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid references auth.users(id) on delete set null,
-  organization_id uuid,
-  service_key text not null default 'book_editor',
+  academy_id uuid references public.academies(id) on delete set null,
+  feature_key text not null default 'book_editor',
   template_key text not null default '',
   name text not null default '',
   visibility text not null default 'system'
-    check (visibility in ('system', 'organization', 'private')),
+    check (visibility in ('system', 'academy', 'private')),
   book_type text not null default 'coloringbook'
     check (book_type in ('coloringbook', 'picturebook', 'storybook', 'worksheet')),
   template_json jsonb not null default '{}'::jsonb,
@@ -106,10 +109,10 @@ create table if not exists public.book_submissions (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references public.book_projects(id) on delete set null,
   owner_user_id uuid references auth.users(id) on delete set null,
-  organization_id uuid,
-  class_group_id uuid,
-  student_id uuid,
-  service_key text not null default 'book_editor',
+  academy_id uuid references public.academies(id) on delete set null,
+  class_group_id uuid references public.class_groups(id) on delete set null,
+  student_id uuid references public.students(id) on delete set null,
+  feature_key text not null default 'book_editor',
   kind text not null default 'submission'
     check (kind in ('submission', 'review')),
   teacher_id text not null default '',
@@ -133,14 +136,23 @@ create table if not exists public.book_submissions (
   updated_at timestamptz not null default now()
 );
 
--- If an older draft schema was already applied, add the new common-reference
--- columns without requiring a destructive rebuild.
-alter table public.book_submissions add column if not exists project_id uuid;
-alter table public.book_submissions add column if not exists owner_user_id uuid;
-alter table public.book_submissions add column if not exists organization_id uuid;
-alter table public.book_submissions add column if not exists class_group_id uuid;
-alter table public.book_submissions add column if not exists student_id uuid;
-alter table public.book_submissions add column if not exists service_key text not null default 'book_editor';
+-- If an older draft schema was already applied, add the academy/features
+-- columns without requiring a destructive rebuild. Older organization_id or
+-- service_key columns can remain unused until a later cleanup migration.
+alter table public.book_projects add column if not exists academy_id uuid references public.academies(id) on delete set null;
+alter table public.book_projects add column if not exists class_group_id uuid references public.class_groups(id) on delete set null;
+alter table public.book_projects add column if not exists student_id uuid references public.students(id) on delete set null;
+alter table public.book_projects add column if not exists feature_key text not null default 'book_editor';
+
+alter table public.book_templates add column if not exists academy_id uuid references public.academies(id) on delete set null;
+alter table public.book_templates add column if not exists feature_key text not null default 'book_editor';
+
+alter table public.book_submissions add column if not exists project_id uuid references public.book_projects(id) on delete set null;
+alter table public.book_submissions add column if not exists owner_user_id uuid references auth.users(id) on delete set null;
+alter table public.book_submissions add column if not exists academy_id uuid references public.academies(id) on delete set null;
+alter table public.book_submissions add column if not exists class_group_id uuid references public.class_groups(id) on delete set null;
+alter table public.book_submissions add column if not exists student_id uuid references public.students(id) on delete set null;
+alter table public.book_submissions add column if not exists feature_key text not null default 'book_editor';
 alter table public.book_submissions add column if not exists source_url text not null default '';
 alter table public.book_submissions add column if not exists legacy_pathname text not null default '';
 alter table public.book_submissions add column if not exists legacy_url text not null default '';
@@ -148,8 +160,8 @@ alter table public.book_submissions add column if not exists legacy_url text not
 create index if not exists book_projects_owner_idx
   on public.book_projects (owner_user_id, created_at desc);
 
-create index if not exists book_projects_class_group_idx
-  on public.book_projects (organization_id, class_group_id, created_at desc);
+create index if not exists book_projects_academy_class_idx
+  on public.book_projects (academy_id, class_group_id, created_at desc);
 
 create unique index if not exists book_pages_project_page_uidx
   on public.book_pages (project_id, page_index);
@@ -158,7 +170,7 @@ create index if not exists book_assets_project_idx
   on public.book_assets (project_id, created_at desc);
 
 create index if not exists book_templates_lookup_idx
-  on public.book_templates (service_key, visibility, active, created_at desc);
+  on public.book_templates (feature_key, visibility, active, created_at desc);
 
 create index if not exists book_exports_project_idx
   on public.book_exports (project_id, created_at desc);
@@ -169,8 +181,8 @@ create index if not exists book_submissions_project_idx
 create index if not exists book_submissions_owner_idx
   on public.book_submissions (owner_user_id, created_at desc);
 
-create index if not exists book_submissions_class_group_idx
-  on public.book_submissions (organization_id, class_group_id, created_at desc);
+create index if not exists book_submissions_academy_class_idx
+  on public.book_submissions (academy_id, class_group_id, created_at desc);
 
 create index if not exists book_submissions_student_idx
   on public.book_submissions (student_id, created_at desc);
@@ -234,7 +246,7 @@ alter table public.book_submissions enable row level security;
 
 -- The current Vercel API reads/writes with the service role key.
 -- Browser clients should not read these tables directly until common Auth and
--- per-service RLS policies are finalized.
+-- per-feature RLS policies are finalized with KCSedutech's entitlement_grants.
 revoke all on public.book_projects from anon, authenticated;
 revoke all on public.book_assets from anon, authenticated;
 revoke all on public.book_pages from anon, authenticated;
@@ -243,27 +255,19 @@ revoke all on public.book_exports from anon, authenticated;
 revoke all on public.book_submissions from anon, authenticated;
 
 comment on table public.book_projects is
-  'Book editor project records. Account, organization, class, student, and service entitlement records remain in the KCSedutech common schema.';
+  'Book editor project records. Account, academy, class group, student, and feature entitlement records remain in the KCSedutech common schema.';
 
 comment on column public.book_projects.owner_user_id is
   'Common auth.users.id for the teacher or creator who owns this project.';
 
-comment on column public.book_projects.organization_id is
-  'Common organization/academy/school id. Add the final FK after confirming the exact shared table name.';
+comment on column public.book_projects.academy_id is
+  'Common academies.id for the academy or school that owns this project.';
 
 comment on column public.book_projects.class_group_id is
-  'Common class_groups.id. Add the final FK after confirming the exact shared table name.';
+  'Common class_groups.id for the class connected to this project.';
 
 comment on column public.book_projects.student_id is
   'Common students.id when this project is attached to a student.';
 
--- Optional FK examples after the common table names are confirmed:
--- alter table public.book_projects
---   add constraint book_projects_organization_id_fkey
---   foreign key (organization_id) references public.organizations(id) on delete set null;
--- alter table public.book_projects
---   add constraint book_projects_class_group_id_fkey
---   foreign key (class_group_id) references public.class_groups(id) on delete set null;
--- alter table public.book_projects
---   add constraint book_projects_student_id_fkey
---   foreign key (student_id) references public.students(id) on delete set null;
+comment on column public.book_projects.feature_key is
+  'Feature key to align with the existing KCSedutech features / entitlement_grants access model.';

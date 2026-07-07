@@ -6,15 +6,20 @@
 
 책편집도우미는 별도의 `book_teachers`, `book_classes` 회원/학급 테이블을 만들지 않습니다.
 
-공통 데이터는 KCSedutech 공통 테이블을 참조합니다.
+공통 데이터는 현재 KCSedutech가 이미 많이 연결해 둔 구조를 참조합니다.
 
 - `auth.users`
-- `profiles` 또는 `user_settings`
-- `organizations` / `academies` / `schools` 계열
-- `organization_members` 또는 `academy_members`
+- `academies`
+- `academy_members`
 - `class_groups`
 - `students`
-- `service_entitlements`
+
+권한/서비스 접근은 새 `service_entitlements`를 만들기보다, 기존 KCSedutech의 아래 구조와 맞춥니다.
+
+- `features`
+- `plans`
+- `subscriptions`
+- `entitlement_grants`
 
 책편집도우미가 직접 소유하는 원본 데이터만 `book_*` 테이블로 분리합니다.
 
@@ -25,7 +30,18 @@
 - `book_exports`
 - `book_submissions`
 
-`book_projects`에는 `owner_user_id`, `organization_id`, `class_group_id`, `student_id`를 둡니다. `owner_user_id`는 `auth.users(id)`를 참조하고, 조직/학급/학생 FK는 KCSedutech 공통 테이블명을 최종 확인한 뒤 추가합니다.
+## 주요 FK
+
+```text
+book_projects.owner_user_id   -> auth.users.id
+book_projects.academy_id      -> academies.id
+book_projects.class_group_id  -> class_groups.id
+book_projects.student_id      -> students.id
+book_submissions.project_id   -> book_projects.id
+book_submissions.student_id   -> students.id
+```
+
+책편집도우미 권한은 `feature_key = 'book_editor'`로 표시하되, 실제 접근 제어는 KCSedutech의 `features / entitlement_grants`와 충돌하지 않도록 별도 연결 기준을 확인한 뒤 붙입니다.
 
 ## 1. Supabase SQL 적용
 
@@ -73,16 +89,16 @@ curl -X POST \
   "https://YOUR_VERCEL_DOMAIN/api/admin/migrate-blob-to-supabase"
 ```
 
-응답의 `authMode`가 `common-account-references`이면 선생님/학급 Blob 자료는 Supabase로 옮기지 않고 건너뜁니다. 이 자료는 `profiles`, `organization_members`, `class_groups`, `students`와 매핑 규칙을 정한 뒤 별도 마이그레이션하는 것이 안전합니다.
+응답의 `authMode`가 `common-account-references`이면 선생님/학급 Blob 자료는 Supabase로 옮기지 않고 건너뜁니다. 이 자료는 `auth.users`, `academies`, `academy_members`, `class_groups`, `students`와 매핑 규칙을 정한 뒤 별도 마이그레이션하는 것이 안전합니다.
 
 ## 4. 다음 단계
 
 공통계정 연결 단계에서 확인할 것:
 
-- 현재 법인 Supabase의 실제 조직 테이블명이 `organizations`, `academies`, `schools` 중 무엇인지
-- 학급 테이블의 실제 이름과 PK가 `class_groups(id)`인지
-- 학생 테이블의 실제 이름과 PK가 `students(id)`인지
-- 책편집도우미 권한을 `service_entitlements`에 어떤 `service_key`로 넣을지
+- `features`에 책편집도우미를 `book_editor`로 넣을지, 다른 feature key를 쓸지
+- `entitlement_grants`에서 선생님/기관/학급 단위 권한을 어떻게 판정하는지
 - 기존 Blob 학급 코드와 새 `class_group_id`를 어떻게 연결할지
+- 기존 Blob 학생 이름/번호와 `students.id`를 어떻게 매칭할지
+- 학생 제출 시 `book_projects`, `book_submissions`, `book_pages`, `book_assets`를 어떤 순서로 생성할지
 
-이 확인이 끝나면 `book_projects.organization_id`, `book_projects.class_group_id`, `book_projects.student_id`에 실제 FK를 추가하고, 학생 제출 시 `book_projects`와 `book_submissions`를 함께 생성하도록 서버 API를 바꾸면 됩니다.
+이 확인이 끝나면 학생 제출 API에서 `book_projects.academy_id`, `book_projects.class_group_id`, `book_submissions.student_id`를 채우도록 서버 API를 바꾸면 됩니다.

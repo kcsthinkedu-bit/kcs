@@ -206,7 +206,7 @@ export default async function handler(req, res) {
 
   if (!migrateLegacyAuthTables) {
     report.notes.push(
-      'Teacher and class-group migration is paused. Map Blob teachers/classes to the KCSedutech common auth/organization/class tables before importing those records.'
+      'Teacher and class-group migration is paused. Map Blob teachers/classes to the KCSedutech common auth.users, academies, academy_members, class_groups, and students tables before importing those records.'
     );
   }
 

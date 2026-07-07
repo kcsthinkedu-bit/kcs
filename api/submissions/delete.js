@@ -4,6 +4,11 @@ import {
   readBody,
   safePathPart
 } from '../_lib/school-store.js';
+import {
+  deleteSupabaseSubmission,
+  getSupabaseSubmissionId,
+  isSupabaseConfigured
+} from '../_lib/supabase-store.js';
 
 function getTeacherPassword(req) {
   return String(req.headers['x-teacher-password'] || '').trim();
@@ -23,6 +28,35 @@ export default async function handler(req, res) {
     }
 
     const teacher = getTeacherFromRequest(req);
+    const supabaseId = getSupabaseSubmissionId(pathname);
+    if (supabaseId) {
+      if (!isSupabaseConfigured()) {
+        return res.status(400).json({ error: 'Supabase 제출물 경로를 처리할 수 없습니다.' });
+      }
+
+      if (!teacher) {
+        const expectedTeacherPassword = String(process.env.TEACHER_ACCESS_PASSWORD || '').trim();
+        if (!expectedTeacherPassword) {
+          return res.status(500).json({ error: '서버 선생님 비밀번호 설정이 없습니다.' });
+        }
+
+        const teacherPassword = getTeacherPassword(req);
+        if (teacherPassword !== expectedTeacherPassword) {
+          return res.status(401).json({ error: '선생님 비밀번호가 맞지 않습니다.' });
+        }
+      }
+
+      const deleted = await deleteSupabaseSubmission(supabaseId, teacher ? teacher.teacherId : '');
+      if (!deleted) {
+        return res.status(404).json({ error: '삭제할 제출물을 찾지 못했습니다.' });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        pathname
+      });
+    }
+
     if (teacher) {
       const teacherPart = safePathPart(teacher.teacherId, 'teacher');
       const allowed =

@@ -7,6 +7,10 @@ import {
   safePathPart,
   safeString
 } from '../_lib/school-store.js';
+import {
+  insertSupabaseSubmission,
+  isSupabaseConfigured
+} from '../_lib/supabase-store.js';
 
 function getTeacherPassword(req) {
   return String(req.headers['x-teacher-password'] || '').trim();
@@ -96,6 +100,19 @@ export default async function handler(req, res) {
         sourceUrl
       }
     };
+
+    if (isSupabaseConfigured()) {
+      const item = await insertSupabaseSubmission('review', payload, sourceUrl);
+      return res.status(200).json({
+        ok: true,
+        storage: 'supabase',
+        id: item.id,
+        url: item.url,
+        pathname: item.pathname,
+        editUrl: item.editUrl,
+        teacherUrl: '/teacher/'
+      });
+    }
 
     const studentPart = safePathPart(studentName || 'student', 'student');
     const numberPart = safePathPart(studentNumber || 'no-number', 'no-number');

@@ -7,7 +7,7 @@ import {
   publicTeacherProfile,
   readBody,
   safeString,
-  saveJson,
+  saveTeacherRecord,
   sendError
 } from '../_lib/school-store.js';
 
@@ -42,8 +42,7 @@ export default async function handler(req, res) {
       createdAt: now
     };
 
-    await saveJson(`teachers/id/${teacher.teacherId}.json`, teacher);
-    await saveJson(`teachers/email/${hashText(email)}.json`, teacher);
+    await saveTeacherRecord(teacher);
 
     return res.status(200).json({
       ok: true,

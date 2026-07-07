@@ -1,5 +1,14 @@
 import { list, put } from '@vercel/blob';
 import crypto from 'crypto';
+import {
+  findSupabaseClassByCode,
+  findSupabaseTeacherByEmail,
+  findSupabaseTeacherById,
+  isSupabaseConfigured,
+  listSupabaseClassesByTeacher,
+  saveSupabaseClass,
+  saveSupabaseTeacher
+} from './supabase-store.js';
 
 const TOKEN_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 14;
 
@@ -165,13 +174,31 @@ export async function saveJson(pathname, data) {
 export async function findTeacherByEmail(email) {
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
+  if (isSupabaseConfigured()) {
+    const teacher = await findSupabaseTeacherByEmail(normalized);
+    if (teacher) return teacher;
+  }
   return await readFirstJsonByPrefix(`teachers/email/${hashText(normalized)}.json`);
 }
 
 export async function findTeacherById(teacherId) {
   const safeTeacherId = safePathPart(teacherId, '');
   if (!safeTeacherId) return null;
+  if (isSupabaseConfigured()) {
+    const teacher = await findSupabaseTeacherById(safeTeacherId);
+    if (teacher) return teacher;
+  }
   return await readFirstJsonByPrefix(`teachers/id/${safeTeacherId}.json`);
+}
+
+export async function saveTeacherRecord(teacher) {
+  if (isSupabaseConfigured()) {
+    return await saveSupabaseTeacher(teacher, hashText);
+  }
+
+  await saveJson(`teachers/id/${teacher.teacherId}.json`, teacher);
+  await saveJson(`teachers/email/${hashText(teacher.email)}.json`, teacher);
+  return teacher;
 }
 
 export function publicTeacherProfile(teacher) {
@@ -188,11 +215,19 @@ export function publicTeacherProfile(teacher) {
 export async function findClassByCode(code) {
   const safeCode = normalizeClassCode(code);
   if (!safeCode) return null;
+  if (isSupabaseConfigured()) {
+    const classInfo = await findSupabaseClassByCode(safeCode);
+    if (classInfo) return classInfo;
+  }
   const data = await readFirstJsonByPrefix(`classes/code/${safeCode}.json`);
   return data && data.active !== false ? data : null;
 }
 
 export async function listTeacherClasses(teacherId) {
+  if (isSupabaseConfigured()) {
+    return await listSupabaseClassesByTeacher(teacherId);
+  }
+
   const items = await listJsonByPrefix(`classes/teacher/${teacherId}/`);
   return items
     .map((item) => item.data)
@@ -232,8 +267,12 @@ export async function createTeacherClass(teacher, input = {}) {
         active: true,
         createdAt: now
       };
-      await saveJson(`classes/code/${nextCode}.json`, classInfo);
-      await saveJson(`classes/teacher/${teacherId}/${nextCode}.json`, classInfo);
+      if (isSupabaseConfigured()) {
+        await saveSupabaseClass(classInfo);
+      } else {
+        await saveJson(`classes/code/${nextCode}.json`, classInfo);
+        await saveJson(`classes/teacher/${teacherId}/${nextCode}.json`, classInfo);
+      }
       return classInfo;
     }
 

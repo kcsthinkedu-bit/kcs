@@ -4,6 +4,11 @@ import {
   normalizeClassCode,
   safeString
 } from '../_lib/school-store.js';
+import {
+  isSupabaseConfigured,
+  listSupabaseSubmissionsByCode,
+  listSupabaseSubmissionsByTeacher
+} from '../_lib/supabase-store.js';
 
 function safeTime(value) {
   const time = new Date(value || 0).getTime();
@@ -143,6 +148,42 @@ export default async function handler(req, res) {
     const teacher = getTeacherFromRequest(req);
     let submissionItems = [];
     let reviewItems = [];
+
+    if (isSupabaseConfigured()) {
+      let items = [];
+
+      if (teacher) {
+        items = await listSupabaseSubmissionsByTeacher(teacher.teacherId);
+      } else {
+        const expectedTeacherPassword = String(process.env.TEACHER_ACCESS_PASSWORD || '').trim();
+        const expectedSubmissionCode = normalizeClassCode(process.env.SUBMISSION_CODE || '');
+
+        if (!expectedTeacherPassword) {
+          return res.status(500).json({ error: '서버 선생님 비밀번호 설정이 없습니다.' });
+        }
+
+        if (!expectedSubmissionCode) {
+          return res.status(500).json({ error: '서버 제출코드 설정이 없습니다.' });
+        }
+
+        const teacherPassword = getTeacherPassword(req);
+        if (teacherPassword !== expectedTeacherPassword) {
+          return res.status(401).json({ error: '선생님 비밀번호가 맞지 않습니다.' });
+        }
+
+        items = await listSupabaseSubmissionsByCode(expectedSubmissionCode);
+      }
+
+      const finished = finishItems(items);
+      return res.status(200).json({
+        ok: true,
+        storage: 'supabase',
+        teacher: teacher || null,
+        count: finished.items.length,
+        classes: finished.classes,
+        items: finished.items
+      });
+    }
 
     if (teacher) {
       [submissionItems, reviewItems] = await Promise.all([

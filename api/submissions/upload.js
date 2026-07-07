@@ -6,6 +6,10 @@ import {
   safePathPart,
   safeString
 } from '../_lib/school-store.js';
+import {
+  insertSupabaseSubmission,
+  isSupabaseConfigured
+} from '../_lib/supabase-store.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -68,6 +72,19 @@ export default async function handler(req, res) {
         submittedAt: submission.submittedAt || now.toISOString()
       }
     };
+
+    if (isSupabaseConfigured()) {
+      const item = await insertSupabaseSubmission('submission', payload);
+      return res.status(200).json({
+        ok: true,
+        storage: 'supabase',
+        id: item.id,
+        url: item.url,
+        pathname: item.pathname,
+        editUrl: item.editUrl,
+        teacherUrl: '/teacher/'
+      });
+    }
 
     const pathname = classInfo
       ? `submissions/${safePathPart(classInfo.teacherId, 'teacher')}/${classInfo.code}/${stamp}-${studentPart}-${numberPart}.json`

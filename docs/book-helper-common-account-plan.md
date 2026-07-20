@@ -51,6 +51,8 @@ book_submissions.student_id   -> students.id
 
 Supabase 환경변수를 켜면 제출물 JSON은 `book_submissions`로 저장할 수 있습니다. 단, 공통 Auth 연결 전에는 `book_teachers`, `book_classes`를 사용하지 않습니다.
 
+저장/제출 경로, 권한 판정, Blob -> Supabase 전환 기준은 `docs/coloringbook-storage-transition-spec.md`를 기준으로 검토합니다.
+
 레거시 실험 테이블을 꼭 써야 할 때만 아래 환경변수를 켭니다.
 
 ```text

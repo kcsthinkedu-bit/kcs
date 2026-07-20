@@ -2,6 +2,8 @@
 
 이 문서는 책편집도우미 데이터를 KCSedutech 공통 Supabase 구조로 옮기기 위한 기준입니다.
 
+저장/제출 경로, 권한 판정, Blob -> Supabase 전환 세부 기준은 `docs/coloringbook-storage-transition-spec.md`를 함께 확인합니다.
+
 ## 방향
 
 책편집도우미는 별도의 `book_teachers`, `book_classes` 회원/학급 테이블을 만들지 않습니다.

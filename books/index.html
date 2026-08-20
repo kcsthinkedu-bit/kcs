@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="컬러링북과 그림책을 쉽고 편하게 만드는 KCS 책 만들기">
+  <title>KCS 책 만들기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/books/styles/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#book-types">책 종류 선택으로 바로 가기</a>
+
+  <div class="page-shell">
+    <header class="site-header" aria-label="책 만들기 머리말">
+      <a class="brand" href="/books/" aria-label="KCS 책 만들기 처음으로">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>
+          <strong>KCS 책 만들기</strong>
+          <small>내 이야기를 한 권의 책으로</small>
+        </span>
+      </a>
+
+      <div class="header-actions" aria-label="도움말과 내 책">
+        <a class="quiet-button" href="/books/guide/">사용 안내</a>
+        <a class="quiet-button" href="/books/library/">이 기기의 책장</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow">어렵지 않게, 차근차근</p>
+          <h1 id="page-title">어떤 책을<br>만들어 볼까요?</h1>
+          <p class="intro-description">
+            만들고 싶은 책을 고르면 바로 시작할 수 있어요.
+            글과 그림을 넣고, 완성된 책도 넘겨볼 수 있어요.
+          </p>
+          <div class="promise" aria-label="책 만들기 특징">
+            <span>쉬운 편집</span>
+            <span>이 기기에 임시 보관</span>
+            <span>책으로 미리보기</span>
+          </div>
+        </div>
+
+        <div class="intro-art" aria-hidden="true">
+          <div class="sun"></div>
+          <div class="book book-back">
+            <span class="picture-cloud"></span>
+            <span class="picture-hill"></span>
+          </div>
+          <div class="book book-front">
+            <span class="line-flower flower-one"></span>
+            <span class="line-flower flower-two"></span>
+            <span class="book-line"></span>
+          </div>
+          <div class="pencil"></div>
+        </div>
+      </section>
+
+      <section class="book-picker" id="book-types" aria-labelledby="picker-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">새 책 만들기</p>
+            <h2 id="picker-title">책 종류를 골라 주세요</h2>
+          </div>
+          <p>나중에 다른 종류의 책도 계속 추가할 수 있어요.</p>
+        </div>
+
+        <div class="book-grid">
+          <article class="book-card coloring-card">
+            <div class="card-visual coloring-visual" aria-hidden="true">
+              <span class="drawing-frame">
+                <span class="drawing-stem"></span>
+                <span class="drawing-bloom bloom-left"></span>
+                <span class="drawing-bloom bloom-right"></span>
+                <span class="drawing-bloom bloom-top"></span>
+              </span>
+              <span class="crayon crayon-yellow"></span>
+              <span class="crayon crayon-green"></span>
+            </div>
+            <div class="card-content">
+              <span class="card-label">지금 사용할 수 있어요</span>
+              <h3>컬러링북 만들기</h3>
+              <p>그림을 넣고 페이지를 꾸며서 나만의 색칠책을 만들어요.</p>
+              <ul class="feature-list" aria-label="컬러링북 주요 기능">
+                <li>그림 넣기</li>
+                <li>페이지 꾸미기</li>
+                <li>인쇄하기</li>
+              </ul>
+              <a class="start-button" href="/editor/?type=coloringbook">
+                컬러링북 시작하기
+                <span aria-hidden="true">→</span>
+              </a>
+              <a class="new-editor-link" href="/coloringbook/">이전 방식 열기 · A4/B4 전용</a>
+            </div>
+          </article>
+
+          <article class="book-card picture-card" aria-labelledby="picture-title">
+            <div class="card-visual picture-visual" aria-hidden="true">
+              <span class="story-page story-left">
+                <span class="story-sun"></span>
+                <span class="story-ground"></span>
+              </span>
+              <span class="story-page story-right">
+                <span class="story-text-line line-wide"></span>
+                <span class="story-text-line"></span>
+                <span class="story-text-line line-short"></span>
+              </span>
+            </div>
+            <div class="card-content">
+              <span class="card-label coming-label">새 편집기로 시작해요</span>
+              <h3 id="picture-title">그림책 만들기</h3>
+              <p>그림과 글을 함께 넣고, 양쪽 페이지를 보며 이야기를 만들어요.</p>
+              <ul class="feature-list" aria-label="그림책 주요 기능">
+                <li>그림과 글</li>
+                <li>양쪽 페이지</li>
+                <li>책 넘겨보기</li>
+              </ul>
+              <a class="start-button picture-start-button" href="/editor/?type=picturebook">
+                그림책 시작하기
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="coming-panel" aria-labelledby="coming-title">
+        <div class="coming-icon" aria-hidden="true">+</div>
+        <div>
+          <h2 id="coming-title">더 다양한 책도 만들 수 있게 준비할게요</h2>
+          <p>활동책, 작품 모음집처럼 수업과 일상에 필요한 책을 하나씩 더해 갈 예정입니다.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>로그인과 수업 기능은 KCSedutech 계정 연결 기준이 정해진 뒤 안전하게 제공할 예정입니다.</p>
+    </footer>
+  </div>
+    <a class="local-library-link" href="/books/library/">이 기기에 저장된 책 보기</a>
+  </body>
+</html>

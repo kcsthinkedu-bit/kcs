@@ -1,0 +1,101 @@
+:root {
+  color-scheme: light;
+  --ink: #24352f;
+  --muted: #66756f;
+  --paper: #fffdf7;
+  --green: #2f6f58;
+  --green-soft: #e6f2eb;
+  --orange: #d8773a;
+  --line: #d9dfd9;
+  --shadow: 0 18px 42px rgba(49, 65, 57, 0.12);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(216, 119, 58, 0.13), transparent 24rem),
+    linear-gradient(135deg, #f3f0e6 0%, #edf5ef 52%, #f8f3e8 100%);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px clamp(20px, 5vw, 72px);
+  background: rgba(255, 253, 247, 0.88);
+  border-bottom: 1px solid rgba(47, 111, 88, 0.15);
+  backdrop-filter: blur(12px);
+}
+
+.back-link { color: var(--green); font-weight: 800; text-decoration: none; }
+.local-badge { padding: 7px 11px; border-radius: 999px; background: var(--green-soft); font-size: 13px; font-weight: 800; }
+
+main { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0 96px; }
+.intro { max-width: 720px; margin-bottom: 54px; }
+.eyebrow { margin: 0 0 8px; color: var(--orange); font-weight: 900; letter-spacing: 0.08em; }
+h1 { margin: 0; font-family: "Nanum Myeongjo", serif; font-size: clamp(36px, 7vw, 64px); line-height: 1.08; }
+.intro > p:not(.eyebrow) { color: var(--muted); font-size: 18px; }
+
+.notice {
+  margin-top: 24px;
+  padding: 16px 18px;
+  border-left: 5px solid var(--orange);
+  border-radius: 0 14px 14px 0;
+  background: rgba(255, 253, 247, 0.84);
+  line-height: 1.6;
+}
+
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+h2 { font-size: 25px; }
+button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--paper); font: inherit; font-weight: 800; cursor: pointer; }
+.library-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.import-button { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 16px; border: 1px solid var(--green); border-radius: 12px; color: white; background: var(--green); font-weight: 800; cursor: pointer; }
+.import-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.import-button:focus-within { outline: 4px solid rgba(216, 119, 58, 0.32); outline-offset: 3px; }
+button:focus-visible, a:focus-visible { outline: 4px solid rgba(216, 119, 58, 0.32); outline-offset: 3px; }
+button:disabled { cursor: wait; opacity: 0.6; }
+.status { margin: 10px 0 20px; color: var(--muted); }
+.book-list { display: grid; gap: 14px; }
+
+.book-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid rgba(47, 111, 88, 0.15);
+  border-radius: 22px;
+  background: rgba(255, 253, 247, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.book-icon { display: grid; place-items: center; width: 62px; aspect-ratio: 4 / 5; border-radius: 8px 13px 13px 8px; color: white; background: var(--green); font-weight: 900; box-shadow: inset 7px 0 rgba(0, 0, 0, 0.12); }
+.book-type { color: var(--orange); font-size: 13px; font-weight: 900; }
+.book-title { margin: 4px 0 6px; overflow-wrap: anywhere; font-size: 20px; }
+.book-meta { margin: 0; color: var(--muted); }
+.book-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.primary { border-color: var(--green); color: white; background: var(--green); }
+.remove-book { color: #8b4339; }
+
+@media (max-width: 700px) {
+  main { padding-top: 40px; }
+  .local-badge { display: none; }
+  .section-heading { align-items: flex-start; flex-direction: column; }
+  .library-tools { width: 100%; justify-content: stretch; }
+  .library-tools > * { flex: 1; justify-content: center; text-align: center; }
+  .book-card { grid-template-columns: auto minmax(0, 1fr); }
+  .book-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
+  .book-actions .primary { grid-column: 1 / -1; }
+}
+
+@media (max-width: 430px) {
+  .book-card { grid-template-columns: 1fr; }
+  .book-icon { width: 50px; }
+  .book-actions { grid-column: auto; grid-template-columns: 1fr; }
+}

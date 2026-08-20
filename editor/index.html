@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="그림과 글을 쉽게 배치하고 책으로 넘겨보는 KCS 공통 책 편집기">
+  <title>그림책 만들기 | KCS 책 만들기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/editor/styles/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#editWorkspace">편집 화면으로 바로 가기</a>
+
+  <div class="app-shell">
+    <book-editor-shell
+      id="commonEditorShell"
+      home-url="/books/"
+      book-kind="그림책"
+      editor-title="그림책 만들기"
+      editor-description="그림과 글을 자유롭게 넣고, 양쪽 페이지와 완성된 책을 확인할 수 있어요."
+      edit-target="#editWorkspace"
+      preview-target="#readingView"
+      print-target="#printNotice"
+    ></book-editor-shell>
+
+    <header class="project-bar" aria-label="현재 책과 저장 상태">
+      <label class="book-title-field">
+        <span>책 제목</span>
+        <input id="bookTitleInput" type="text" value="나의 그림책" maxlength="80">
+      </label>
+
+      <div class="save-state" aria-live="polite">
+        <span id="saveStateDot" class="save-dot"></span>
+        <span id="saveStateText">이 기기에 임시 저장됨</span>
+      </div>
+
+      <div class="project-actions">
+        <button id="downloadBookBtn" class="soft-button" type="button">책 파일 받기</button>
+        <label class="soft-button file-button">
+          책 파일 불러오기
+          <input id="loadBookInput" type="file" accept=".json,application/json">
+        </label>
+      </div>
+    </header>
+
+    <section class="revision-strip" aria-labelledby="revisionTitle">
+      <details>
+        <summary>
+          <span>
+            <strong id="revisionTitle">저장본 보기</strong>
+            <small>학생이 저장한 것과 선생님이 수정한 것을 따로 보관해요</small>
+          </span>
+          <span id="revisionCount" class="revision-count">0개</span>
+        </summary>
+
+        <div class="revision-content">
+          <div class="revision-create">
+            <label>
+              <span>어떤 저장본인가요?</span>
+              <select id="revisionKindInput">
+                <option value="draft">현재 상태 보관</option>
+                <option value="submission">학생 제출본</option>
+                <option value="teacher-edit">선생님 수정본</option>
+                <option value="returned">다시 고칠 책</option>
+                <option value="final">최종본</option>
+              </select>
+            </label>
+            <button id="createRevisionBtn" type="button">새 저장본 만들기</button>
+          </div>
+
+          <p class="revision-warning">
+            계정 연결 전에는 이 기기에만 보관됩니다. 수업 권한은 아직 판정하지 않으며, 서버 연결 후 선생님·학생 권한을 반드시 다시 확인합니다.
+          </p>
+          <div id="revisionStatus" class="revision-status" aria-live="polite"></div>
+          <div id="revisionList" class="revision-list"></div>
+        </div>
+      </details>
+    </section>
+
+    <main id="editWorkspace" class="editor-layout">
+      <aside class="page-panel" aria-labelledby="pageListTitle">
+        <div class="panel-heading">
+          <div>
+            <span class="panel-kicker">내 책</span>
+            <h2 id="pageListTitle">페이지</h2>
+          </div>
+          <button id="addPageBtn" class="round-add-button" type="button" aria-label="새 페이지 추가">+</button>
+        </div>
+
+        <ol id="pageList" class="page-list"></ol>
+
+        <div class="page-actions" aria-label="선택한 페이지 관리">
+          <button id="movePageUpBtn" type="button">앞으로</button>
+          <button id="movePageDownBtn" type="button">뒤로</button>
+          <button id="duplicatePageBtn" type="button">복제</button>
+          <button id="deletePageBtn" class="danger-button" type="button">삭제</button>
+        </div>
+      </aside>
+
+      <section class="work-panel" aria-labelledby="canvasTitle">
+        <div class="tool-shelf" aria-label="페이지에 넣기">
+          <div>
+            <span class="tool-label">페이지에 넣기</span>
+            <div class="tool-buttons">
+              <button id="addTextBtn" class="main-tool-button" type="button">
+                <span aria-hidden="true">가</span>
+                글 넣기
+              </button>
+              <label class="main-tool-button image-tool-button">
+                <span aria-hidden="true">▧</span>
+                그림 넣기
+                <input id="addImageInput" type="file" accept="image/*">
+              </label>
+              <button id="undoBtn" class="main-tool-button history-tool-button" type="button" disabled>
+                <span aria-hidden="true">↶</span>
+                되돌리기
+              </button>
+              <button id="redoBtn" class="main-tool-button history-tool-button" type="button" disabled>
+                <span aria-hidden="true">↷</span>
+                다시 실행
+              </button>
+            </div>
+          </div>
+
+          <div class="canvas-guide">
+            <strong id="canvasTitle">선택한 페이지</strong>
+            <span>글이나 그림을 누른 뒤 움직여 보세요.</span>
+          </div>
+        </div>
+
+        <div id="textToolbar" class="text-toolbar" role="toolbar" aria-label="글자 꾸미기" hidden>
+          <label>
+            <span>글꼴</span>
+            <select id="fontFamilyInput">
+              <option value="Noto Sans KR">기본 고딕</option>
+              <option value="Nanum Gothic">나눔고딕</option>
+              <option value="Gowun Dodum">고운돋움</option>
+              <option value="Malgun Gothic">맑은 고딕</option>
+            </select>
+          </label>
+
+          <label>
+            <span>크기</span>
+            <div class="size-stepper">
+              <button id="fontSizeDownBtn" type="button" aria-label="글자 작게">−</button>
+              <input id="fontSizeInput" type="number" min="8" max="96" step="1" aria-label="글자 크기">
+              <button id="fontSizeUpBtn" type="button" aria-label="글자 크게">+</button>
+            </div>
+          </label>
+
+          <div class="toggle-group" aria-label="글자 모양">
+            <button id="boldBtn" type="button" aria-pressed="false"><strong>굵게</strong></button>
+            <button id="italicBtn" type="button" aria-pressed="false"><em>기울임</em></button>
+            <button id="underlineBtn" type="button" aria-pressed="false"><u>밑줄</u></button>
+          </div>
+
+          <label class="color-field">
+            <span>글자색</span>
+            <input id="fontColorInput" type="color" value="#1f2937">
+          </label>
+
+          <div class="align-group" aria-label="글자 정렬">
+            <button type="button" data-align="left" aria-pressed="true">왼쪽</button>
+            <button type="button" data-align="center" aria-pressed="false">가운데</button>
+            <button type="button" data-align="right" aria-pressed="false">오른쪽</button>
+          </div>
+        </div>
+
+        <div class="canvas-area">
+          <div id="pageCanvas" class="page-canvas" aria-label="책 페이지 편집 영역"></div>
+        </div>
+      </section>
+
+      <aside class="detail-panel" aria-labelledby="detailTitle">
+        <div class="panel-heading compact-heading">
+          <div>
+            <span class="panel-kicker">쉬운 조절</span>
+            <h2 id="detailTitle">선택한 내용</h2>
+          </div>
+        </div>
+
+        <div id="nothingSelected" class="empty-detail">
+          <strong>글이나 그림을 선택해 주세요</strong>
+          <p>선택하면 내용과 위치를 여기에서 편하게 바꿀 수 있어요.</p>
+        </div>
+
+        <div id="elementDetails" hidden>
+          <label id="textContentField" class="detail-field">
+            <span>글 내용</span>
+            <textarea id="textContentInput" rows="7"></textarea>
+          </label>
+
+          <label id="imageAltField" class="detail-field" hidden>
+            <span>그림 설명</span>
+            <input id="imageAltInput" type="text" placeholder="예: 공원에서 노는 아이들">
+          </label>
+
+          <div class="detail-grid">
+            <label class="detail-field">
+              <span>왼쪽·오른쪽</span>
+              <input id="elementXInput" type="range" min="0" max="95" step="1">
+            </label>
+            <label class="detail-field">
+              <span>위·아래</span>
+              <input id="elementYInput" type="range" min="0" max="95" step="1">
+            </label>
+            <label class="detail-field">
+              <span>너비</span>
+              <input id="elementWidthInput" type="range" min="5" max="100" step="1">
+            </label>
+            <label class="detail-field">
+              <span>높이</span>
+              <input id="elementHeightInput" type="range" min="5" max="100" step="1">
+            </label>
+          </div>
+
+          <button id="deleteElementBtn" class="wide-danger-button" type="button">선택한 내용 삭제</button>
+        </div>
+
+        <div class="page-detail-box">
+          <h3>페이지 꾸미기</h3>
+          <label class="detail-field color-row">
+            <span>바탕색</span>
+            <input id="pageColorInput" type="color" value="#ffffff">
+          </label>
+        </div>
+
+        <details id="printNotice" class="print-settings" open>
+          <summary>인쇄 준비</summary>
+          <p class="print-help">용지와 인쇄 방법을 고르고, 사용하는 프린터의 앞뒤 위치를 맞출 수 있어요.</p>
+
+          <div class="print-grid">
+            <label class="detail-field">
+              <span>인쇄 용지</span>
+              <select id="printPaperSizeInput">
+                <option value="A4">A4</option>
+                <option value="B4">B4</option>
+                <option value="A3">A3</option>
+              </select>
+            </label>
+            <label id="b4StandardField" class="detail-field" hidden>
+              <span>B4 종류</span>
+              <select id="printPaperStandardInput">
+                <option value="JIS">복사기 B4 (257×364mm)</option>
+                <option value="ISO">ISO B4 (250×353mm)</option>
+              </select>
+            </label>
+            <label class="detail-field">
+              <span>인쇄 방법</span>
+              <select id="printModeInput">
+                <option value="single-sided">한 면씩</option>
+                <option value="duplex">양면 인쇄</option>
+                <option value="booklet">반으로 접는 소책자</option>
+              </select>
+            </label>
+            <label class="detail-field">
+              <span>종이 한 장 두께</span>
+              <select id="paperThicknessInput">
+                <option value="0.10">일반 복사용지 약 0.10mm</option>
+                <option value="0.13">조금 두꺼운 종이 약 0.13mm</option>
+                <option value="0.18">두꺼운 종이 약 0.18mm</option>
+                <option value="0.25">매우 두꺼운 종이 약 0.25mm</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="calibration-box">
+            <label class="detail-field">
+              <span>프린터 설정 이름</span>
+              <input id="printProfileNameInput" type="text" value="기본 프린터" placeholder="예: 교무실 복합기 A4">
+            </label>
+            <div class="offset-grid">
+              <label class="detail-field"><span>앞면 좌우 mm</span><input id="frontOffsetXInput" type="number" min="-20" max="20" step="0.1" value="0"></label>
+              <label class="detail-field"><span>앞면 상하 mm</span><input id="frontOffsetYInput" type="number" min="-20" max="20" step="0.1" value="0"></label>
+              <label class="detail-field"><span>뒷면 좌우 mm</span><input id="backOffsetXInput" type="number" min="-20" max="20" step="0.1" value="0"></label>
+              <label class="detail-field"><span>뒷면 상하 mm</span><input id="backOffsetYInput" type="number" min="-20" max="20" step="0.1" value="0"></label>
+            </div>
+            <div class="print-small-actions">
+              <button id="savePrintProfileBtn" type="button">이 프린터 설정 저장</button>
+              <button id="resetPrintProfileBtn" type="button">보정값 0으로</button>
+            </div>
+          </div>
+
+          <div id="printStatus" class="print-status" aria-live="polite"></div>
+          <div class="print-main-actions">
+            <button id="calibrationPrintBtn" type="button">양면 위치 테스트</button>
+            <button id="openPrintPreviewBtn" class="primary-print-button" type="button">인쇄 미리보기</button>
+          </div>
+        </details>
+      </aside>
+    </main>
+
+    <section id="readingView" class="reading-section" aria-labelledby="readingTitle">
+      <div class="reading-heading">
+        <div>
+          <span class="panel-kicker">책으로 보기</span>
+          <h2 id="readingTitle">내 책을 넘겨 보세요</h2>
+          <p>실제로 읽는 순서대로 앞표지부터 뒤표지까지 확인할 수 있어요.</p>
+        </div>
+        <div class="reading-actions">
+          <button id="previousOpeningBtn" type="button">이전</button>
+          <span id="openingCounter" aria-live="polite"></span>
+          <button id="nextOpeningBtn" type="button">다음</button>
+        </div>
+      </div>
+
+      <div id="readingPages" class="reading-pages"></div>
+    </section>
+
+    <footer>
+      <p>현재 자동 저장은 이 기기의 브라우저에만 보관됩니다. 서버 저장이 연결되기 전에는 중요한 책을 파일로 받아 두세요.</p>
+    </footer>
+  </div>
+
+  <script type="module" src="/shared/editor-shell.js"></script>
+  <script type="module" src="/editor/js/app.js"></script>
+    <script type="module" src="/shared/local-project-tracker.js"></script>
+    <script type="module" src="/shared/easy-view-controls.js"></script>
+    <script type="module" src="/shared/book-mode-controls.js"></script>
+    <script type="module" src="/shared/book-project-handoff.js"></script>
+    <script type="module" src="/shared/book-save-status.js"></script>
+  </body>
+</html>

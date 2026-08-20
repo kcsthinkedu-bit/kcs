@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>이 기기에 저장된 책</title>
+    <link rel="stylesheet" href="/books/library/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a href="/books/" class="back-link">책 만들기 처음으로</a>
+      <span class="local-badge">이 기기에만 저장됨</span>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">내 책장</p>
+        <h1 id="page-title">이 기기에 저장된 책</h1>
+        <p>최근에 편집한 책을 골라 이어서 만들 수 있어요.</p>
+        <div class="notice" role="note">
+          아직 계정 저장과 연결되지 않았어요. 브라우저 자료를 지우거나 다른 기기를 사용하면 이 목록을 볼 수 없습니다.
+        </div>
+      </section>
+
+      <section aria-labelledby="book-list-title">
+        <div class="section-heading">
+          <h2 id="book-list-title">최근 작업</h2>
+          <div class="library-tools">
+            <label class="import-button">
+              책 파일 가져오기
+              <input id="import-file" type="file" accept=".json,application/json" />
+            </label>
+            <button type="button" id="refresh-button">목록 새로고침</button>
+          </div>
+        </div>
+        <div id="status" class="status" aria-live="polite">책장을 확인하고 있어요.</div>
+        <div id="book-list" class="book-list"></div>
+      </section>
+    </main>
+
+    <template id="book-card-template">
+      <article class="book-card">
+        <div class="book-icon" aria-hidden="true">책</div>
+        <div class="book-info">
+          <span class="book-type"></span>
+          <h3 class="book-title"></h3>
+          <p class="book-meta"></p>
+        </div>
+        <div class="book-actions">
+          <button type="button" class="open-book primary">이어서 만들기</button>
+          <button type="button" class="download-book">파일로 보관하기</button>
+          <button type="button" class="remove-book">이 목록에서 빼기</button>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="/books/library/app.js"></script>
+  </body>
+</html>

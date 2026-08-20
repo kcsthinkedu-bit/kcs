@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kcsedutech.com/schemas/kcs-book-v2.json",
+  "title": "KCS 공통 책 문서",
+  "type": "object",
+  "required": [
+    "formatVersion",
+    "id",
+    "bookType",
+    "title",
+    "pageSetup",
+    "printSetup",
+    "pages",
+    "assets"
+  ],
+  "properties": {
+    "formatVersion": { "const": "kcs-book-v2" },
+    "id": { "type": "string", "minLength": 1 },
+    "bookType": {
+      "enum": ["coloringbook", "picturebook", "storybook", "worksheet"]
+    },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "pageSetup": {
+      "type": "object",
+      "required": ["view", "readingDirection", "finishedSize"],
+      "properties": {
+        "view": { "enum": ["single", "facing"] },
+        "readingDirection": { "enum": ["left-to-right", "right-to-left"] },
+        "finishedSize": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "printSetup": {
+      "type": "object",
+      "required": ["sheetSize", "sheetStandard", "orientation", "mode", "binding", "duplexFlip"],
+      "properties": {
+        "sheetSize": { "enum": ["A4", "B4", "A3"] },
+        "sheetStandard": { "enum": ["ISO", "JIS"] },
+        "orientation": { "enum": ["portrait", "landscape"] },
+        "mode": { "enum": ["single-sided", "duplex", "booklet"] },
+        "binding": { "enum": ["left", "right", "top"] },
+        "duplexFlip": { "enum": ["long-edge", "short-edge"] },
+        "bleedMm": { "type": "number", "minimum": 0 },
+        "gutterMm": { "type": "number", "minimum": 0 },
+        "calibrationProfileId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "toolSetup": {
+      "type": "object",
+      "properties": {
+        "allowedElements": {
+          "type": "array",
+          "items": { "enum": ["image", "text", "shape"] },
+          "uniqueItems": true
+        },
+        "studentTools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "pages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/page" }
+    },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/asset" }
+    },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  },
+  "$defs": {
+    "frame": {
+      "type": "object",
+      "required": ["x", "y", "width", "height", "rotation"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "rotation": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "element": {
+      "type": "object",
+      "required": ["id", "type", "frame"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["image", "text", "shape"] },
+        "name": { "type": "string" },
+        "locked": { "type": "boolean" },
+        "hidden": { "type": "boolean" },
+        "frame": { "$ref": "#/$defs/frame" },
+        "text": { "type": "string" },
+        "style": { "type": "object" },
+        "assetId": { "type": "string" },
+        "source": { "type": "string" },
+        "alt": { "type": "string" },
+        "fit": { "enum": ["contain", "cover", "fill"] },
+        "crop": { "type": "object" },
+        "shape": { "enum": ["rectangle", "ellipse", "line"] },
+        "fill": { "type": "string" },
+        "stroke": { "type": "string" },
+        "strokeWidth": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "page": {
+      "type": "object",
+      "required": ["id", "order", "role", "elements"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 0 },
+        "role": {
+          "enum": [
+            "front-cover",
+            "inside-front-cover",
+            "content",
+            "blank",
+            "inside-back-cover",
+            "back-cover"
+          ]
+        },
+        "title": { "type": "string" },
+        "background": { "type": "string" },
+        "locked": { "type": "boolean" },
+        "elements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/element" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "asset": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "name": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "originalAssetId": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "source": { "type": "string" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 },
+        "size": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

@@ -18,6 +18,11 @@ const TEXT_FONT_STACKS = {
   blackHan: "'Black Han Sans', 'Noto Sans KR', sans-serif"
 };
 
+function normalizeTextColor(value) {
+  const color = typeof value === 'string' ? value.trim() : '';
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : '#1f2937';
+}
+
 const state = {
   mode: 'student',
   active: { type: 'cover', id: 'cover' },
@@ -247,6 +252,9 @@ function createSpread(index) {
     leftBody: '여기에 본문 내용을 적거나 붙여넣으세요.',
     leftFontSize: 24,
     leftFontWeight: '400',
+    leftFontItalic: false,
+    leftFontUnderline: false,
+    leftTextColor: '#1f2937',
     leftFontFamily: DEFAULT_TEXT_FONT,
     leftLineHeight: DEFAULT_LINE_HEIGHT,
     leftTitleAlign: 'left',
@@ -538,11 +546,29 @@ function renderEditor() {
   const frameInsetInput = document.getElementById('frameInsetInput');
   const centerImageBtn = document.getElementById('centerImageBtn');
   const resetImageBtn = document.getElementById('resetImageBtn');
+  const quickFontFamilyInput = document.getElementById('quickFontFamilyInput');
+  const quickFontSizeInput = document.getElementById('quickFontSizeInput');
+  const decreaseFontSizeBtn = document.getElementById('decreaseFontSizeBtn');
+  const increaseFontSizeBtn = document.getElementById('increaseFontSizeBtn');
+  const boldTextBtn = document.getElementById('boldTextBtn');
+  const italicTextBtn = document.getElementById('italicTextBtn');
+  const underlineTextBtn = document.getElementById('underlineTextBtn');
+  const textColorInput = document.getElementById('textColorInput');
+  const textAlignButtons = Array.from(document.querySelectorAll('[data-text-align]'));
 
   spreadTitleInput.value = spread.leftTitle;
   spreadBodyInput.value = spread.leftBody;
   fontSizeInput.value = spread.leftFontSize;
   fontWeightInput.value = spread.leftFontWeight;
+  if (quickFontFamilyInput) quickFontFamilyInput.value = normalizeTextFont(spread.leftFontFamily);
+  if (quickFontSizeInput) quickFontSizeInput.value = String(spread.leftFontSize);
+  if (textColorInput) textColorInput.value = normalizeTextColor(spread.leftTextColor);
+  if (boldTextBtn) boldTextBtn.setAttribute('aria-pressed', spread.leftFontWeight !== '400' ? 'true' : 'false');
+  if (italicTextBtn) italicTextBtn.setAttribute('aria-pressed', spread.leftFontItalic ? 'true' : 'false');
+  if (underlineTextBtn) underlineTextBtn.setAttribute('aria-pressed', spread.leftFontUnderline ? 'true' : 'false');
+  textAlignButtons.forEach((button) => {
+    button.setAttribute('aria-pressed', button.dataset.textAlign === (spread.leftTextAlign || 'left') ? 'true' : 'false');
+  });
   if (fontFamilyInput) fontFamilyInput.value = normalizeTextFont(spread.leftFontFamily);
   if (lineHeightInput) lineHeightInput.value = String(normalizeLineHeight(spread.leftLineHeight));
   if (titleAlignInput) titleAlignInput.value = spread.leftTitleAlign || spread.leftTextAlign || 'left';
@@ -560,6 +586,11 @@ function renderEditor() {
   setNumberSelectValue(imageYInput, spread.rightImageY);
   if (guideVisibleInput) guideVisibleInput.value = spread.rightGuideVisible === false ? 'hide' : 'show';
   setNumberSelectValue(frameInsetInput, normalizeFrameInset(spread.rightFrameInset));
+
+  [fontSizeInput, fontWeightInput, fontFamilyInput, titleAlignInput, textAlignInput].forEach((input) => {
+    const field = input && input.closest('.field');
+    if (field) field.classList.add('replaced-by-format-toolbar');
+  });
 
   const syncSpreadMeta = () => {
     const bodyStats = getTextStats(spread.leftBody);
@@ -612,6 +643,7 @@ function renderEditor() {
 
   fontWeightInput.addEventListener('change', () => {
     spread.leftFontWeight = fontWeightInput.value;
+    if (boldTextBtn) boldTextBtn.setAttribute('aria-pressed', spread.leftFontWeight !== '400' ? 'true' : 'false');
     renderPreview();
     renderTeacherPanels();
   });
@@ -619,10 +651,96 @@ function renderEditor() {
   if (fontFamilyInput) {
     fontFamilyInput.addEventListener('change', () => {
       spread.leftFontFamily = normalizeTextFont(fontFamilyInput.value);
+      if (quickFontFamilyInput) quickFontFamilyInput.value = spread.leftFontFamily;
       renderPreview();
       renderTeacherPanels();
     });
   }
+
+  const applyQuickFontSize = (nextSize) => {
+    const safeSize = clampNumber(toNumber(nextSize, spread.leftFontSize), 16, 64);
+    spread.leftFontSize = Math.round(safeSize);
+    fontSizeInput.value = String(spread.leftFontSize);
+    if (quickFontSizeInput) quickFontSizeInput.value = String(spread.leftFontSize);
+    renderPreview();
+    renderTeacherPanels();
+    syncSpreadMeta();
+  };
+
+  if (quickFontFamilyInput) {
+    quickFontFamilyInput.addEventListener('change', () => {
+      spread.leftFontFamily = normalizeTextFont(quickFontFamilyInput.value);
+      if (fontFamilyInput) fontFamilyInput.value = spread.leftFontFamily;
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (quickFontSizeInput) {
+    quickFontSizeInput.addEventListener('input', () => applyQuickFontSize(quickFontSizeInput.value));
+  }
+
+  if (decreaseFontSizeBtn) {
+    decreaseFontSizeBtn.addEventListener('click', () => applyQuickFontSize(spread.leftFontSize - 1));
+  }
+
+  if (increaseFontSizeBtn) {
+    increaseFontSizeBtn.addEventListener('click', () => applyQuickFontSize(spread.leftFontSize + 1));
+  }
+
+  if (boldTextBtn) {
+    boldTextBtn.addEventListener('click', () => {
+      const active = boldTextBtn.getAttribute('aria-pressed') === 'true';
+      spread.leftFontWeight = active ? '400' : '700';
+      fontWeightInput.value = spread.leftFontWeight;
+      boldTextBtn.setAttribute('aria-pressed', active ? 'false' : 'true');
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (italicTextBtn) {
+    italicTextBtn.addEventListener('click', () => {
+      spread.leftFontItalic = !spread.leftFontItalic;
+      italicTextBtn.setAttribute('aria-pressed', spread.leftFontItalic ? 'true' : 'false');
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (underlineTextBtn) {
+    underlineTextBtn.addEventListener('click', () => {
+      spread.leftFontUnderline = !spread.leftFontUnderline;
+      underlineTextBtn.setAttribute('aria-pressed', spread.leftFontUnderline ? 'true' : 'false');
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  if (textColorInput) {
+    textColorInput.addEventListener('input', () => {
+      spread.leftTextColor = normalizeTextColor(textColorInput.value);
+      renderPreview();
+      renderTeacherPanels();
+    });
+  }
+
+  textAlignButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const align = button.dataset.textAlign;
+      if (!['left', 'center', 'right'].includes(align)) return;
+      spread.leftTextAlign = align;
+      spread.leftTitleAlign = align;
+      if (textAlignInput) textAlignInput.value = align;
+      if (titleAlignInput) titleAlignInput.value = align;
+      if (align === 'center') enforceCenteredTextLayout(spread);
+      textAlignButtons.forEach((item) => {
+        item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
+      });
+      renderPreview();
+      renderTeacherPanels();
+    });
+  });
 
   if (lineHeightInput) {
     lineHeightInput.addEventListener('change', () => {
@@ -936,6 +1054,9 @@ function renderPreview() {
               style="
                 font-size:${Number(spread.leftFontSize || 24)}px;
                 font-weight:${escapeAttr(spread.leftFontWeight || '400')};
+                font-style:${spread.leftFontItalic ? 'italic' : 'normal'};
+                text-decoration:${spread.leftFontUnderline ? 'underline' : 'none'};
+                color:${normalizeTextColor(spread.leftTextColor)};
                 text-align:${escapeAttr(titleAlign)};
                 margin-top:${Number(textLayout.titleOffsetY || 0)}px;
                 margin-bottom:10px;
@@ -948,6 +1069,9 @@ function renderPreview() {
             style="
               font-size:${Math.max(16, Number(spread.leftFontSize || 24) - 4)}px;
               font-weight:${escapeAttr(spread.leftFontWeight || '400')};
+              font-style:${spread.leftFontItalic ? 'italic' : 'normal'};
+              text-decoration:${spread.leftFontUnderline ? 'underline' : 'none'};
+              color:${normalizeTextColor(spread.leftTextColor)};
               text-align:${escapeAttr(bodyAlign)};
               text-indent:${bodyIndent}px;
               line-height:${lineHeight};
@@ -1247,8 +1371,8 @@ function renderReadingPageContent(page) {
     const bodyFontSize = Math.max(12, titleFontSize - 3);
     return `
       <div class="book-reading-text" style="font-family:${fontStack};">
-        ${page.title ? `<h4 style="font-size:${titleFontSize}px; text-align:${escapeAttr(page.titleAlign || 'left')};">${escapeHtml(page.title)}</h4>` : ''}
-        <p style="font-size:${bodyFontSize}px; line-height:${lineHeight}; text-align:${escapeAttr(page.textAlign || 'left')};">${renderBodyContentHtml(page.body || '', page.leadScale || 1)}</p>
+        ${page.title ? `<h4 style="font-size:${titleFontSize}px; font-weight:${escapeAttr(page.fontWeight || '400')}; font-style:${page.fontItalic ? 'italic' : 'normal'}; text-decoration:${page.fontUnderline ? 'underline' : 'none'}; color:${normalizeTextColor(page.textColor)}; text-align:${escapeAttr(page.titleAlign || 'left')};">${escapeHtml(page.title)}</h4>` : ''}
+        <p style="font-size:${bodyFontSize}px; font-weight:${escapeAttr(page.fontWeight || '400')}; font-style:${page.fontItalic ? 'italic' : 'normal'}; text-decoration:${page.fontUnderline ? 'underline' : 'none'}; color:${normalizeTextColor(page.textColor)}; line-height:${lineHeight}; text-align:${escapeAttr(page.textAlign || 'left')};">${renderBodyContentHtml(page.body || '', page.leadScale || 1)}</p>
       </div>
     `;
   }
@@ -2353,6 +2477,9 @@ function normalizeSpread(item, index) {
     leftBody: normalizeString(safeItem.leftBody, ''),
     leftFontSize: toNumber(safeItem.leftFontSize, 24),
     leftFontWeight: normalizeString(safeItem.leftFontWeight, '400'),
+    leftFontItalic: safeItem.leftFontItalic === true,
+    leftFontUnderline: safeItem.leftFontUnderline === true,
+    leftTextColor: normalizeTextColor(safeItem.leftTextColor),
     leftFontFamily: normalizeTextFont(safeItem.leftFontFamily),
     leftLineHeight: normalizeLineHeight(safeItem.leftLineHeight),
     leftTitleAlign: ['left', 'center', 'right'].includes(titleAlign) ? titleAlign : 'left',
@@ -2458,6 +2585,9 @@ function buildLogicalPages() {
       body: spread.leftBody,
       fontSize: spread.leftFontSize,
       fontWeight: spread.leftFontWeight,
+      fontItalic: spread.leftFontItalic,
+      fontUnderline: spread.leftFontUnderline,
+      textColor: spread.leftTextColor,
       fontFamily: spread.leftFontFamily,
       lineHeight: spread.leftLineHeight,
       titleAlign: textLayout.titleAlign,
@@ -3063,6 +3193,9 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
               style="
                 font-size:${titleFontSize}px;
                 font-weight:${escapeAttr(page.fontWeight || '400')};
+                font-style:${page.fontItalic ? 'italic' : 'normal'};
+                text-decoration:${page.fontUnderline ? 'underline' : 'none'};
+                color:${normalizeTextColor(page.textColor)};
                 text-align:${escapeAttr(titleAlign)};
                 margin-top:${Number(page.titleOffsetY || 0)}px;
                 margin-bottom:10px;
@@ -3075,6 +3208,9 @@ function renderPrintPage(page, slotLabel, slotSide = 'left') {
             style="
               font-size:${bodyFontSize}px;
               font-weight:${escapeAttr(page.fontWeight || '400')};
+              font-style:${page.fontItalic ? 'italic' : 'normal'};
+              text-decoration:${page.fontUnderline ? 'underline' : 'none'};
+              color:${normalizeTextColor(page.textColor)};
               text-align:${escapeAttr(textAlign)};
               text-indent:${bodyIndent}px;
               line-height:${lineHeight};

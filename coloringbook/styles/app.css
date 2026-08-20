@@ -779,6 +779,145 @@ body.student-mode .teacher-only {
   display: none !important;
 }
 
+.text-format-toolbar {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) minmax(150px, 0.85fr) auto auto minmax(210px, 1fr);
+  gap: 10px;
+  align-items: end;
+  margin: 16px 0 20px;
+  padding: 14px;
+  border: 1px solid #b9d9ce;
+  border-radius: 18px;
+  background: #f2faf6;
+  box-shadow: 0 8px 20px rgba(15, 118, 93, 0.08);
+}
+
+.format-field {
+  display: grid;
+  gap: 6px;
+  color: #315047;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.format-field select,
+.format-field input[type="number"] {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid #b9c9c2;
+  border-radius: 11px;
+  color: #17352d;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+
+.format-size-controls,
+.format-button-group,
+.format-align-group {
+  display: flex;
+  gap: 6px;
+}
+
+.format-size-controls input {
+  min-width: 62px;
+  text-align: center;
+}
+
+.format-icon-btn,
+.format-toggle-btn,
+.format-align-btn {
+  min-height: 44px;
+  border: 1px solid #b9c9c2;
+  border-radius: 11px;
+  color: #29473e;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.format-icon-btn {
+  flex: 0 0 44px;
+  padding: 0;
+  font-size: 21px;
+}
+
+.format-toggle-btn {
+  min-width: 62px;
+  padding: 0 12px;
+}
+
+.format-align-group {
+  padding: 5px;
+  border-radius: 13px;
+  background: #e3eee9;
+}
+
+.format-align-btn {
+  flex: 1 1 auto;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.format-toggle-btn[aria-pressed="true"],
+.format-align-btn[aria-pressed="true"] {
+  border-color: #0f765d;
+  color: #fff;
+  background: #0f765d;
+  box-shadow: 0 3px 0 #095744;
+}
+
+.format-color-field input[type="color"] {
+  width: 54px;
+  height: 44px;
+  padding: 4px;
+  border: 1px solid #b9c9c2;
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.replaced-by-format-toolbar {
+  display: none !important;
+}
+
+@media (max-width: 1180px) {
+  .text-format-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .format-align-group {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .text-format-toolbar {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .format-align-group {
+    grid-column: auto;
+  }
+
+  .format-button-group,
+  .format-align-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .format-toggle-btn,
+  .format-align-btn {
+    min-height: 48px;
+    min-width: 0;
+    padding: 0 6px;
+  }
+}
+
 .submit-modal {
   position: fixed;
   inset: 0;

@@ -12,6 +12,15 @@
 </head>
 <body>
   <div class="app-shell">
+    <book-editor-shell
+      home-url="/books/"
+      book-kind="컬러링북"
+      editor-title="컬러링북 만들기"
+      editor-description="그림과 글을 넣어 나만의 컬러링북을 만들고, 완성된 책을 넘겨보거나 인쇄할 수 있어요."
+      edit-target="#editWorkspace"
+      preview-target="#bookFlipPreview"
+      print-target="#printBookBtn"
+    ></book-editor-shell>
     <header class="topbar">
       <div class="title-block">
         <h1>KCS 책 만들기 편집기 MVP</h1>
@@ -20,17 +29,17 @@
 
       <div class="top-controls">
         <div class="mode-switch">
-          <button id="studentModeBtn" class="mode-btn active" type="button">학생 모드</button>
-          <button id="teacherModeBtn" class="mode-btn" type="button">선생님 모드</button>
-          <span id="modeBadge" class="badge student">현재 모드: 학생</span>
+          <button id="studentModeBtn" class="mode-btn active" type="button" disabled>학생용 화면</button>
+          <button id="teacherModeBtn" class="mode-btn" type="button" disabled title="계정 연결 후 사용할 수 있습니다">선생님 기능 준비 중</button>
+          <span id="modeBadge" class="badge student">현재 화면: 학생용</span>
         </div>
 
        <div class="action-row">
   <button id="addSpreadBtn" class="primary-btn" type="button">새 펼침 추가</button>
   <button id="saveJsonBtn" class="ghost-btn" type="button">저장(JSON)</button>
   <button id="saveReviewBtn" class="ghost-btn" type="button" hidden>수정본 저장</button>
-  <button type="button" class="ghost-btn" onclick="location.href='/teacher/'">선생님 제출함</button>
-  <button id="submitWorkBtn" class="primary-btn accent-btn" type="button">학생 작품 제출</button>
+  <button type="button" class="ghost-btn" disabled title="계정 연결 후 사용할 수 있습니다">선생님 제출함 · 준비 중</button>
+  <button id="submitWorkBtn" class="primary-btn accent-btn" type="button" disabled title="계정 연결 후 사용할 수 있습니다">학생 작품 제출 · 준비 중</button>
   <label class="file-btn">
     불러오기(JSON)
     <input id="jsonFileInput" type="file" accept=".json,application/json" />
@@ -42,7 +51,7 @@
       </div>
     </header>
 
-    <main class="workspace">
+    <main id="editWorkspace" class="workspace">
       <aside class="panel sidebar-panel">
         <div class="panel-head">
           <h2>책 구성</h2>
@@ -222,6 +231,45 @@
       </label>
 
       <div id="spreadBodyMeta" class="field-meta"></div>
+
+      <div class="text-format-toolbar" role="toolbar" aria-label="글자 꾸미기">
+        <label class="format-field format-font-family">
+          <span>글꼴</span>
+          <select id="quickFontFamilyInput">
+            <option value="notoSans">기본 고딕</option>
+            <option value="nanumGothic">나눔고딕</option>
+            <option value="gowunDodum">고운돋움</option>
+            <option value="malgun">맑은 고딕</option>
+            <option value="blackHan">굵은 제목체</option>
+          </select>
+        </label>
+
+        <div class="format-field format-size-field">
+          <span>글자 크기</span>
+          <div class="format-size-controls">
+            <button id="decreaseFontSizeBtn" class="format-icon-btn" type="button" aria-label="글자 작게">−</button>
+            <input id="quickFontSizeInput" type="number" min="16" max="64" step="1" aria-label="글자 크기" />
+            <button id="increaseFontSizeBtn" class="format-icon-btn" type="button" aria-label="글자 크게">+</button>
+          </div>
+        </div>
+
+        <div class="format-button-group" aria-label="글자 모양">
+          <button id="boldTextBtn" class="format-toggle-btn" type="button" aria-pressed="false"><strong>굵게</strong></button>
+          <button id="italicTextBtn" class="format-toggle-btn" type="button" aria-pressed="false"><em>기울임</em></button>
+          <button id="underlineTextBtn" class="format-toggle-btn" type="button" aria-pressed="false"><u>밑줄</u></button>
+        </div>
+
+        <label class="format-field format-color-field">
+          <span>글자색</span>
+          <input id="textColorInput" type="color" value="#1f2937" aria-label="글자색 고르기" />
+        </label>
+
+        <div class="format-align-group" role="group" aria-label="글자 정렬">
+          <button class="format-align-btn" type="button" data-text-align="left" aria-label="왼쪽 정렬">왼쪽</button>
+          <button class="format-align-btn" type="button" data-text-align="center" aria-label="가운데 정렬">가운데</button>
+          <button class="format-align-btn" type="button" data-text-align="right" aria-label="오른쪽 정렬">오른쪽</button>
+        </div>
+      </div>
 
       <div class="inline-fields">
         <label class="field">
@@ -481,6 +529,11 @@
     </section>
   </div>
 
+  <script type="module" src="/shared/editor-shell.js"></script>
   <script src="./js/app.js?v=20260707-teacher-class-code"></script>
+  <script type="module" src="/shared/local-project-tracker.js"></script>
+  <script type="module" src="/shared/easy-view-controls.js"></script>
+  <script type="module" src="/shared/book-project-handoff.js"></script>
+  <script type="module" src="/shared/book-save-status.js"></script>
 </body>
 </html>

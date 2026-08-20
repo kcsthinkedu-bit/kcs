@@ -1,0 +1,103 @@
+.easy-view-controls {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 10000;
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+}
+
+.easy-view-open,
+.easy-view-dialog button {
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 2px solid #234c3d;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.easy-view-open {
+  color: #fffef7;
+  background: #234c3d;
+  box-shadow: 0 10px 28px rgba(25, 56, 44, 0.24);
+}
+
+.easy-view-dialog {
+  width: min(520px, calc(100% - 28px));
+  max-height: calc(100dvh - 28px);
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 24px;
+  color: #21352e;
+  background: #fffdf6;
+  box-shadow: 0 28px 80px rgba(20, 43, 34, 0.3);
+}
+
+.easy-view-dialog::backdrop { background: rgba(20, 34, 29, 0.56); }
+.easy-view-dialog form { padding: 24px; }
+.easy-view-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.easy-view-heading p { margin: 0 0 4px; color: #ad5e2f; font-size: 13px; font-weight: 900; }
+.easy-view-heading h2 { margin: 0; color: #21352e; font-size: 25px; }
+.easy-view-close { color: #234c3d; background: transparent; }
+.easy-view-options { display: grid; gap: 12px; margin: 24px 0; }
+
+.easy-view-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 14px;
+  border: 2px solid #d6dfda;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.easy-view-option:has(input:checked) { border-color: #2e7259; background: #edf7f1; }
+.easy-view-option input { width: 26px; height: 26px; accent-color: #2e7259; }
+.easy-view-option strong, .easy-view-option small { display: block; }
+.easy-view-option strong { font-size: 17px; }
+.easy-view-option small { margin-top: 4px; color: #5c6e67; font-size: 14px; line-height: 1.45; }
+.easy-view-note { color: #5c6e67; font-size: 14px; }
+.easy-view-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.easy-view-reset { color: #234c3d; background: transparent; }
+.easy-view-done { color: white; background: #2e7259; }
+.easy-view-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+.easy-view-open:focus-visible,
+.easy-view-dialog button:focus-visible,
+.easy-view-option:focus-within {
+  outline: 4px solid rgba(221, 126, 64, 0.45);
+  outline-offset: 3px;
+}
+
+html[data-easy-large="true"] body { font-size: 18px; line-height: 1.65; }
+html[data-easy-large="true"] :is(button, input, select, textarea) { min-height: 48px; font-size: 18px !important; }
+html[data-easy-large="true"] :is(label, p, li) { line-height: 1.65; }
+html[data-easy-contrast="true"] body { filter: contrast(1.16); }
+
+html[data-easy-reduce-motion="true"] *,
+html[data-easy-reduce-motion="true"] *::before,
+html[data-easy-reduce-motion="true"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (max-width: 560px) {
+  .easy-view-controls { left: 10px; bottom: 10px; }
+  .easy-view-open,
+  html[data-easy-large="true"] .easy-view-open { width: 80px; min-height: 44px !important; padding: 7px 8px; overflow: hidden; color: transparent; font-size: 0 !important; white-space: nowrap; }
+  .easy-view-open::after { content: "보기 설정"; color: #fffef7; font-size: 13px !important; }
+  .easy-view-dialog form { padding: 20px; }
+  .easy-view-footer { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+@media print {
+  .easy-view-controls { display: none !important; }
+  html[data-easy-contrast="true"] body { filter: none; }
+}

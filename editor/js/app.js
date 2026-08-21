@@ -1073,6 +1073,12 @@ dom.deleteSpreadDialog.addEventListener('cancel', (event) => {
   event.preventDefault();
   closeDeleteSpreadDialog();
 });
+dom.deleteSpreadDialog.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeDeleteSpreadDialog();
+});
 dom.deleteSpreadDialog.addEventListener('click', (event) => {
   if (event.target === dom.deleteSpreadDialog) closeDeleteSpreadDialog();
 });

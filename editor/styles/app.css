@@ -646,25 +646,60 @@ label:has(input:focus-visible) {
 
 .reading-pages {
   min-height: 520px;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   perspective: 1600px;
+  outline: none;
+  overflow: hidden;
 }
 
+.reading-pages:focus-visible { border-radius: 18px; outline: 4px solid rgba(241, 196, 83, 0.9); outline-offset: 5px; }
+.book-opening { position: relative; width: min(84vw, 780px); display: flex; align-items: stretch; justify-content: center; transform-style: preserve-3d; filter: drop-shadow(0 22px 22px rgba(23, 53, 45, 0.2)); }
 .reading-page {
   position: relative;
-  width: min(42vw, 390px);
+  width: 50%;
   aspect-ratio: 210 / 297;
   overflow: hidden;
   border: 1px solid #b8c3bd;
   background: #fff;
-  box-shadow: 0 20px 42px rgba(23, 53, 45, 0.17);
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
 }
 
-.reading-page:first-child { transform: rotateY(2deg); transform-origin: right center; }
-.reading-page + .reading-page { border-left: 0; transform: rotateY(-2deg); transform-origin: left center; }
-.reading-page.single { border-radius: 5px 14px 14px 5px; }
+.reading-page.left-page { border-radius: 14px 2px 2px 14px; transform: rotateY(2deg); transform-origin: right center; }
+.reading-page.right-page { border-left: 0; border-radius: 2px 14px 14px 2px; transform: rotateY(-2deg); transform-origin: left center; }
+.reading-page.blank-page { visibility: hidden; }
+.book-opening.front-cover .left-page,
+.book-opening.back-cover .right-page { visibility: hidden; }
+.book-opening.front-cover .right-page { border-left: 1px solid #b8c3bd; box-shadow: -9px 7px 0 #d9dedb, -14px 12px 25px rgba(23, 53, 45, 0.18); }
+.book-opening.back-cover .left-page { box-shadow: 9px 7px 0 #d9dedb, 14px 12px 25px rgba(23, 53, 45, 0.18); }
+.book-spine { position: absolute; z-index: 8; top: 1.5%; bottom: 1.5%; left: 50%; width: 14px; pointer-events: none; transform: translateX(-50%); background: linear-gradient(90deg, rgba(23,53,45,.2), rgba(255,255,255,.7) 46%, rgba(23,53,45,.22)); filter: blur(1px); opacity: .72; }
+.book-opening.front-cover .book-spine,
+.book-opening.back-cover .book-spine { display: none; }
+.page-purpose { position: absolute; z-index: 5; top: 10px; left: 10px; padding: 5px 8px; border: 1px solid rgba(23, 53, 45, 0.16); border-radius: 999px; color: #365a4f; background: rgba(255,255,255,.9); font-size: 11px; font-weight: 800; }
+.reader-page-number { position: absolute; z-index: 5; bottom: 9px; left: 50%; min-width: 25px; padding: 3px 6px; border-radius: 999px; color: #53655f; background: rgba(255,255,255,.86); transform: translateX(-50%); text-align: center; font-size: 10px; }
+
+.reading-pages.is-turning-next .right-page { z-index: 10; animation: flip-next-out .34s cubic-bezier(.55,.08,.68,.53) both; }
+.reading-pages.is-turning-previous .left-page { z-index: 10; animation: flip-previous-out .34s cubic-bezier(.55,.08,.68,.53) both; }
+.reading-pages.is-arriving-next .book-opening { animation: arrive-from-right .36s cubic-bezier(.22,.61,.36,1) both; }
+.reading-pages.is-arriving-previous .book-opening { animation: arrive-from-left .36s cubic-bezier(.22,.61,.36,1) both; }
+
+@keyframes flip-next-out {
+  from { transform: rotateY(-2deg); filter: brightness(1); }
+  to { transform: rotateY(-86deg); filter: brightness(.82); }
+}
+@keyframes flip-previous-out {
+  from { transform: rotateY(2deg); filter: brightness(1); }
+  to { transform: rotateY(86deg); filter: brightness(.82); }
+}
+@keyframes arrive-from-right {
+  from { opacity: .45; transform: translateX(18px) rotateY(-5deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes arrive-from-left {
+  from { opacity: .45; transform: translateX(-18px) rotateY(5deg); }
+  to { opacity: 1; transform: none; }
+}
 
 .reading-object { position: absolute; overflow: hidden; }
 .reading-object.text { display: flex; padding: 5px; white-space: pre-wrap; word-break: break-word; }
@@ -714,6 +749,10 @@ footer { padding: 28px 14px 0; color: var(--muted); text-align: center; font-siz
   .detail-grid { grid-template-columns: 1fr; }
   .reading-section { padding: 20px 12px; }
   .reading-pages { min-height: 300px; }
+  .book-opening { width: 100%; }
+  .page-purpose { top: 5px; left: 5px; padding: 3px 5px; font-size: 8px; }
+  .reader-page-number { bottom: 4px; font-size: 8px; }
+  .book-spine { width: 8px; }
   .revision-strip summary > span:first-child { display: grid; gap: 3px; }
   .revision-create { align-items: stretch; flex-direction: column; }
   .revision-create label { min-width: 0; }

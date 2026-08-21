@@ -38,7 +38,7 @@ const VALID_AUTHOR_ROLES = new Set(Object.values(AUTHOR_ROLES));
 
 const BOOK_PRESETS = Object.freeze({
   [BOOK_TYPES.COLORING_BOOK]: Object.freeze({
-    pageView: 'single',
+    pageView: 'facing',
     printMode: 'single-sided',
     allowedElements: ['image', 'text', 'shape']
   }),
@@ -434,9 +434,42 @@ export function getFacingSpreads(project) {
   const pages = getReadingPages(project);
   if (!pages.length) return [];
 
-  const spreads = [{ index: 0, pages: [pages[0]] }];
-  for (let index = 1; index < pages.length; index += 2) {
-    spreads.push({ index: spreads.length, pages: pages.slice(index, index + 2) });
+  const frontCover = pages.find((page) => page.role === PAGE_ROLES.FRONT_COVER);
+  const backCover = pages.find((page) => page.role === PAGE_ROLES.BACK_COVER);
+  const insidePages = pages.filter((page) => ![PAGE_ROLES.FRONT_COVER, PAGE_ROLES.BACK_COVER].includes(page.role));
+  const spreads = [];
+
+  if (frontCover) {
+    spreads.push({
+      index: spreads.length,
+      kind: 'front-cover',
+      pages: [frontCover],
+      leftPage: null,
+      rightPage: frontCover
+    });
   }
+
+  for (let index = 0; index < insidePages.length; index += 2) {
+    const leftPage = insidePages[index] || null;
+    const rightPage = insidePages[index + 1] || null;
+    spreads.push({
+      index: spreads.length,
+      kind: 'content',
+      pages: [leftPage, rightPage].filter(Boolean),
+      leftPage,
+      rightPage
+    });
+  }
+
+  if (backCover) {
+    spreads.push({
+      index: spreads.length,
+      kind: 'back-cover',
+      pages: [backCover],
+      leftPage: backCover,
+      rightPage: null
+    });
+  }
+
   return spreads;
 }

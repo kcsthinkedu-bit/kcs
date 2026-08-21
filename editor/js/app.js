@@ -27,6 +27,7 @@ const bookType = requestedType === BOOK_TYPES.COLORING_BOOK
   : BOOK_TYPES.PICTURE_BOOK;
 const storageKey = `kcs-book-v2-draft-${bookType}`;
 const bookName = bookType === BOOK_TYPES.COLORING_BOOK ? '컬러링북' : '그림책';
+const starterText = '여기에 글을 써 보세요.';
 let pendingDeleteSpreadIds = [];
 let pendingDeleteSpreadIndex = -1;
 let spreadDragState = null;
@@ -233,7 +234,7 @@ function createTextElement() {
     locked: false,
     hidden: false,
     frame: { x: 12, y: 14, width: 76, height: 22, rotation: 0 },
-    text: '여기에 글을 써 보세요.',
+    text: starterText,
     style: {
       fontFamily: 'Noto Sans KR',
       fontSize: 22,
@@ -658,8 +659,66 @@ function renderPageCanvas(page, side) {
     applyFrame(object, element.frame);
 
     if (element.type === 'text') {
-      object.textContent = element.text || '';
-      applyTextStyle(object, element.style);
+      const editor = document.createElement('div');
+      editor.className = 'inline-text-editor';
+      editor.contentEditable = isActive ? 'true' : 'false';
+      editor.spellcheck = true;
+      editor.setAttribute('role', 'textbox');
+      editor.setAttribute('aria-multiline', 'true');
+      editor.setAttribute('aria-label', `${side === 'left' ? '왼쪽' : '오른쪽'} 페이지 글 상자`);
+      editor.textContent = element.text || '';
+      applyTextStyle(editor, element.style);
+
+      if (isActive) {
+        editor.addEventListener('focus', () => {
+          state.selectedElementId = element.id;
+          object.classList.add('selected');
+          renderDetails();
+
+          if (element.text === starterText) {
+            requestAnimationFrame(() => {
+              if (document.activeElement !== editor || element.text !== starterText) return;
+              const selection = window.getSelection();
+              const range = document.createRange();
+              range.selectNodeContents(editor);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            });
+          }
+        });
+        editor.addEventListener('click', (event) => event.stopPropagation());
+        editor.addEventListener('input', () => {
+          element.text = editor.innerText.replace(/\r\n?/g, '\n');
+          dom.textContentInput.value = element.text;
+          renderReader();
+          markChanged();
+        });
+        editor.addEventListener('paste', (event) => {
+          event.preventDefault();
+          const text = event.clipboardData?.getData('text/plain') || '';
+          const selection = window.getSelection();
+          if (!selection?.rangeCount) return;
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const textNode = document.createTextNode(text);
+          range.insertNode(textNode);
+          range.setStartAfter(textNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
+        });
+
+        const moveHandle = document.createElement('button');
+        moveHandle.type = 'button';
+        moveHandle.className = 'object-move-handle';
+        moveHandle.textContent = '옮기기';
+        moveHandle.setAttribute('aria-label', '글 상자 옮기기');
+        moveHandle.addEventListener('pointerdown', (event) => beginDrag(event, element, object));
+        object.append(editor, moveHandle);
+      } else {
+        object.appendChild(editor);
+      }
     } else if (element.type === 'image') {
       const image = document.createElement('img');
       image.src = element.source || '';
@@ -668,13 +727,21 @@ function renderPageCanvas(page, side) {
       object.appendChild(image);
     }
 
-    if (isActive) {
+    if (isActive && element.type !== 'text') {
       object.addEventListener('pointerdown', (event) => beginDrag(event, element, object));
       object.addEventListener('click', (event) => {
         event.stopPropagation();
         state.selectedElementId = element.id;
         renderCanvas();
         renderDetails();
+      });
+    } else if (isActive && element.type === 'text') {
+      object.addEventListener('click', (event) => {
+        event.stopPropagation();
+        state.selectedElementId = element.id;
+        object.classList.add('selected');
+        renderDetails();
+        object.querySelector('.inline-text-editor')?.focus();
       });
     }
     canvas.appendChild(object);
@@ -818,6 +885,13 @@ function addElement(element) {
   state.selectedElementId = element.id;
   renderAll();
   markChanged();
+  if (element.type === 'text') {
+    requestAnimationFrame(() => {
+      dom.spreadCanvas
+        .querySelector(`[data-element-id="${element.id}"] .inline-text-editor`)
+        ?.focus();
+    });
+  }
 }
 
 function moveSpreadToIndex(sourceIndex, destinationIndex) {

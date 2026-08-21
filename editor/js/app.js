@@ -41,10 +41,12 @@ const dom = {
   downloadBookBtn: document.getElementById('downloadBookBtn'),
   loadBookInput: document.getElementById('loadBookInput'),
   revisionCount: document.getElementById('revisionCount'),
+  revisionDetails: document.getElementById('revisionDetails'),
   revisionKindInput: document.getElementById('revisionKindInput'),
   createRevisionBtn: document.getElementById('createRevisionBtn'),
   revisionStatus: document.getElementById('revisionStatus'),
   revisionList: document.getElementById('revisionList'),
+  bookFileMenu: document.getElementById('bookFileMenu'),
   pageList: document.getElementById('pageList'),
   addPageBtn: document.getElementById('addPageBtn'),
   duplicatePageBtn: document.getElementById('duplicatePageBtn'),
@@ -1282,6 +1284,38 @@ async function addImageFile(file, fallbackName = '붙여넣은 그림.png') {
 dom.bookTitleInput.addEventListener('input', () => {
   state.project.title = dom.bookTitleInput.value;
   markChanged();
+});
+
+const compactHeaderMenus = [dom.revisionDetails, dom.bookFileMenu].filter(Boolean);
+compactHeaderMenus.forEach((menu) => menu.addEventListener('toggle', () => {
+  if (!menu.open) return;
+  if (menu === dom.revisionDetails) {
+    menu.style.setProperty('--compact-viewport-offset', '0px');
+    requestAnimationFrame(() => {
+      const panel = menu.querySelector('.revision-content');
+      if (!panel) return;
+      const leftOffset = 9 - panel.getBoundingClientRect().left;
+      menu.style.setProperty('--compact-viewport-offset', `${leftOffset}px`);
+    });
+  }
+  compactHeaderMenus.forEach((otherMenu) => {
+    if (otherMenu !== menu) otherMenu.open = false;
+  });
+}));
+
+document.addEventListener('click', (event) => {
+  compactHeaderMenus.forEach((menu) => {
+    if (menu.open && !menu.contains(event.target)) menu.open = false;
+  });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const openMenu = compactHeaderMenus.find((menu) => menu.open);
+  if (!openMenu) return;
+  event.preventDefault();
+  openMenu.open = false;
+  openMenu.querySelector('summary')?.focus();
 });
 
 dom.createRevisionBtn.addEventListener('click', async () => {

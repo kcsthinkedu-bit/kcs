@@ -29,6 +29,7 @@ const storageKey = `kcs-book-v2-draft-${bookType}`;
 const bookName = bookType === BOOK_TYPES.COLORING_BOOK ? '컬러링북' : '그림책';
 let pendingDeleteSpreadIds = [];
 let pendingDeleteSpreadIndex = -1;
+let spreadDragState = null;
 
 const dom = {
   shell: document.getElementById('commonEditorShell'),
@@ -44,8 +45,6 @@ const dom = {
   revisionList: document.getElementById('revisionList'),
   pageList: document.getElementById('pageList'),
   addPageBtn: document.getElementById('addPageBtn'),
-  movePageUpBtn: document.getElementById('movePageUpBtn'),
-  movePageDownBtn: document.getElementById('movePageDownBtn'),
   duplicatePageBtn: document.getElementById('duplicatePageBtn'),
   deletePageBtn: document.getElementById('deletePageBtn'),
   pageActionHint: document.getElementById('pageActionHint'),
@@ -516,12 +515,12 @@ function updateProjectPrintSetup() {
 function renderPageList() {
   dom.pageList.innerHTML = '';
 
-  state.project.pages.forEach((page, index) => {
+  const createPageButton = (page) => {
+    const index = state.project.pages.findIndex((item) => item.id === page.id);
     const description = describePage(page, index);
-    const item = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = page.id === state.activePageId ? 'active' : '';
+    button.className = `page-list-button${page.id === state.activePageId ? ' active' : ''}`;
     button.innerHTML = `
       <span class="page-thumb" style="background:${safeColor(page.background, '#ffffff')}">${index + 1}</span>
       <span class="page-name"><strong></strong><small></small></span>
@@ -533,23 +532,67 @@ function renderPageList() {
       state.selectedElementId = '';
       renderAll();
     });
-    item.appendChild(button);
+    return button;
+  };
+
+  const frontCover = state.project.pages.find((page) => page.role === PAGE_ROLES.FRONT_COVER);
+  if (frontCover) {
+    const item = document.createElement('li');
+    item.className = 'cover-list-item';
+    item.appendChild(createPageButton(frontCover));
+    dom.pageList.appendChild(item);
+  }
+
+  const contentOpenings = getContentOpenings();
+  contentOpenings.forEach((opening, spreadIndex) => {
+    const item = document.createElement('li');
+    item.className = 'spread-list-item';
+    item.dataset.spreadIndex = String(spreadIndex);
+
+    const handle = document.createElement('button');
+    handle.type = 'button';
+    handle.className = 'spread-drag-handle';
+    handle.innerHTML = '<span aria-hidden="true">⠿</span>';
+    const pageNumbers = [opening.leftPage, opening.rightPage]
+      .filter(Boolean)
+      .map((page) => state.project.pages.findIndex((itemPage) => itemPage.id === page.id));
+    handle.setAttribute('aria-label', `본문 ${pageNumbers.join('쪽과 ')}쪽 순서 옮기기. 위아래로 끌거나 방향키를 사용하세요.`);
+    handle.title = '위아래로 끌어 펼침 순서 바꾸기';
+    handle.addEventListener('pointerdown', (event) => startSpreadDrag(event, spreadIndex));
+    handle.addEventListener('pointermove', updateSpreadDrag);
+    handle.addEventListener('pointerup', finishSpreadDrag);
+    handle.addEventListener('pointercancel', cancelSpreadDrag);
+    handle.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+      event.preventDefault();
+      moveSpreadToIndex(spreadIndex, spreadIndex + (event.key === 'ArrowUp' ? -1 : 1));
+    });
+
+    const pages = document.createElement('div');
+    pages.className = 'spread-list-pages';
+    [opening.leftPage, opening.rightPage].filter(Boolean).forEach((page) => pages.appendChild(createPageButton(page)));
+    item.append(handle, pages);
     dom.pageList.appendChild(item);
   });
 
+  const backCover = state.project.pages.find((page) => page.role === PAGE_ROLES.BACK_COVER);
+  if (backCover) {
+    const item = document.createElement('li');
+    item.className = 'cover-list-item';
+    item.appendChild(createPageButton(backCover));
+    dom.pageList.appendChild(item);
+  }
+
   const opening = getEditingOpening();
-  const contentOpenings = getContentOpenings();
   const spreadIndex = contentOpenings.findIndex((item) => item.pages.some((page) => page.id === state.activePageId));
   const isContentSpread = opening?.kind === 'content';
-  dom.movePageUpBtn.disabled = !isContentSpread || spreadIndex <= 0;
-  dom.movePageDownBtn.disabled = !isContentSpread || spreadIndex < 0 || spreadIndex >= contentOpenings.length - 1;
   dom.duplicatePageBtn.disabled = !isContentSpread;
   dom.deletePageBtn.disabled = !isContentSpread || contentOpenings.length <= 1;
   dom.pageActionHint.textContent = !isContentSpread
     ? '앞표지와 뒤표지는 삭제하거나 복제할 수 없어요.'
     : contentOpenings.length <= 1
-      ? '본문 펼침은 한 개 이상 남겨야 해요.'
-      : '왼쪽과 오른쪽 페이지를 한 쌍으로 관리해요.';
+      ? '본문 펼침은 한 개 이상 남겨야 해요. 손잡이를 위아래로 끌어 순서를 바꿀 수 있어요.'
+      : '손잡이를 위아래로 끌어 펼침 순서를 바꿔요.';
 }
 
 function hydrateOpening(opening) {
@@ -777,12 +820,12 @@ function addElement(element) {
   markChanged();
 }
 
-function moveActiveSpread(delta) {
+function moveSpreadToIndex(sourceIndex, destinationIndex) {
   const contentOpenings = getContentOpenings();
-  const index = contentOpenings.findIndex((opening) => opening.pages.some((page) => page.id === state.activePageId));
-  const nextIndex = index + delta;
-  if (index < 0 || nextIndex < 0 || nextIndex >= contentOpenings.length) return;
-  [contentOpenings[index], contentOpenings[nextIndex]] = [contentOpenings[nextIndex], contentOpenings[index]];
+  const nextIndex = Math.max(0, Math.min(contentOpenings.length - 1, destinationIndex));
+  if (sourceIndex < 0 || sourceIndex >= contentOpenings.length || sourceIndex === nextIndex) return;
+  const [movedOpening] = contentOpenings.splice(sourceIndex, 1);
+  contentOpenings.splice(nextIndex, 0, movedOpening);
   const frontCover = state.project.pages.find((page) => page.role === PAGE_ROLES.FRONT_COVER) || null;
   const backCover = state.project.pages.find((page) => page.role === PAGE_ROLES.BACK_COVER) || null;
   state.project.pages = [
@@ -791,8 +834,77 @@ function moveActiveSpread(delta) {
     backCover
   ].filter(Boolean);
   resetPageOrders(state.project.pages);
+  state.activePageId = movedOpening.leftPage?.id || movedOpening.rightPage?.id || state.activePageId;
+  state.selectedElementId = '';
   renderAll();
   markChanged();
+  dom.pageActionHint.textContent = '펼침 순서를 바꿨어요. 위쪽 되돌리기로 원래 순서로 돌아갈 수 있어요.';
+}
+
+function clearSpreadDragIndicators() {
+  dom.pageList.querySelectorAll('.spread-list-item').forEach((item) => {
+    item.classList.remove('dragging', 'drag-pending', 'drop-before', 'drop-after');
+  });
+}
+
+function startSpreadDrag(event, spreadIndex) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  const handle = event.currentTarget;
+  const item = handle.closest('.spread-list-item');
+  if (!item) return;
+  spreadDragState = {
+    pointerId: event.pointerId,
+    sourceIndex: spreadIndex,
+    targetIndex: spreadIndex,
+    placeAfter: false,
+    startY: event.clientY,
+    moved: false,
+    handle,
+    item
+  };
+  item.classList.add('drag-pending');
+  handle.setPointerCapture?.(event.pointerId);
+}
+
+function updateSpreadDrag(event) {
+  if (!spreadDragState || event.pointerId !== spreadDragState.pointerId) return;
+  if (!spreadDragState.moved && Math.abs(event.clientY - spreadDragState.startY) < 6) return;
+  event.preventDefault();
+  spreadDragState.moved = true;
+  spreadDragState.item.classList.remove('drag-pending');
+  spreadDragState.item.classList.add('dragging');
+
+  dom.pageList.querySelectorAll('.spread-list-item').forEach((item) => item.classList.remove('drop-before', 'drop-after'));
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.spread-list-item[data-spread-index]');
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    spreadDragState.targetIndex = Number(target.dataset.spreadIndex);
+    spreadDragState.placeAfter = event.clientY > rect.top + rect.height / 2;
+    target.classList.add(spreadDragState.placeAfter ? 'drop-after' : 'drop-before');
+  }
+
+  const listRect = dom.pageList.getBoundingClientRect();
+  if (event.clientY < listRect.top + 36) dom.pageList.scrollTop -= 12;
+  if (event.clientY > listRect.bottom - 36) dom.pageList.scrollTop += 12;
+}
+
+function finishSpreadDrag(event) {
+  if (!spreadDragState || event.pointerId !== spreadDragState.pointerId) return;
+  const drag = spreadDragState;
+  spreadDragState = null;
+  drag.handle.releasePointerCapture?.(event.pointerId);
+  clearSpreadDragIndicators();
+  if (!drag.moved) return;
+  event.preventDefault();
+  let destinationIndex = drag.targetIndex + (drag.placeAfter ? 1 : 0);
+  if (drag.sourceIndex < destinationIndex) destinationIndex -= 1;
+  moveSpreadToIndex(drag.sourceIndex, destinationIndex);
+}
+
+function cancelSpreadDrag(event) {
+  if (!spreadDragState || event.pointerId !== spreadDragState.pointerId) return;
+  spreadDragState = null;
+  clearSpreadDragIndicators();
 }
 
 function duplicateActiveSpread() {
@@ -1062,8 +1174,6 @@ dom.addPageBtn.addEventListener('click', () => {
   markChanged();
 });
 
-dom.movePageUpBtn.addEventListener('click', () => moveActiveSpread(-1));
-dom.movePageDownBtn.addEventListener('click', () => moveActiveSpread(1));
 dom.swapSpreadBtn.addEventListener('click', swapActiveSpread);
 dom.duplicatePageBtn.addEventListener('click', duplicateActiveSpread);
 dom.deletePageBtn.addEventListener('click', requestDeleteActiveSpread);

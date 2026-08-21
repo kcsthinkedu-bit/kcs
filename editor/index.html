@@ -113,6 +113,10 @@
                 그림 넣기
                 <input id="addImageInput" type="file" accept="image/*">
               </label>
+              <button id="swapSpreadBtn" class="main-tool-button swap-spread-button" type="button">
+                <span aria-hidden="true">⇄</span>
+                그림과 글 자리 바꾸기
+              </button>
               <button id="undoBtn" class="main-tool-button history-tool-button" type="button" disabled>
                 <span aria-hidden="true">↶</span>
                 되돌리기
@@ -125,8 +129,8 @@
           </div>
 
           <div class="canvas-guide">
-            <strong id="canvasTitle">선택한 페이지</strong>
-            <span>글이나 그림을 누른 뒤 움직여 보세요.</span>
+            <strong id="canvasTitle">펼친 책 편집</strong>
+            <span>왼쪽이나 오른쪽을 누르고 글과 그림을 넣어 보세요.</span>
           </div>
         </div>
 
@@ -169,7 +173,23 @@
         </div>
 
         <div class="canvas-area">
-          <div id="pageCanvas" class="page-canvas" aria-label="책 페이지 편집 영역"></div>
+          <div id="spreadCanvas" class="spread-canvas" aria-label="펼친 책 편집 영역">
+            <section id="leftPageSlot" class="page-edit-slot left-slot" aria-label="왼쪽 페이지">
+              <button id="leftPageSelectBtn" class="page-side-picker" type="button">
+                <span>왼쪽</span>
+                <strong id="leftPagePurpose">페이지</strong>
+              </button>
+              <div id="leftPageCanvas" class="page-canvas" aria-label="왼쪽 책 페이지 편집 영역"></div>
+            </section>
+            <section id="rightPageSlot" class="page-edit-slot right-slot" aria-label="오른쪽 페이지">
+              <button id="rightPageSelectBtn" class="page-side-picker" type="button">
+                <span>오른쪽</span>
+                <strong id="rightPagePurpose">페이지</strong>
+              </button>
+              <div id="rightPageCanvas" class="page-canvas" aria-label="오른쪽 책 페이지 편집 영역"></div>
+            </section>
+            <div class="edit-book-spine" aria-hidden="true"></div>
+          </div>
         </div>
       </section>
 

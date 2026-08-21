@@ -48,9 +48,18 @@ const dom = {
   deletePageBtn: document.getElementById('deletePageBtn'),
   addTextBtn: document.getElementById('addTextBtn'),
   addImageInput: document.getElementById('addImageInput'),
+  swapSpreadBtn: document.getElementById('swapSpreadBtn'),
   undoBtn: document.getElementById('undoBtn'),
   redoBtn: document.getElementById('redoBtn'),
-  pageCanvas: document.getElementById('pageCanvas'),
+  spreadCanvas: document.getElementById('spreadCanvas'),
+  leftPageSlot: document.getElementById('leftPageSlot'),
+  rightPageSlot: document.getElementById('rightPageSlot'),
+  leftPageSelectBtn: document.getElementById('leftPageSelectBtn'),
+  rightPageSelectBtn: document.getElementById('rightPageSelectBtn'),
+  leftPagePurpose: document.getElementById('leftPagePurpose'),
+  rightPagePurpose: document.getElementById('rightPagePurpose'),
+  leftPageCanvas: document.getElementById('leftPageCanvas'),
+  rightPageCanvas: document.getElementById('rightPageCanvas'),
   textToolbar: document.getElementById('textToolbar'),
   fontFamilyInput: document.getElementById('fontFamilyInput'),
   fontSizeInput: document.getElementById('fontSizeInput'),
@@ -496,16 +505,55 @@ function renderPageList() {
   dom.deletePageBtn.disabled = isCover || state.project.pages.length <= 3;
 }
 
-function renderCanvas() {
-  const page = getActivePage();
-  dom.pageCanvas.innerHTML = '';
-  if (!page) return;
-  dom.pageCanvas.style.background = safeColor(page.background, '#ffffff');
-  dom.pageColorInput.value = safeColor(page.background, '#ffffff');
+function getEditingOpening() {
+  const opening = getFacingSpreads(state.project).find((item) => item.pages.some((page) => page.id === state.activePageId))
+    || getFacingSpreads(state.project)[0];
+  if (!opening) return null;
+  const findSourcePage = (page) => page
+    ? state.project.pages.find((sourcePage) => sourcePage.id === page.id) || null
+    : null;
+  return {
+    ...opening,
+    leftPage: findSourcePage(opening.leftPage),
+    rightPage: findSourcePage(opening.rightPage)
+  };
+}
+
+function selectEditingPage(page) {
+  if (!page || page.id === state.activePageId) return;
+  state.activePageId = page.id;
+  state.selectedElementId = '';
+  renderAll();
+}
+
+function renderPageCanvas(page, side) {
+  const canvas = side === 'left' ? dom.leftPageCanvas : dom.rightPageCanvas;
+  const slot = side === 'left' ? dom.leftPageSlot : dom.rightPageSlot;
+  const selectButton = side === 'left' ? dom.leftPageSelectBtn : dom.rightPageSelectBtn;
+  const purpose = side === 'left' ? dom.leftPagePurpose : dom.rightPagePurpose;
+  const isActive = page?.id === state.activePageId;
+
+  canvas.innerHTML = '';
+  slot.classList.toggle('active', !!isActive);
+  slot.classList.toggle('empty', !page);
+  canvas.classList.toggle('inactive-canvas', !!page && !isActive);
+  selectButton.disabled = !page;
+  selectButton.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  purpose.textContent = page ? getReaderPurpose(page, side) : '페이지 없음';
+
+  if (!page) {
+    canvas.style.background = '#ffffff';
+    canvas.onclick = null;
+    selectButton.onclick = null;
+    return;
+  }
+
+  canvas.style.background = safeColor(page.background, '#ffffff');
+  selectButton.onclick = () => selectEditingPage(page);
 
   page.elements.filter((element) => !element.hidden).forEach((element) => {
     const object = document.createElement('div');
-    object.className = `canvas-object ${element.type}-object${element.id === state.selectedElementId ? ' selected' : ''}${element.locked ? ' locked' : ''}`;
+    object.className = `canvas-object ${element.type}-object${isActive && element.id === state.selectedElementId ? ' selected' : ''}${element.locked ? ' locked' : ''}${isActive ? '' : ' companion-object'}`;
     object.dataset.elementId = element.id;
     applyFrame(object, element.frame);
 
@@ -520,22 +568,41 @@ function renderCanvas() {
       object.appendChild(image);
     }
 
-    object.addEventListener('pointerdown', (event) => beginDrag(event, element, object));
-    object.addEventListener('click', (event) => {
-      event.stopPropagation();
-      state.selectedElementId = element.id;
-      renderCanvas();
-      renderDetails();
-    });
-    dom.pageCanvas.appendChild(object);
+    if (isActive) {
+      object.addEventListener('pointerdown', (event) => beginDrag(event, element, object));
+      object.addEventListener('click', (event) => {
+        event.stopPropagation();
+        state.selectedElementId = element.id;
+        renderCanvas();
+        renderDetails();
+      });
+    }
+    canvas.appendChild(object);
   });
 
-  dom.pageCanvas.onclick = (event) => {
-    if (event.target !== dom.pageCanvas) return;
+  canvas.onclick = (event) => {
+    if (!isActive) {
+      selectEditingPage(page);
+      return;
+    }
+    if (event.target !== canvas) return;
     state.selectedElementId = '';
     renderCanvas();
     renderDetails();
   };
+}
+
+function renderCanvas() {
+  const opening = getEditingOpening();
+  dom.spreadCanvas.dataset.openingKind = opening?.kind || 'empty';
+  renderPageCanvas(opening?.leftPage || null, 'left');
+  renderPageCanvas(opening?.rightPage || null, 'right');
+  const activePage = getActivePage();
+  if (activePage) dom.pageColorInput.value = safeColor(activePage.background, '#ffffff');
+  dom.swapSpreadBtn.disabled = !opening
+    || opening.kind !== 'content'
+    || !opening.leftPage
+    || !opening.rightPage;
 }
 
 function applyFrame(node, frame) {
@@ -567,7 +634,9 @@ function beginDrag(event, element, node) {
   if (element.locked) return;
 
   node.setPointerCapture(event.pointerId);
-  const canvasRect = dom.pageCanvas.getBoundingClientRect();
+  const canvas = node.closest('.page-canvas');
+  if (!canvas) return;
+  const canvasRect = canvas.getBoundingClientRect();
   const start = { clientX: event.clientX, clientY: event.clientY, x: element.frame.x, y: element.frame.y };
 
   const move = (moveEvent) => {
@@ -658,6 +727,20 @@ function moveActivePage(delta) {
   if (index < 1 || nextIndex < 1 || nextIndex >= pages.length - 1) return;
   [pages[index], pages[nextIndex]] = [pages[nextIndex], pages[index]];
   resetPageOrders(pages);
+  renderAll();
+  markChanged();
+}
+
+function swapActiveSpread() {
+  const opening = getEditingOpening();
+  if (!opening || opening.kind !== 'content' || !opening.leftPage || !opening.rightPage) return;
+  const pages = state.project.pages;
+  const leftIndex = pages.findIndex((page) => page.id === opening.leftPage.id);
+  const rightIndex = pages.findIndex((page) => page.id === opening.rightPage.id);
+  if (leftIndex < 0 || rightIndex < 0) return;
+  [pages[leftIndex], pages[rightIndex]] = [pages[rightIndex], pages[leftIndex]];
+  resetPageOrders(pages);
+  state.selectedElementId = '';
   renderAll();
   markChanged();
 }
@@ -850,6 +933,7 @@ dom.addPageBtn.addEventListener('click', () => {
 
 dom.movePageUpBtn.addEventListener('click', () => moveActivePage(-1));
 dom.movePageDownBtn.addEventListener('click', () => moveActivePage(1));
+dom.swapSpreadBtn.addEventListener('click', swapActiveSpread);
 
 dom.duplicatePageBtn.addEventListener('click', () => {
   const page = getActivePage();

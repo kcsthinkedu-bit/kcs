@@ -86,17 +86,18 @@
             <span class="panel-kicker">내 책</span>
             <h2 id="pageListTitle">페이지</h2>
           </div>
-          <button id="addPageBtn" class="round-add-button" type="button" aria-label="새 페이지 추가">+</button>
+          <button id="addPageBtn" class="round-add-button" type="button" aria-label="새 펼침 추가">+</button>
         </div>
 
         <ol id="pageList" class="page-list"></ol>
 
-        <div class="page-actions" aria-label="선택한 페이지 관리">
-          <button id="movePageUpBtn" type="button">앞으로</button>
-          <button id="movePageDownBtn" type="button">뒤로</button>
-          <button id="duplicatePageBtn" type="button">복제</button>
-          <button id="deletePageBtn" class="danger-button" type="button">삭제</button>
+        <div class="page-actions" aria-label="선택한 펼침 관리">
+          <button id="movePageUpBtn" type="button">앞 펼침</button>
+          <button id="movePageDownBtn" type="button">뒤 펼침</button>
+          <button id="duplicatePageBtn" type="button">펼침 복제</button>
+          <button id="deletePageBtn" class="danger-button" type="button">펼침 삭제</button>
         </div>
+        <p id="pageActionHint" class="page-action-hint" aria-live="polite"></p>
       </aside>
 
       <section class="work-panel" aria-labelledby="canvasTitle">

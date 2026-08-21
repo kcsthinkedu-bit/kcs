@@ -89,6 +89,7 @@ const dom = {
   openPrintPreviewBtn: document.getElementById('openPrintPreviewBtn'),
   printStatus: document.getElementById('printStatus'),
   readingPages: document.getElementById('readingPages'),
+  readingLayoutHint: document.getElementById('readingLayoutHint'),
   previousOpeningBtn: document.getElementById('previousOpeningBtn'),
   nextOpeningBtn: document.getElementById('nextOpeningBtn'),
   openingCounter: document.getElementById('openingCounter')
@@ -99,6 +100,7 @@ const state = {
   activePageId: '',
   selectedElementId: '',
   openingIndex: 0,
+  readerTurning: false,
   saveTimer: null,
   printProfile: null,
   workingParentRevisionId: '',
@@ -146,10 +148,15 @@ function loadDraft() {
     title: bookType === BOOK_TYPES.COLORING_BOOK ? '나의 컬러링북' : '나의 그림책'
   });
 
-  if (bookType === BOOK_TYPES.PICTURE_BOOK) {
-    project.pages.splice(project.pages.length - 1, 0, createPage('두 번째 페이지'));
-    resetPageOrders(project.pages);
+  const firstPage = project.pages.find((page) => page.role === PAGE_ROLES.CONTENT);
+  const secondPage = createPage(bookType === BOOK_TYPES.COLORING_BOOK ? '오른쪽 그림' : '오른쪽 글');
+  if (firstPage) {
+    firstPage.title = bookType === BOOK_TYPES.COLORING_BOOK ? '왼쪽 글' : '왼쪽 그림';
   }
+  const textPage = bookType === BOOK_TYPES.COLORING_BOOK ? firstPage : secondPage;
+  if (textPage) textPage.elements.push(createTextElement());
+  project.pages.splice(project.pages.length - 1, 0, secondPage);
+  resetPageOrders(project.pages);
 
   return project;
 }
@@ -655,43 +662,123 @@ function moveActivePage(delta) {
   markChanged();
 }
 
+function getReaderPurpose(page, side) {
+  if (!page) return '';
+  if (page.role === PAGE_ROLES.FRONT_COVER) return '앞표지';
+  if (page.role === PAGE_ROLES.BACK_COVER) return '뒤표지';
+  if (bookType === BOOK_TYPES.COLORING_BOOK) return side === 'left' ? '글 페이지' : '그림 페이지';
+  return side === 'left' ? '그림 페이지' : '글 페이지';
+}
+
+function createReaderPage(page, side, openingKind) {
+  const pageNode = document.createElement('article');
+  pageNode.className = `reading-page ${side}-page${page ? '' : ' blank-page'}`;
+  pageNode.setAttribute('aria-label', page ? `${getReaderPurpose(page, side)}: ${page.title || '제목 없음'}` : '빈 페이지');
+
+  if (!page) {
+    pageNode.setAttribute('aria-hidden', 'true');
+    return pageNode;
+  }
+
+  pageNode.style.background = safeColor(page.background, '#ffffff');
+  page.elements.filter((element) => !element.hidden).forEach((element) => {
+    const node = document.createElement('div');
+    node.className = `reading-object ${element.type}`;
+    applyFrame(node, element.frame);
+    if (element.type === 'text') {
+      node.textContent = element.text || '';
+      applyTextStyle(node, { ...element.style, fontSize: Math.max(8, (element.style?.fontSize || 18) * 0.72) });
+    } else if (element.type === 'image') {
+      const image = document.createElement('img');
+      image.src = element.source || '';
+      image.alt = element.alt || '';
+      image.style.objectFit = element.fit || 'contain';
+      node.appendChild(image);
+    }
+    pageNode.appendChild(node);
+  });
+
+  const purpose = document.createElement('span');
+  purpose.className = 'page-purpose';
+  purpose.textContent = getReaderPurpose(page, side);
+  pageNode.appendChild(purpose);
+
+  if (openingKind === 'content') {
+    const pageNumber = document.createElement('span');
+    pageNumber.className = 'reader-page-number';
+    pageNumber.textContent = String(page.order || 0);
+    pageNode.appendChild(pageNumber);
+  }
+  return pageNode;
+}
+
+function getReaderOpenings() {
+  return getFacingSpreads(state.project);
+}
+
+function syncReaderControls(allOpenings) {
+  dom.openingCounter.textContent = allOpenings.length ? `${state.openingIndex + 1} / ${allOpenings.length}` : '0 / 0';
+  dom.previousOpeningBtn.disabled = state.readerTurning || state.openingIndex <= 0;
+  dom.nextOpeningBtn.disabled = state.readerTurning || state.openingIndex >= allOpenings.length - 1;
+}
+
 function renderReader() {
-  const allOpenings = state.project.pageSetup.view === 'single'
-    ? state.project.pages.map((page, index) => ({ index, pages: [page] }))
-    : getFacingSpreads(state.project);
+  const allOpenings = getReaderOpenings();
   state.openingIndex = clamp(state.openingIndex, 0, Math.max(0, allOpenings.length - 1));
   const opening = allOpenings[state.openingIndex];
   dom.readingPages.innerHTML = '';
+  dom.readingPages.classList.remove('is-turning-next', 'is-turning-previous', 'is-arriving-next', 'is-arriving-previous');
+  dom.readingLayoutHint.textContent = bookType === BOOK_TYPES.COLORING_BOOK
+    ? '컬러링북은 왼쪽에 글, 오른쪽에 그림이 보이도록 펼쳐져요.'
+    : '그림책은 왼쪽에 그림, 오른쪽에 글이 보이도록 펼쳐져요.';
 
-  (opening?.pages || []).forEach((page) => {
-    const pageNode = document.createElement('article');
-    pageNode.className = `reading-page${opening.pages.length === 1 ? ' single' : ''}`;
-    pageNode.style.background = safeColor(page.background, '#ffffff');
-    page.elements.filter((element) => !element.hidden).forEach((element) => {
-      const node = document.createElement('div');
-      node.className = `reading-object ${element.type}`;
-      applyFrame(node, element.frame);
-      if (element.type === 'text') {
-        node.textContent = element.text || '';
-        applyTextStyle(node, { ...element.style, fontSize: Math.max(8, (element.style?.fontSize || 18) * 0.72) });
-      } else if (element.type === 'image') {
-        const image = document.createElement('img');
-        image.src = element.source || '';
-        image.alt = element.alt || '';
-        image.style.objectFit = element.fit || 'contain';
-        node.appendChild(image);
-      }
-      pageNode.appendChild(node);
-    });
-    dom.readingPages.appendChild(pageNode);
-  });
+  if (opening) {
+    const book = document.createElement('div');
+    book.className = `book-opening ${opening.kind}`;
+    book.append(
+      createReaderPage(opening.leftPage, 'left', opening.kind),
+      createReaderPage(opening.rightPage, 'right', opening.kind)
+    );
+    const spine = document.createElement('div');
+    spine.className = 'book-spine';
+    spine.setAttribute('aria-hidden', 'true');
+    book.appendChild(spine);
+    dom.readingPages.appendChild(book);
+  }
 
   if (!opening) {
     dom.readingPages.innerHTML = '<div class="reading-empty">아직 볼 수 있는 페이지가 없어요.</div>';
   }
-  dom.openingCounter.textContent = allOpenings.length ? `${state.openingIndex + 1} / ${allOpenings.length}` : '0 / 0';
-  dom.previousOpeningBtn.disabled = state.openingIndex <= 0;
-  dom.nextOpeningBtn.disabled = state.openingIndex >= allOpenings.length - 1;
+  syncReaderControls(allOpenings);
+}
+
+function turnReader(delta) {
+  if (state.readerTurning) return;
+  const allOpenings = getReaderOpenings();
+  const nextIndex = clamp(state.openingIndex + delta, 0, Math.max(0, allOpenings.length - 1));
+  if (nextIndex === state.openingIndex) return;
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    state.openingIndex = nextIndex;
+    renderReader();
+    return;
+  }
+
+  state.readerTurning = true;
+  syncReaderControls(allOpenings);
+  const direction = delta > 0 ? 'next' : 'previous';
+  dom.readingPages.classList.add(`is-turning-${direction}`);
+
+  window.setTimeout(() => {
+    state.openingIndex = nextIndex;
+    renderReader();
+    dom.readingPages.classList.add(`is-arriving-${direction}`);
+    window.setTimeout(() => {
+      dom.readingPages.classList.remove(`is-arriving-${direction}`);
+      state.readerTurning = false;
+      syncReaderControls(getReaderOpenings());
+    }, 360);
+  }, 340);
 }
 
 function fileToDataUrl(file) {
@@ -944,12 +1031,20 @@ dom.alignButtons.forEach((button) => button.addEventListener('click', () => upda
 })));
 
 dom.previousOpeningBtn.addEventListener('click', () => {
-  state.openingIndex -= 1;
-  renderReader();
+  turnReader(-1);
 });
 dom.nextOpeningBtn.addEventListener('click', () => {
-  state.openingIndex += 1;
-  renderReader();
+  turnReader(1);
+});
+dom.readingPages.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    turnReader(-1);
+  }
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    turnReader(1);
+  }
 });
 
 dom.downloadBookBtn.addEventListener('click', () => {

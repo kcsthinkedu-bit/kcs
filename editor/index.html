@@ -295,9 +295,9 @@
     <section id="readingView" class="reading-section" aria-labelledby="readingTitle">
       <div class="reading-heading">
         <div>
-          <span class="panel-kicker">책으로 보기</span>
-          <h2 id="readingTitle">내 책을 넘겨 보세요</h2>
-          <p>실제로 읽는 순서대로 앞표지부터 뒤표지까지 확인할 수 있어요.</p>
+          <span class="panel-kicker">플립북으로 보기</span>
+          <h2 id="readingTitle">내 책을 실제 책처럼 넘겨 보세요</h2>
+          <p id="readingLayoutHint">왼쪽과 오른쪽 페이지를 함께 보고, 이전·다음 버튼이나 키보드 방향키로 넘길 수 있어요.</p>
         </div>
         <div class="reading-actions">
           <button id="previousOpeningBtn" type="button">이전</button>
@@ -306,7 +306,7 @@
         </div>
       </div>
 
-      <div id="readingPages" class="reading-pages"></div>
+      <div id="readingPages" class="reading-pages" tabindex="0" role="group" aria-label="플립북 미리보기"></div>
     </section>
 
     <footer>

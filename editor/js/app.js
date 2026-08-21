@@ -1036,16 +1036,20 @@ dom.previousOpeningBtn.addEventListener('click', () => {
 dom.nextOpeningBtn.addEventListener('click', () => {
   turnReader(1);
 });
-dom.readingPages.addEventListener('keydown', (event) => {
-  if (event.key === 'ArrowLeft') {
+  document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+    const target = event.target;
+    if (
+      target instanceof Element
+      && target.closest('input, textarea, select, [contenteditable="true"]')
+    ) return;
+    if (!dom.readingPages.getClientRects().length) return;
+
     event.preventDefault();
-    turnReader(-1);
-  }
-  if (event.key === 'ArrowRight') {
-    event.preventDefault();
-    turnReader(1);
-  }
-});
+    turnReader(event.key === 'ArrowLeft' ? -1 : 1);
+  });
 
 dom.downloadBookBtn.addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state.project, null, 2)], { type: 'application/json' });

@@ -24,61 +24,62 @@
       preview-target="#readingView"
       preview-label="책 넘겨보기"
       print-target="#printNotice"
-    ></book-editor-shell>
-
-    <header class="project-bar" aria-label="현재 책과 저장 상태">
-      <label class="book-title-field">
-        <span>책 제목</span>
-        <input id="bookTitleInput" type="text" value="나의 그림책" maxlength="80">
-      </label>
-
-      <div class="save-state" aria-live="polite">
-        <span id="saveStateDot" class="save-dot"></span>
-        <span id="saveStateText">이 기기에 임시 저장됨</span>
-      </div>
-
-      <div class="project-actions">
-        <button id="downloadBookBtn" class="soft-button" type="button">책 파일 받기</button>
-        <label class="soft-button file-button">
-          책 파일 불러오기
-          <input id="loadBookInput" type="file" accept=".json,application/json">
+    >
+      <header class="project-bar" slot="project-controls" aria-label="현재 책과 저장 상태">
+        <label class="book-title-field">
+          <span>책 제목</span>
+          <input id="bookTitleInput" type="text" value="나의 그림책" maxlength="80">
         </label>
-      </div>
-    </header>
 
-    <section class="revision-strip" aria-labelledby="revisionTitle">
-      <details>
-        <summary>
-          <span>
-            <strong id="revisionTitle">저장본 보기</strong>
-            <small>학생이 저장한 것과 선생님이 수정한 것을 따로 보관해요</small>
-          </span>
-          <span id="revisionCount" class="revision-count">0개</span>
-        </summary>
-
-        <div class="revision-content">
-          <div class="revision-create">
-            <label>
-              <span>어떤 저장본인가요?</span>
-              <select id="revisionKindInput">
-                <option value="draft">현재 상태 보관</option>
-                <option value="submission">학생 제출본</option>
-                <option value="teacher-edit">선생님 수정본</option>
-                <option value="returned">다시 고칠 책</option>
-                <option value="final">최종본</option>
-              </select>
-            </label>
-            <button id="createRevisionBtn" type="button">새 저장본 만들기</button>
-          </div>
-
-          <p class="revision-warning">
-            계정 연결 전에는 이 기기에만 보관됩니다. 수업 권한은 아직 판정하지 않으며, 서버 연결 후 선생님·학생 권한을 반드시 다시 확인합니다.
-          </p>
-          <div id="revisionStatus" class="revision-status" aria-live="polite"></div>
-          <div id="revisionList" class="revision-list"></div>
+        <div class="save-state" aria-live="polite">
+          <span id="saveStateDot" class="save-dot"></span>
+          <span id="saveStateText">이 기기에 임시 저장됨</span>
         </div>
-      </details>
-    </section>
+
+        <section class="revision-strip" aria-labelledby="revisionTitle">
+          <details id="revisionDetails" class="compact-menu">
+            <summary aria-label="저장본 보기">
+              <strong id="revisionTitle">저장본</strong>
+              <span id="revisionCount" class="revision-count">0개</span>
+            </summary>
+
+            <div class="revision-content">
+              <p class="revision-intro">학생이 저장한 것과 선생님이 수정한 것을 따로 보관해요.</p>
+              <div class="revision-create">
+                <label>
+                  <span>어떤 저장본인가요?</span>
+                  <select id="revisionKindInput">
+                    <option value="draft">현재 상태 보관</option>
+                    <option value="submission">학생 제출본</option>
+                    <option value="teacher-edit">선생님 수정본</option>
+                    <option value="returned">다시 고칠 책</option>
+                    <option value="final">최종본</option>
+                  </select>
+                </label>
+                <button id="createRevisionBtn" type="button">새 저장본 만들기</button>
+              </div>
+
+              <p class="revision-warning">
+                계정 연결 전에는 이 기기에만 보관됩니다. 수업 권한은 아직 판정하지 않으며, 서버 연결 후 선생님·학생 권한을 반드시 다시 확인합니다.
+              </p>
+              <div id="revisionStatus" class="revision-status" aria-live="polite"></div>
+              <div id="revisionList" class="revision-list"></div>
+            </div>
+          </details>
+        </section>
+
+        <details id="bookFileMenu" class="book-file-menu compact-menu">
+          <summary>책 파일</summary>
+          <div class="book-file-content">
+            <button id="downloadBookBtn" class="soft-button" type="button">책 파일 받기</button>
+            <label class="soft-button file-button">
+              책 파일 불러오기
+              <input id="loadBookInput" type="file" accept=".json,application/json">
+            </label>
+          </div>
+        </details>
+      </header>
+    </book-editor-shell>
 
     <main id="editWorkspace" class="editor-layout">
       <aside class="page-panel" aria-labelledby="pageListTitle">

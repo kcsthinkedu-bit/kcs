@@ -4,7 +4,7 @@ template.innerHTML = `
   <style>
     :host {
       display: block;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       color: #17352d;
       font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
     }
@@ -24,30 +24,30 @@ template.innerHTML = `
     }
 
     .shell {
-      min-height: 76px;
+      min-height: 62px;
       display: grid;
-      grid-template-columns: minmax(190px, auto) minmax(280px, 1fr) auto;
+      grid-template-columns: auto auto minmax(300px, 1fr) auto;
       align-items: center;
-      gap: 18px;
-      padding: 12px 16px;
+      gap: 10px;
+      padding: 8px 10px;
       border: 1px solid #d7e1da;
-      border-radius: 22px;
+      border-radius: 18px;
       background: rgba(255, 253, 247, 0.96);
       box-shadow: 0 12px 34px rgba(35, 57, 48, 0.09);
     }
 
     .back-link {
-      min-height: 46px;
+      min-height: 40px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 0 15px;
+      padding: 0 11px;
       border: 1px solid #d7e1da;
       border-radius: 14px;
       color: #315047;
       background: #ffffff;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -72,40 +72,45 @@ template.innerHTML = `
     }
 
     .kind {
-      margin-bottom: 2px;
-      color: #0f765d;
-      font-size: 12px;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #095744;
+      background: #e3f2eb;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.06em;
     }
 
     .title {
-      overflow: hidden;
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      display: none;
+    }
+
+    slot[name="project-controls"] {
+      min-width: 0;
+      display: block;
     }
 
     nav {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px;
-      border-radius: 15px;
+      gap: 4px;
+      padding: 3px;
+      border-radius: 12px;
       background: #edf3ef;
     }
 
     .view-link {
-      min-height: 42px;
+      min-height: 38px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0 14px;
-      border-radius: 11px;
+      padding: 0 11px;
+      border-radius: 9px;
       color: #586a64;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -121,41 +126,32 @@ template.innerHTML = `
       box-shadow: 0 4px 0 #095744;
     }
 
-    @media (max-width: 900px) {
+    .view-link[data-view="edit"] {
+      display: none;
+    }
+
+    @media (max-width: 1200px) {
       .shell {
-        grid-template-columns: auto 1fr;
+        grid-template-columns: auto 1fr auto;
       }
 
-      nav {
+      slot[name="project-controls"] {
+        grid-row: 2;
         grid-column: 1 / -1;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
       }
     }
 
     @media (max-width: 520px) {
       .shell {
-        grid-template-columns: 1fr;
-        padding: 11px;
-      }
-
-      .identity {
-        grid-row: 1;
-      }
-
-      .back-link {
-        grid-row: 2;
-      }
-
-      nav {
-        grid-column: auto;
-        grid-row: 3;
+        grid-template-columns: auto 1fr auto;
+        gap: 6px;
+        padding: 7px;
       }
 
       .view-link {
-        min-height: 48px;
-        padding: 0 8px;
-        font-size: 13px;
+        min-height: 38px;
+        padding: 0 7px;
+        font-size: 12px;
       }
     }
 
@@ -169,13 +165,15 @@ template.innerHTML = `
   <div class="shell">
     <a class="back-link" part="back-link">
       <span class="arrow" aria-hidden="true">←</span>
-      <span>책 종류 고르기</span>
+      <span>책 종류</span>
     </a>
 
     <div class="identity">
       <span class="kind"></span>
       <strong class="title"></strong>
     </div>
+
+    <slot name="project-controls"></slot>
 
     <nav aria-label="책 만들기 화면">
       <a class="view-link" data-view="edit" aria-current="page">편집하기</a>

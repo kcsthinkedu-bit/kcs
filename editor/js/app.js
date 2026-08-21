@@ -673,6 +673,22 @@ function renderPageCanvas(page, side) {
         editor.addEventListener('focus', () => {
           state.selectedElementId = element.id;
           object.classList.add('selected');
+
+          if (element.text === starterText) {
+            requestAnimationFrame(() => {
+              if (document.activeElement !== editor || element.text !== starterText) return;
+              const selection = window.getSelection();
+              const range = document.createRange();
+              range.selectNodeContents(editor);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            });
+          }
+        });
+        editor.addEventListener('click', (event) => {
+          event.stopPropagation();
+          state.selectedElementId = element.id;
+          object.classList.add('selected');
           renderDetails();
 
           if (element.text === starterText) {
@@ -686,7 +702,12 @@ function renderPageCanvas(page, side) {
             });
           }
         });
-        editor.addEventListener('click', (event) => event.stopPropagation());
+        editor.addEventListener('keydown', () => {
+          if (state.selectedElementId === element.id && !dom.elementDetails.hidden) return;
+          state.selectedElementId = element.id;
+          object.classList.add('selected');
+          renderDetails();
+        });
         editor.addEventListener('input', () => {
           element.text = editor.innerText.replace(/\r\n?/g, '\n');
           dom.textContentInput.value = element.text;
@@ -746,6 +767,28 @@ function renderPageCanvas(page, side) {
     }
     canvas.appendChild(object);
   });
+
+  const isImagePage = getPageContentKind(page, side) === 'image';
+  const hasVisibleImage = page.elements.some((element) => element.type === 'image' && !element.hidden);
+  if (isActive && isImagePage && !hasVisibleImage) {
+    const prompt = document.createElement('div');
+    prompt.className = 'image-page-prompt';
+
+    const title = document.createElement('strong');
+    title.textContent = '그림을 이 페이지에 넣어 보세요';
+    const description = document.createElement('p');
+    description.textContent = '복사한 그림은 Ctrl+V로 붙여넣을 수 있어요.';
+    const loadButton = document.createElement('button');
+    loadButton.type = 'button';
+    loadButton.textContent = '그림 파일 불러오기';
+    loadButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      dom.addImageInput.click();
+    });
+
+    prompt.append(title, description, loadButton);
+    canvas.appendChild(prompt);
+  }
 
   canvas.onclick = (event) => {
     if (!isActive) {
@@ -838,7 +881,7 @@ function renderDetails() {
   dom.textToolbar.hidden = !isText;
   if (!element) return;
 
-  dom.textContentField.hidden = !isText;
+  dom.textContentField.hidden = true;
   dom.imageAltField.hidden = !isImage;
   if (isText) dom.textContentInput.value = element.text || '';
   if (isImage) dom.imageAltInput.value = element.alt || '';
@@ -1212,6 +1255,30 @@ function readImageDimensions(source) {
   });
 }
 
+async function addImageFile(file, fallbackName = '붙여넣은 그림.png') {
+  if (!file || !String(file.type || '').startsWith('image/')) {
+    throw new Error('그림 파일만 넣을 수 있어요.');
+  }
+
+  const source = await fileToDataUrl(file);
+  const dimensions = await readImageDimensions(source);
+  const assetId = makeId('asset');
+  const name = file.name || fallbackName;
+  state.project.assets.push({
+    id: assetId,
+    type: 'image',
+    name,
+    mimeType: file.type || '',
+    originalAssetId: '',
+    storagePath: '',
+    source,
+    width: dimensions.width,
+    height: dimensions.height,
+    size: file.size || 0
+  });
+  addElement(createImageElement(source, name, assetId));
+}
+
 dom.bookTitleInput.addEventListener('input', () => {
   state.project.title = dom.bookTitleInput.value;
   markChanged();
@@ -1288,24 +1355,35 @@ dom.addImageInput.addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   try {
-    const source = await fileToDataUrl(file);
-    const dimensions = await readImageDimensions(source);
-    const assetId = makeId('asset');
-    state.project.assets.push({
-      id: assetId,
-      type: 'image',
-      name: file.name,
-      mimeType: file.type || '',
-      originalAssetId: '',
-      storagePath: '',
-      source,
-      width: dimensions.width,
-      height: dimensions.height,
-      size: file.size || 0
-    });
-    addElement(createImageElement(source, file.name, assetId));
+    await addImageFile(file);
+  } catch (error) {
+    console.error(error);
+    dom.saveStateText.textContent = error.message || '그림을 넣지 못했어요.';
   } finally {
     event.target.value = '';
+  }
+});
+
+document.addEventListener('paste', async (event) => {
+  const target = event.target;
+  if (target instanceof Element && target.closest('input, textarea, [contenteditable="true"]')) return;
+
+  const activePage = getActivePage();
+  const opening = getEditingOpening();
+  const side = opening?.leftPage?.id === activePage?.id ? 'left' : 'right';
+  if (!activePage || getPageContentKind(activePage, side) !== 'image') return;
+
+  const imageItem = Array.from(event.clipboardData?.items || [])
+    .find((item) => item.kind === 'file' && item.type.startsWith('image/'));
+  const file = imageItem?.getAsFile();
+  if (!file) return;
+
+  event.preventDefault();
+  try {
+    await addImageFile(file);
+  } catch (error) {
+    console.error(error);
+    dom.saveStateText.textContent = error.message || '복사한 그림을 붙여넣지 못했어요.';
   }
 });
 

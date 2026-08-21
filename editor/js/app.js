@@ -559,9 +559,6 @@ function renderPageList() {
     handle.setAttribute('aria-label', `본문 ${pageNumbers.join('쪽과 ')}쪽 순서 옮기기. 위아래로 끌거나 방향키를 사용하세요.`);
     handle.title = '위아래로 끌어 펼침 순서 바꾸기';
     handle.addEventListener('pointerdown', (event) => startSpreadDrag(event, spreadIndex));
-    handle.addEventListener('pointermove', updateSpreadDrag);
-    handle.addEventListener('pointerup', finishSpreadDrag);
-    handle.addEventListener('pointercancel', cancelSpreadDrag);
     handle.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
       event.preventDefault();
@@ -852,6 +849,7 @@ function startSpreadDrag(event, spreadIndex) {
   const handle = event.currentTarget;
   const item = handle.closest('.spread-list-item');
   if (!item) return;
+  const controller = new AbortController();
   spreadDragState = {
     pointerId: event.pointerId,
     sourceIndex: spreadIndex,
@@ -860,10 +858,17 @@ function startSpreadDrag(event, spreadIndex) {
     startY: event.clientY,
     moved: false,
     handle,
-    item
+    item,
+    controller
   };
   item.classList.add('drag-pending');
   handle.setPointerCapture?.(event.pointerId);
+  document.addEventListener('pointermove', updateSpreadDrag, { passive: false, signal: controller.signal });
+  document.addEventListener('pointerup', finishSpreadDrag, { signal: controller.signal });
+  document.addEventListener('pointercancel', cancelSpreadDrag, { signal: controller.signal });
+  window.addEventListener('pointerup', finishSpreadDrag, { signal: controller.signal });
+  window.addEventListener('pointercancel', cancelSpreadDrag, { signal: controller.signal });
+  handle.addEventListener('lostpointercapture', finishSpreadDrag, { signal: controller.signal });
 }
 
 function updateSpreadDrag(event) {
@@ -888,12 +893,19 @@ function updateSpreadDrag(event) {
   if (event.clientY > listRect.bottom - 36) dom.pageList.scrollTop += 12;
 }
 
-function finishSpreadDrag(event) {
+function releaseSpreadDrag(event) {
   if (!spreadDragState || event.pointerId !== spreadDragState.pointerId) return;
   const drag = spreadDragState;
   spreadDragState = null;
-  drag.handle.releasePointerCapture?.(event.pointerId);
+  drag.controller.abort();
+  if (drag.handle.hasPointerCapture?.(drag.pointerId)) drag.handle.releasePointerCapture(drag.pointerId);
   clearSpreadDragIndicators();
+  return drag;
+}
+
+function finishSpreadDrag(event) {
+  const drag = releaseSpreadDrag(event);
+  if (!drag) return;
   if (!drag.moved) return;
   event.preventDefault();
   let destinationIndex = drag.targetIndex + (drag.placeAfter ? 1 : 0);
@@ -902,9 +914,7 @@ function finishSpreadDrag(event) {
 }
 
 function cancelSpreadDrag(event) {
-  if (!spreadDragState || event.pointerId !== spreadDragState.pointerId) return;
-  spreadDragState = null;
-  clearSpreadDragIndicators();
+  releaseSpreadDrag(event);
 }
 
 function duplicateActiveSpread() {

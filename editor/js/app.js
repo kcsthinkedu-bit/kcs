@@ -46,6 +46,7 @@ const dom = {
   movePageDownBtn: document.getElementById('movePageDownBtn'),
   duplicatePageBtn: document.getElementById('duplicatePageBtn'),
   deletePageBtn: document.getElementById('deletePageBtn'),
+  pageActionHint: document.getElementById('pageActionHint'),
   addTextBtn: document.getElementById('addTextBtn'),
   addImageInput: document.getElementById('addImageInput'),
   swapSpreadBtn: document.getElementById('swapSpreadBtn'),
@@ -147,7 +148,7 @@ function safeColor(value, fallback = '#1f2937') {
 function loadDraft() {
   try {
     const saved = localStorage.getItem(storageKey);
-    if (saved) return normalizeBookProject(JSON.parse(saved));
+    if (saved) return ensureFacingPagePairs(normalizeBookProject(JSON.parse(saved)));
   } catch (error) {
     console.error(error);
   }
@@ -157,14 +158,8 @@ function loadDraft() {
     title: bookType === BOOK_TYPES.COLORING_BOOK ? '나의 컬러링북' : '나의 그림책'
   });
 
-  const firstPage = project.pages.find((page) => page.role === PAGE_ROLES.CONTENT);
-  const secondPage = createPage(bookType === BOOK_TYPES.COLORING_BOOK ? '오른쪽 그림' : '오른쪽 글');
-  if (firstPage) {
-    firstPage.title = bookType === BOOK_TYPES.COLORING_BOOK ? '왼쪽 글' : '왼쪽 그림';
-  }
-  const textPage = bookType === BOOK_TYPES.COLORING_BOOK ? firstPage : secondPage;
-  if (textPage) textPage.elements.push(createTextElement());
-  project.pages.splice(project.pages.length - 1, 0, secondPage);
+  const [leftPage, rightPage] = createSpreadPages();
+  project.pages.splice(1, project.pages.length - 2, leftPage, rightPage);
   resetPageOrders(project.pages);
 
   return project;
@@ -190,6 +185,36 @@ function createPage(title = '새 페이지') {
     locked: false,
     elements: []
   };
+}
+
+function createSpreadPages(options = {}) {
+  const leftKind = bookType === BOOK_TYPES.COLORING_BOOK ? 'text' : 'image';
+  const rightKind = leftKind === 'text' ? 'image' : 'text';
+  const leftPage = createPage(`왼쪽 ${leftKind === 'text' ? '글' : '그림'}`);
+  const rightPage = createPage(`오른쪽 ${rightKind === 'text' ? '글' : '그림'}`);
+  if (options.addStarterText !== false) {
+    const textPage = leftKind === 'text' ? leftPage : rightPage;
+    textPage.elements.push(createTextElement());
+  }
+  return [leftPage, rightPage];
+}
+
+function ensureFacingPagePairs(project) {
+  const frontCover = project.pages.find((page) => page.role === PAGE_ROLES.FRONT_COVER) || null;
+  const backCover = project.pages.find((page) => page.role === PAGE_ROLES.BACK_COVER) || null;
+  const bodyPages = project.pages.filter((page) => ![PAGE_ROLES.FRONT_COVER, PAGE_ROLES.BACK_COVER].includes(page.role));
+
+  if (!bodyPages.length) {
+    bodyPages.push(...createSpreadPages());
+  } else if (bodyPages.length % 2 === 1) {
+    const leftPage = bodyPages[bodyPages.length - 1];
+    const leftKind = getPageContentKind(leftPage, 'left');
+    bodyPages.push(createPage(`오른쪽 ${leftKind === 'text' ? '그림' : '글'}`));
+  }
+
+  project.pages = [frontCover, ...bodyPages, backCover].filter(Boolean);
+  resetPageOrders(project.pages);
+  return project;
 }
 
 function createTextElement() {
@@ -300,7 +325,7 @@ function applyHistory(direction) {
   if (direction === 'undo') state.historyFuture.push(current);
   else state.historyPast.push(current);
 
-  state.project = normalizeBookProject(JSON.parse(target));
+  state.project = ensureFacingPagePairs(normalizeBookProject(JSON.parse(target)));
   state.historyCurrent = target;
   state.historyGroupOpen = false;
   if (!state.project.pages.some((page) => page.id === state.activePageId)) {
@@ -397,7 +422,7 @@ async function continueFromRevision(revisionId, kind) {
   saveDraft();
   const revision = await getBookRevision(revisionId);
   if (!revision) return;
-  state.project = normalizeBookProject(revision.document);
+  state.project = ensureFacingPagePairs(normalizeBookProject(revision.document));
   state.activePageId = state.project.pages[0]?.id || '';
   state.selectedElementId = '';
   state.workingParentRevisionId = revision.id;
@@ -412,7 +437,7 @@ async function startTeacherEdit(revisionId) {
   const revision = await getBookRevision(revisionId);
   if (!revision || revision.kind !== 'submission') return;
   saveDraft();
-  state.project = normalizeBookProject(revision.document);
+  state.project = ensureFacingPagePairs(normalizeBookProject(revision.document));
   state.activePageId = state.project.pages[0]?.id || '';
   state.selectedElementId = '';
   state.workingParentRevisionId = revision.id;
@@ -474,7 +499,6 @@ function updateProjectPrintSetup() {
 
 function renderPageList() {
   dom.pageList.innerHTML = '';
-  const activeIndex = state.project.pages.findIndex((page) => page.id === state.activePageId);
 
   state.project.pages.forEach((page, index) => {
     const description = describePage(page, index);
@@ -497,17 +521,22 @@ function renderPageList() {
     dom.pageList.appendChild(item);
   });
 
-  const activePage = getActivePage();
-  const isCover = activePage && [PAGE_ROLES.FRONT_COVER, PAGE_ROLES.BACK_COVER].includes(activePage.role);
-  dom.movePageUpBtn.disabled = activeIndex <= 1;
-  dom.movePageDownBtn.disabled = activeIndex < 1 || activeIndex >= state.project.pages.length - 2;
-  dom.duplicatePageBtn.disabled = isCover;
-  dom.deletePageBtn.disabled = isCover || state.project.pages.length <= 3;
+  const opening = getEditingOpening();
+  const contentOpenings = getContentOpenings();
+  const spreadIndex = contentOpenings.findIndex((item) => item.pages.some((page) => page.id === state.activePageId));
+  const isContentSpread = opening?.kind === 'content';
+  dom.movePageUpBtn.disabled = !isContentSpread || spreadIndex <= 0;
+  dom.movePageDownBtn.disabled = !isContentSpread || spreadIndex < 0 || spreadIndex >= contentOpenings.length - 1;
+  dom.duplicatePageBtn.disabled = !isContentSpread;
+  dom.deletePageBtn.disabled = !isContentSpread || contentOpenings.length <= 1;
+  dom.pageActionHint.textContent = !isContentSpread
+    ? '앞표지와 뒤표지는 삭제하거나 복제할 수 없어요.'
+    : contentOpenings.length <= 1
+      ? '본문 펼침은 한 개 이상 남겨야 해요.'
+      : '왼쪽과 오른쪽 페이지를 한 쌍으로 관리해요.';
 }
 
-function getEditingOpening() {
-  const opening = getFacingSpreads(state.project).find((item) => item.pages.some((page) => page.id === state.activePageId))
-    || getFacingSpreads(state.project)[0];
+function hydrateOpening(opening) {
   if (!opening) return null;
   const findSourcePage = (page) => page
     ? state.project.pages.find((sourcePage) => sourcePage.id === page.id) || null
@@ -517,6 +546,18 @@ function getEditingOpening() {
     leftPage: findSourcePage(opening.leftPage),
     rightPage: findSourcePage(opening.rightPage)
   };
+}
+
+function getContentOpenings() {
+  return getFacingSpreads(state.project)
+    .filter((opening) => opening.kind === 'content')
+    .map(hydrateOpening);
+}
+
+function getEditingOpening() {
+  const opening = getFacingSpreads(state.project).find((item) => item.pages.some((page) => page.id === state.activePageId))
+    || getFacingSpreads(state.project)[0];
+  return hydrateOpening(opening);
 }
 
 function selectEditingPage(page) {
@@ -720,13 +761,56 @@ function addElement(element) {
   markChanged();
 }
 
-function moveActivePage(delta) {
-  const pages = state.project.pages;
-  const index = pages.findIndex((page) => page.id === state.activePageId);
+function moveActiveSpread(delta) {
+  const contentOpenings = getContentOpenings();
+  const index = contentOpenings.findIndex((opening) => opening.pages.some((page) => page.id === state.activePageId));
   const nextIndex = index + delta;
-  if (index < 1 || nextIndex < 1 || nextIndex >= pages.length - 1) return;
-  [pages[index], pages[nextIndex]] = [pages[nextIndex], pages[index]];
-  resetPageOrders(pages);
+  if (index < 0 || nextIndex < 0 || nextIndex >= contentOpenings.length) return;
+  [contentOpenings[index], contentOpenings[nextIndex]] = [contentOpenings[nextIndex], contentOpenings[index]];
+  const frontCover = state.project.pages.find((page) => page.role === PAGE_ROLES.FRONT_COVER) || null;
+  const backCover = state.project.pages.find((page) => page.role === PAGE_ROLES.BACK_COVER) || null;
+  state.project.pages = [
+    frontCover,
+    ...contentOpenings.flatMap((opening) => [opening.leftPage, opening.rightPage]),
+    backCover
+  ].filter(Boolean);
+  resetPageOrders(state.project.pages);
+  renderAll();
+  markChanged();
+}
+
+function duplicateActiveSpread() {
+  const opening = getEditingOpening();
+  if (!opening || opening.kind !== 'content' || !opening.leftPage || !opening.rightPage) return;
+  const copies = [opening.leftPage, opening.rightPage].map((page, index) => {
+    const copy = clone(page);
+    copy.id = makeId('page');
+    copy.title = `${index === 0 ? '왼쪽' : '오른쪽'} ${getPageContentKind(page, index === 0 ? 'left' : 'right') === 'text' ? '글' : '그림'}`;
+    copy.elements.forEach((element) => { element.id = makeId('element'); });
+    return copy;
+  });
+  const rightIndex = state.project.pages.findIndex((page) => page.id === opening.rightPage.id);
+  state.project.pages.splice(rightIndex + 1, 0, ...copies);
+  resetPageOrders(state.project.pages);
+  state.activePageId = copies[0].id;
+  state.selectedElementId = '';
+  renderAll();
+  markChanged();
+}
+
+function deleteActiveSpread() {
+  const openings = getContentOpenings();
+  const index = openings.findIndex((opening) => opening.pages.some((page) => page.id === state.activePageId));
+  if (index < 0 || openings.length <= 1) return;
+  const opening = openings[index];
+  if (!confirm('이 펼침의 왼쪽과 오른쪽 페이지를 함께 삭제할까요? 삭제한 펼침은 바로 되돌릴 수 없어요.')) return;
+  const deleteIds = new Set([opening.leftPage?.id, opening.rightPage?.id].filter(Boolean));
+  state.project.pages = state.project.pages.filter((page) => !deleteIds.has(page.id));
+  resetPageOrders(state.project.pages);
+  const remaining = getContentOpenings();
+  const nextOpening = remaining[Math.min(index, remaining.length - 1)];
+  state.activePageId = nextOpening?.leftPage?.id || state.project.pages[0]?.id || '';
+  state.selectedElementId = '';
   renderAll();
   markChanged();
 }
@@ -933,47 +1017,20 @@ dom.createRevisionBtn.addEventListener('click', async () => {
 });
 
 dom.addPageBtn.addEventListener('click', () => {
-  const page = createPage(`새 페이지 ${state.project.pages.length - 1}`);
-  state.project.pages.splice(state.project.pages.length - 1, 0, page);
+  const pages = createSpreadPages();
+  state.project.pages.splice(state.project.pages.length - 1, 0, ...pages);
   resetPageOrders(state.project.pages);
-  state.activePageId = page.id;
+  state.activePageId = pages[0].id;
   state.selectedElementId = '';
   renderAll();
   markChanged();
 });
 
-dom.movePageUpBtn.addEventListener('click', () => moveActivePage(-1));
-dom.movePageDownBtn.addEventListener('click', () => moveActivePage(1));
+dom.movePageUpBtn.addEventListener('click', () => moveActiveSpread(-1));
+dom.movePageDownBtn.addEventListener('click', () => moveActiveSpread(1));
 dom.swapSpreadBtn.addEventListener('click', swapActiveSpread);
-
-dom.duplicatePageBtn.addEventListener('click', () => {
-  const page = getActivePage();
-  if (!page || [PAGE_ROLES.FRONT_COVER, PAGE_ROLES.BACK_COVER].includes(page.role)) return;
-  const copy = clone(page);
-  copy.id = makeId('page');
-  copy.title = `${page.title || '페이지'} 복사본`;
-  copy.elements.forEach((element) => { element.id = makeId('element'); });
-  const index = state.project.pages.findIndex((item) => item.id === page.id);
-  state.project.pages.splice(index + 1, 0, copy);
-  resetPageOrders(state.project.pages);
-  state.activePageId = copy.id;
-  state.selectedElementId = '';
-  renderAll();
-  markChanged();
-});
-
-dom.deletePageBtn.addEventListener('click', () => {
-  const page = getActivePage();
-  if (!page || [PAGE_ROLES.FRONT_COVER, PAGE_ROLES.BACK_COVER].includes(page.role)) return;
-  if (!confirm('이 페이지를 삭제할까요? 삭제한 페이지는 바로 되돌릴 수 없어요.')) return;
-  const index = state.project.pages.findIndex((item) => item.id === page.id);
-  state.project.pages.splice(index, 1);
-  resetPageOrders(state.project.pages);
-  state.activePageId = state.project.pages[Math.max(0, index - 1)]?.id || '';
-  state.selectedElementId = '';
-  renderAll();
-  markChanged();
-});
+dom.duplicatePageBtn.addEventListener('click', duplicateActiveSpread);
+dom.deletePageBtn.addEventListener('click', deleteActiveSpread);
 
 dom.addTextBtn.addEventListener('click', () => addElement(createTextElement()));
 dom.undoBtn.addEventListener('click', () => applyHistory('undo'));
@@ -1160,7 +1217,7 @@ dom.loadBookInput.addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   try {
-    const loaded = normalizeBookProject(JSON.parse(await file.text()));
+    const loaded = ensureFacingPagePairs(normalizeBookProject(JSON.parse(await file.text())));
     state.project = loaded;
     state.activePageId = loaded.pages[0]?.id || '';
     state.selectedElementId = '';

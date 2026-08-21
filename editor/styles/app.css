@@ -682,6 +682,36 @@ label:has(input:focus-visible) {
 
 .image-object img { width: 100%; height: 100%; display: block; object-fit: contain; pointer-events: none; }
 
+.image-page-prompt {
+  position: absolute;
+  z-index: 2;
+  inset: 18% 12%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 20px;
+  border: 2px dashed #9cbdb2;
+  border-radius: 18px;
+  color: #31584c;
+  background: rgba(246, 252, 248, .94);
+  text-align: center;
+}
+
+.image-page-prompt strong { font-size: 15px; }
+.image-page-prompt p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.image-page-prompt button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  color: #fff;
+  background: var(--green);
+  cursor: pointer;
+  font-weight: 800;
+}
+
 .empty-detail {
   padding: 18px 14px;
   border: 1px dashed #b9c9c2;

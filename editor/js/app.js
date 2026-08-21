@@ -27,6 +27,8 @@ const bookType = requestedType === BOOK_TYPES.COLORING_BOOK
   : BOOK_TYPES.PICTURE_BOOK;
 const storageKey = `kcs-book-v2-draft-${bookType}`;
 const bookName = bookType === BOOK_TYPES.COLORING_BOOK ? '컬러링북' : '그림책';
+let pendingDeleteSpreadIds = [];
+let pendingDeleteSpreadIndex = -1;
 
 const dom = {
   shell: document.getElementById('commonEditorShell'),
@@ -47,6 +49,10 @@ const dom = {
   duplicatePageBtn: document.getElementById('duplicatePageBtn'),
   deletePageBtn: document.getElementById('deletePageBtn'),
   pageActionHint: document.getElementById('pageActionHint'),
+  deleteSpreadDialog: document.getElementById('deleteSpreadDialog'),
+  deleteSpreadPages: document.getElementById('deleteSpreadPages'),
+  cancelDeleteSpreadBtn: document.getElementById('cancelDeleteSpreadBtn'),
+  confirmDeleteSpreadBtn: document.getElementById('confirmDeleteSpreadBtn'),
   addTextBtn: document.getElementById('addTextBtn'),
   addImageInput: document.getElementById('addImageInput'),
   swapSpreadBtn: document.getElementById('swapSpreadBtn'),
@@ -272,7 +278,17 @@ function resetPageOrders(pages) {
 function describePage(page, index) {
   if (page.role === PAGE_ROLES.FRONT_COVER) return { title: '앞표지', note: '책의 첫 얼굴' };
   if (page.role === PAGE_ROLES.BACK_COVER) return { title: '뒤표지', note: '책의 마지막' };
-  return { title: page.title || `${index + 1}쪽`, note: `본문 ${index}쪽` };
+  const bodyPages = state.project.pages.filter((item) => ![
+    PAGE_ROLES.FRONT_COVER,
+    PAGE_ROLES.BACK_COVER
+  ].includes(item.role));
+  const bodyIndex = bodyPages.findIndex((item) => item.id === page.id);
+  const side = bodyIndex % 2 === 0 ? 'left' : 'right';
+  const kind = getPageContentKind(page, side);
+  return {
+    title: `${side === 'left' ? '왼쪽' : '오른쪽'} ${kind === 'text' ? '글' : '그림'}`,
+    note: `본문 ${index}쪽`
+  };
 }
 
 function markChanged() {
@@ -798,13 +814,33 @@ function duplicateActiveSpread() {
   markChanged();
 }
 
-function deleteActiveSpread() {
+function requestDeleteActiveSpread() {
   const openings = getContentOpenings();
   const index = openings.findIndex((opening) => opening.pages.some((page) => page.id === state.activePageId));
   if (index < 0 || openings.length <= 1) return;
   const opening = openings[index];
-  if (!confirm('이 펼침의 왼쪽과 오른쪽 페이지를 함께 삭제할까요? 삭제한 펼침은 바로 되돌릴 수 없어요.')) return;
-  const deleteIds = new Set([opening.leftPage?.id, opening.rightPage?.id].filter(Boolean));
+  pendingDeleteSpreadIds = [opening.leftPage?.id, opening.rightPage?.id].filter(Boolean);
+  pendingDeleteSpreadIndex = index;
+  const pageNumbers = pendingDeleteSpreadIds.map((pageId) => state.project.pages.findIndex((page) => page.id === pageId) + 1);
+  dom.deleteSpreadPages.textContent = `${pageNumbers.join('쪽과 ')}쪽`;
+  if (!dom.deleteSpreadDialog.open) dom.deleteSpreadDialog.showModal();
+  dom.cancelDeleteSpreadBtn.focus();
+}
+
+function closeDeleteSpreadDialog() {
+  pendingDeleteSpreadIds = [];
+  pendingDeleteSpreadIndex = -1;
+  if (dom.deleteSpreadDialog.open) dom.deleteSpreadDialog.close();
+}
+
+function confirmDeleteActiveSpread() {
+  if (pendingDeleteSpreadIds.length !== 2 || pendingDeleteSpreadIndex < 0) {
+    closeDeleteSpreadDialog();
+    return;
+  }
+  const index = pendingDeleteSpreadIndex;
+  const deleteIds = new Set(pendingDeleteSpreadIds);
+  closeDeleteSpreadDialog();
   state.project.pages = state.project.pages.filter((page) => !deleteIds.has(page.id));
   resetPageOrders(state.project.pages);
   const remaining = getContentOpenings();
@@ -1030,7 +1066,16 @@ dom.movePageUpBtn.addEventListener('click', () => moveActiveSpread(-1));
 dom.movePageDownBtn.addEventListener('click', () => moveActiveSpread(1));
 dom.swapSpreadBtn.addEventListener('click', swapActiveSpread);
 dom.duplicatePageBtn.addEventListener('click', duplicateActiveSpread);
-dom.deletePageBtn.addEventListener('click', deleteActiveSpread);
+dom.deletePageBtn.addEventListener('click', requestDeleteActiveSpread);
+dom.cancelDeleteSpreadBtn.addEventListener('click', closeDeleteSpreadDialog);
+dom.confirmDeleteSpreadBtn.addEventListener('click', confirmDeleteActiveSpread);
+dom.deleteSpreadDialog.addEventListener('cancel', () => {
+  pendingDeleteSpreadIds = [];
+  pendingDeleteSpreadIndex = -1;
+});
+dom.deleteSpreadDialog.addEventListener('click', (event) => {
+  if (event.target === dom.deleteSpreadDialog) closeDeleteSpreadDialog();
+});
 
 dom.addTextBtn.addEventListener('click', () => addElement(createTextElement()));
 dom.undoBtn.addEventListener('click', () => applyHistory('undo'));

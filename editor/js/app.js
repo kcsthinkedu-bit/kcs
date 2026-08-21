@@ -738,19 +738,30 @@ function swapActiveSpread() {
   const leftIndex = pages.findIndex((page) => page.id === opening.leftPage.id);
   const rightIndex = pages.findIndex((page) => page.id === opening.rightPage.id);
   if (leftIndex < 0 || rightIndex < 0) return;
+  const leftKind = getPageContentKind(opening.leftPage, 'left');
+  const rightKind = getPageContentKind(opening.rightPage, 'right');
   [pages[leftIndex], pages[rightIndex]] = [pages[rightIndex], pages[leftIndex]];
+  pages[leftIndex].title = `왼쪽 ${rightKind === 'text' ? '글' : '그림'}`;
+  pages[rightIndex].title = `오른쪽 ${leftKind === 'text' ? '글' : '그림'}`;
   resetPageOrders(pages);
   state.selectedElementId = '';
   renderAll();
   markChanged();
 }
 
+function getPageContentKind(page, side) {
+  const title = String(page?.title || '');
+  if (title.includes('글')) return 'text';
+  if (title.includes('그림')) return 'image';
+  if (bookType === BOOK_TYPES.COLORING_BOOK) return side === 'left' ? 'text' : 'image';
+  return side === 'left' ? 'image' : 'text';
+}
+
 function getReaderPurpose(page, side) {
   if (!page) return '';
   if (page.role === PAGE_ROLES.FRONT_COVER) return '앞표지';
   if (page.role === PAGE_ROLES.BACK_COVER) return '뒤표지';
-  if (bookType === BOOK_TYPES.COLORING_BOOK) return side === 'left' ? '글 페이지' : '그림 페이지';
-  return side === 'left' ? '그림 페이지' : '글 페이지';
+  return getPageContentKind(page, side) === 'text' ? '글 페이지' : '그림 페이지';
 }
 
 function createReaderPage(page, side, openingKind) {

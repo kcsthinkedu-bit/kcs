@@ -1069,9 +1069,9 @@ dom.duplicatePageBtn.addEventListener('click', duplicateActiveSpread);
 dom.deletePageBtn.addEventListener('click', requestDeleteActiveSpread);
 dom.cancelDeleteSpreadBtn.addEventListener('click', closeDeleteSpreadDialog);
 dom.confirmDeleteSpreadBtn.addEventListener('click', confirmDeleteActiveSpread);
-dom.deleteSpreadDialog.addEventListener('cancel', () => {
-  pendingDeleteSpreadIds = [];
-  pendingDeleteSpreadIndex = -1;
+dom.deleteSpreadDialog.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  closeDeleteSpreadDialog();
 });
 dom.deleteSpreadDialog.addEventListener('click', (event) => {
   if (event.target === dom.deleteSpreadDialog) closeDeleteSpreadDialog();

@@ -30,6 +30,7 @@ const bookName = bookType === BOOK_TYPES.COLORING_BOOK ? '컬러링북' : '그�
 let pendingDeleteSpreadIds = [];
 let pendingDeleteSpreadIndex = -1;
 let spreadDragState = null;
+let readingDialogReturnFocus = null;
 
 const dom = {
   shell: document.getElementById('commonEditorShell'),
@@ -103,6 +104,8 @@ const dom = {
   calibrationPrintBtn: document.getElementById('calibrationPrintBtn'),
   openPrintPreviewBtn: document.getElementById('openPrintPreviewBtn'),
   printStatus: document.getElementById('printStatus'),
+  readingView: document.getElementById('readingView'),
+  closeReadingDialogBtn: document.getElementById('closeReadingDialogBtn'),
   readingPages: document.getElementById('readingPages'),
   readingLayoutHint: document.getElementById('readingLayoutHint'),
   previousOpeningBtn: document.getElementById('previousOpeningBtn'),
@@ -1352,6 +1355,40 @@ dom.fontColorInput.addEventListener('input', () => updateSelected((element) => {
 dom.alignButtons.forEach((button) => button.addEventListener('click', () => updateSelected((element) => {
   element.style.align = button.dataset.align;
 })));
+
+function openReadingDialog() {
+  readingDialogReturnFocus = dom.shell.shadowRoot?.querySelector('[data-view="preview"]') || document.activeElement;
+  state.openingIndex = 0;
+  renderReader();
+  dom.readingView.hidden = false;
+  document.body.classList.add('reading-dialog-open');
+  dom.closeReadingDialogBtn.focus();
+}
+
+function closeReadingDialog() {
+  if (dom.readingView.hidden) return;
+  dom.readingView.hidden = true;
+  document.body.classList.remove('reading-dialog-open');
+  dom.shell.selectView?.('edit');
+  const returnTarget = readingDialogReturnFocus instanceof HTMLElement ? readingDialogReturnFocus : null;
+  readingDialogReturnFocus = null;
+  returnTarget?.focus();
+}
+
+const readingPreviewLink = dom.shell.shadowRoot?.querySelector('[data-view="preview"]');
+readingPreviewLink?.addEventListener('click', (event) => {
+  event.preventDefault();
+  openReadingDialog();
+});
+dom.closeReadingDialogBtn.addEventListener('click', closeReadingDialog);
+dom.readingView.addEventListener('click', (event) => {
+  if (event.target === dom.readingView) closeReadingDialog();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || dom.readingView.hidden) return;
+  event.preventDefault();
+  closeReadingDialog();
+});
 
 dom.previousOpeningBtn.addEventListener('click', () => {
   turnReader(-1);

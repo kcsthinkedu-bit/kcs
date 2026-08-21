@@ -22,6 +22,7 @@
       editor-description="그림과 글을 자유롭게 넣고, 양쪽 페이지와 완성된 책을 확인할 수 있어요."
       edit-target="#editWorkspace"
       preview-target="#readingView"
+      preview-label="책 넘겨보기"
       print-target="#printNotice"
     ></book-editor-shell>
 
@@ -311,7 +312,9 @@
       </aside>
     </main>
 
-    <section id="readingView" class="reading-section" aria-labelledby="readingTitle">
+    <section id="readingView" class="reading-section reading-dialog" role="dialog" aria-modal="true" aria-labelledby="readingTitle" hidden>
+      <div class="reading-dialog-card">
+        <button id="closeReadingDialogBtn" class="reading-dialog-close" type="button" aria-label="책 넘겨보기 닫기">닫기</button>
       <div class="reading-heading">
         <div>
           <span class="panel-kicker">플립북으로 보기</span>
@@ -325,7 +328,8 @@
         </div>
       </div>
 
-      <div id="readingPages" class="reading-pages" tabindex="0" role="group" aria-label="플립북 미리보기"></div>
+        <div id="readingPages" class="reading-pages" tabindex="0" role="group" aria-label="책 넘겨보기"></div>
+      </div>
     </section>
 
     <footer>

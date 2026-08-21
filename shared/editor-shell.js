@@ -187,7 +187,7 @@ template.innerHTML = `
 
 class BookEditorShell extends HTMLElement {
   static get observedAttributes() {
-    return ['book-kind', 'editor-title', 'editor-description'];
+    return ['book-kind', 'editor-title', 'editor-description', 'preview-label'];
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -206,6 +206,9 @@ class BookEditorShell extends HTMLElement {
       const description = document.querySelector('.title-block p');
       if (description && newValue) description.textContent = newValue;
     }
+    if (name === 'preview-label') {
+      this.shadowRoot.querySelector('[data-view="preview"]').textContent = newValue || '책으로 보기';
+    }
   }
 
   connectedCallback() {
@@ -222,6 +225,7 @@ class BookEditorShell extends HTMLElement {
     root.querySelector('.back-link').href = homeUrl;
     root.querySelector('.kind').textContent = bookKind;
     root.querySelector('.title').textContent = editorTitle;
+    root.querySelector('[data-view="preview"]').textContent = this.getAttribute('preview-label') || '책으로 보기';
 
     const targets = {
       edit: this.getAttribute('edit-target') || '#editWorkspace',

@@ -849,6 +849,54 @@ label:has(input:focus-visible) {
 
 footer { padding: 28px 14px 0; color: var(--muted); text-align: center; font-size: 13px; }
 
+.reading-dialog[hidden] { display: none; }
+body.reading-dialog-open { overflow: hidden; }
+
+.reading-dialog {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  overflow: auto;
+  padding: 28px;
+  border: 0;
+  border-radius: 0;
+  background: rgba(20, 39, 34, .72);
+  backdrop-filter: blur(5px);
+}
+
+.reading-dialog-card {
+  position: relative;
+  width: min(100%, 1120px);
+  min-height: calc(100vh - 56px);
+  margin: 0 auto;
+  padding: 30px;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 26px;
+  background: #f7f3e8;
+  box-shadow: 0 28px 80px rgba(10, 27, 22, .34);
+}
+
+.reading-dialog-close {
+  position: absolute;
+  z-index: 20;
+  top: 18px;
+  right: 18px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #b9c8c1;
+  border-radius: 999px;
+  color: #314f46;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.reading-dialog .reading-heading { padding-right: 92px; }
+.reading-dialog .reading-pages { min-height: min(68vh, 720px); }
+
 @media (max-width: 1280px) {
   .editor-layout { grid-template-columns: 210px minmax(520px, 1fr); }
   .detail-panel { position: static; grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px; }
@@ -899,6 +947,10 @@ footer { padding: 28px 14px 0; color: var(--muted); text-align: center; font-siz
   .toggle-group { display: grid; grid-template-columns: repeat(3, 1fr); }
   .detail-grid { grid-template-columns: 1fr; }
   .reading-section { padding: 20px 12px; }
+  .reading-dialog { padding: 10px; }
+  .reading-dialog-card { min-height: calc(100vh - 20px); padding: 68px 12px 22px; border-radius: 20px; }
+  .reading-dialog-close { top: 14px; right: 14px; }
+  .reading-dialog .reading-heading { padding-right: 0; }
   .reading-pages { min-height: 300px; }
   .book-opening { width: 100%; }
   .page-purpose { top: 5px; left: 5px; padding: 3px 5px; font-size: 8px; }

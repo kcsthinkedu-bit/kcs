@@ -911,7 +911,10 @@ function renderCanvas() {
   renderPageCanvas(opening?.rightPage || null, 'right');
   const activePage = getActivePage();
   const activeSide = opening?.leftPage?.id === activePage?.id ? 'left' : 'right';
+  const activePageIsCover = activePage
+    && [PAGE_ROLES.FRONT_COVER, PAGE_ROLES.BACK_COVER].includes(activePage.role);
   dom.addOverlayTextBtn.hidden = !activePage
+    || activePageIsCover
     || getPageContentKind(activePage, activeSide) !== 'image';
   if (activePage) dom.pageColorInput.value = safeColor(activePage.background, '#ffffff');
   dom.swapSpreadBtn.disabled = !opening

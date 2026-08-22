@@ -507,7 +507,15 @@ label:has(input:focus-visible) {
   background: #fbfcf8;
 }
 
-.tool-buttons { margin-top: 7px; }
+.tool-shelf > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tool-buttons {
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
 
 .main-tool-button {
   min-width: 112px;
@@ -538,7 +546,11 @@ label:has(input:focus-visible) {
   cursor: not-allowed;
 }
 
-.canvas-guide { text-align: right; }
+.canvas-guide {
+  flex: 0 0 180px;
+  min-width: 180px;
+  text-align: right;
+}
 .canvas-guide strong, .canvas-guide span { display: block; }
 .canvas-guide span { margin-top: 4px; color: var(--muted); font-size: 12px; }
 
@@ -558,7 +570,12 @@ label:has(input:focus-visible) {
 .color-with-clear input { flex: 0 0 44px; width: 44px; height: 44px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; }
 .color-with-clear button { min-height: 44px; padding: 0 9px; white-space: nowrap; }
 .overlay-text-button:not([hidden]) { border-color: #276749; background: #f0fff4; }
-.overlay-text-button[hidden] { display: none; }
+.overlay-text-button[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+.overlay-text-button { white-space: nowrap; }
 .size-stepper input { min-width: 58px; text-align: center; }
 .size-stepper button { flex: 0 0 42px; padding: 0; font-size: 20px; }
 .toggle-group button, .align-group button { padding: 0 10px; font-size: 12px; }

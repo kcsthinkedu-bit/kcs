@@ -1085,6 +1085,85 @@ body.reading-dialog-open { overflow: hidden; }
 .reading-dialog .reading-heading { padding-right: 92px; }
 .reading-dialog .reading-pages { min-height: min(68vh, 720px); }
 
+@media (min-width: 821px) {
+  .app-shell { padding-bottom: 0; }
+
+  .app-shell > .editor-layout {
+    height: calc(100dvh - 84px);
+    align-items: stretch;
+  }
+
+  .app-shell > footer { display: none; }
+
+  .page-panel {
+    height: 100%;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .page-list {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+
+  .work-panel {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .tool-shelf {
+    display: block;
+    padding: 8px 12px;
+  }
+
+  .tool-shelf .tool-label,
+  .canvas-guide { display: none; }
+
+  .tool-buttons {
+    width: 100%;
+    margin-top: 0;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .tool-buttons .main-tool-button {
+    min-width: 0;
+    min-height: 40px;
+    padding: 4px 6px;
+    line-height: 1.2;
+  }
+
+  .text-toolbar:not([hidden]) {
+    display: flex;
+    align-items: end;
+    gap: 7px;
+    overflow-x: auto;
+    padding: 7px 12px;
+  }
+
+  .text-toolbar > label { flex: 0 0 118px; }
+  .text-toolbar > label:first-child { flex-basis: 150px; }
+  .text-toolbar select,
+  .text-toolbar input[type="number"],
+  .text-toolbar button { min-height: 38px; }
+  .text-toolbar .color-with-clear input { width: 38px; height: 38px; }
+  .text-toolbar .toggle-group,
+  .text-toolbar .align-group { flex: 0 0 auto; }
+
+  .compact-editor-controls { padding: 6px 12px; }
+  .compact-editor-menu > summary { min-height: 38px; }
+
+  .canvas-area {
+    min-height: 0;
+    height: 100%;
+    padding: 16px;
+  }
+}
+
 @media (max-width: 1280px) {
   .editor-layout { grid-template-columns: 210px minmax(0, 1fr); }
   .text-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }

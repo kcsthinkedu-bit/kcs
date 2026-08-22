@@ -107,7 +107,7 @@ function normalizeTextStyle(style) {
   const source = isObject(style) ? style : {};
   return {
     fontFamily: asString(source.fontFamily, 'Noto Sans KR'),
-    fontSize: Math.max(6, asNumber(source.fontSize, 18)),
+    fontSize: Math.max(6, asNumber(source.fontSize, 16)),
     fontWeight: asString(source.fontWeight, '400'),
     italic: asBoolean(source.italic, false),
     underline: asBoolean(source.underline, false),

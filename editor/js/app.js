@@ -243,7 +243,7 @@ function createTextElement() {
     text: starterText,
     style: {
       fontFamily: 'Noto Sans KR',
-      fontSize: 22,
+      fontSize: 16,
       fontWeight: '400',
       italic: false,
       underline: false,
@@ -936,7 +936,7 @@ function applyTextStyle(node, style = {}) {
   node.style.backgroundColor = style.backgroundColor || 'transparent';
   node.style.textShadow = style.textShadow || 'none';
   node.style.fontFamily = `'${style.fontFamily || 'Noto Sans KR'}', 'Malgun Gothic', sans-serif`;
-  node.style.fontSize = `${clamp(style.fontSize || 18, 8, 96)}px`;
+  node.style.fontSize = `${clamp(style.fontSize || 16, 8, 96)}px`;
   node.style.fontWeight = style.fontWeight || '400';
   node.style.fontStyle = style.italic ? 'italic' : 'normal';
   node.style.textDecoration = style.underline ? 'underline' : 'none';
@@ -1164,7 +1164,7 @@ function renderDetails() {
   if (isText) {
     const style = element.style || {};
     dom.fontFamilyInput.value = style.fontFamily || 'Noto Sans KR';
-    dom.fontSizeInput.value = String(style.fontSize || 18);
+    dom.fontSizeInput.value = String(style.fontSize || 16);
     setPressed(dom.boldBtn, style.fontWeight !== '400');
     setPressed(dom.italicBtn, !!style.italic);
     setPressed(dom.underlineBtn, !!style.underline);
@@ -1418,7 +1418,7 @@ function createReaderPage(page, side, openingKind) {
     applyFrame(node, element.frame);
     if (element.type === 'text') {
       node.textContent = element.text || '';
-      applyTextStyle(node, { ...element.style, fontSize: Math.max(8, (element.style?.fontSize || 18) * 0.72) });
+      applyTextStyle(node, { ...element.style, fontSize: Math.max(8, (element.style?.fontSize || 16) * 0.72) });
     } else if (element.type === 'image') {
       const image = document.createElement('img');
       image.src = element.source || '';
@@ -1807,7 +1807,7 @@ dom.fontFamilyInput.addEventListener('change', () => updateSelected((element) =>
 
 function changeFontSize(deltaOrValue, absolute = false) {
   updateSelected((element) => {
-    const current = Number(element.style.fontSize) || 18;
+    const current = Number(element.style.fontSize) || 16;
     element.style.fontSize = clamp(absolute ? deltaOrValue : current + deltaOrValue, 8, 96);
   });
 }

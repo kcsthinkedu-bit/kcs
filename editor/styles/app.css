@@ -293,7 +293,7 @@ label:has(input:focus-visible) {
 
 .editor-layout {
   display: grid;
-  grid-template-columns: 230px minmax(580px, 1fr) 270px;
+  grid-template-columns: 230px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -556,7 +556,7 @@ label:has(input:focus-visible) {
 
 .text-toolbar {
   display: grid;
-  grid-template-columns: minmax(140px, 1.2fr) minmax(150px, 0.8fr) auto auto auto minmax(190px, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 9px;
   align-items: end;
   padding: 13px 16px;
@@ -565,17 +565,92 @@ label:has(input:focus-visible) {
 }
 
 .text-toolbar[hidden] { display: none; }
+.text-toolbar.inactive { background: #f4f6f4; }
+.text-toolbar.inactive label > span,
+.text-toolbar.inactive .toggle-group,
+.text-toolbar.inactive .align-group { opacity: .62; }
+.text-toolbar :disabled { cursor: not-allowed; opacity: .52; }
 .text-toolbar select { padding: 0 9px; }
 .color-with-clear { display: flex; align-items: center; gap: 6px; }
 .color-with-clear input { flex: 0 0 44px; width: 44px; height: 44px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; }
 .color-with-clear button { min-height: 44px; padding: 0 9px; white-space: nowrap; }
 .overlay-text-button:not([hidden]) { border-color: #276749; background: #f0fff4; }
-.overlay-text-button[hidden] {
-  display: inline-flex;
-  visibility: hidden;
-  pointer-events: none;
-}
+.overlay-text-button[hidden] { display: none; }
 .overlay-text-button { white-space: nowrap; }
+
+.compact-editor-menu { position: relative; }
+.compact-editor-menu > summary {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  list-style: none;
+}
+.compact-editor-menu > summary::-webkit-details-marker { display: none; }
+.compact-editor-menu > summary::after { content: '⌄'; margin-left: 7px; color: var(--green); }
+.compact-editor-menu[open] > summary { border-color: var(--green); box-shadow: 0 0 0 3px rgba(15, 118, 93, .12); }
+.compact-editor-menu-content,
+.element-details-menu > #elementDetails,
+.page-style-menu > .page-detail-box {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 7px);
+  left: 0;
+  width: min(320px, calc(100vw - 30px));
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(35, 58, 50, .18);
+}
+.compact-editor-menu-content { display: grid; gap: 8px; }
+.compact-editor-menu-content .main-tool-button { width: 100%; min-width: 0; }
+.add-content-menu .image-tool-button { min-height: 44px; }
+
+.compact-editor-controls {
+  display: flex;
+  gap: 8px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcf8;
+}
+.compact-editor-controls [hidden] { display: none; }
+.page-style-menu > .page-detail-box { margin: 0; }
+.detail-panel { display: none; }
+
+.print-settings-dialog {
+  width: min(920px, calc(100% - 30px));
+  max-width: none;
+  max-height: calc(100dvh - 30px);
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+}
+.print-settings-dialog::backdrop { background: rgba(20, 38, 32, .58); backdrop-filter: blur(3px); }
+.print-settings-dialog-card {
+  max-height: calc(100dvh - 30px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #fffdf8;
+  box-shadow: 0 28px 80px rgba(16, 40, 32, .3);
+}
+.print-settings-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.print-settings-dialog-heading span { color: var(--green); font-size: 12px; font-weight: 900; }
+.print-settings-dialog-heading h2 { margin: 5px 0 0; font-size: clamp(22px, 3vw, 34px); }
+.print-settings-dialog-close { min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; font-weight: 800; }
+.print-size-guide { margin: 18px 0; padding: 14px 16px; border-radius: 15px; background: var(--green-soft); }
+.print-size-guide p { margin: 6px 0 0; color: var(--muted); line-height: 1.55; }
+.print-settings-dialog .print-settings { margin: 0; }
+.print-settings-dialog .print-settings > summary { display: none; }
 .size-stepper input { min-width: 58px; text-align: center; }
 .size-stepper button { flex: 0 0 42px; padding: 0; font-size: 20px; }
 .toggle-group button, .align-group button { padding: 0 10px; font-size: 12px; }
@@ -1011,10 +1086,7 @@ body.reading-dialog-open { overflow: hidden; }
 .reading-dialog .reading-pages { min-height: min(68vh, 720px); }
 
 @media (max-width: 1280px) {
-  .editor-layout { grid-template-columns: 210px minmax(520px, 1fr); }
-  .detail-panel { position: static; grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px; }
-  .detail-panel .panel-heading { grid-column: 1 / -1; }
-  .page-detail-box, .print-notice { margin-top: 0; }
+  .editor-layout { grid-template-columns: 210px minmax(0, 1fr); }
   .text-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .align-group { grid-column: 1 / -1; }
   .revision-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1024,7 +1096,7 @@ body.reading-dialog-open { overflow: hidden; }
   .app-shell { width: min(100% - 18px, 680px); }
   .project-bar { grid-template-columns: minmax(150px, 1fr) auto auto auto; align-items: center; gap: 6px; }
   .editor-layout { grid-template-columns: 1fr; }
-  .page-panel, .detail-panel { position: static; }
+  .page-panel { position: static; }
   .page-list { max-height: 280px; grid-template-columns: 1fr; }
   .page-list button { grid-template-columns: 34px 1fr; }
   .page-list .spread-drag-handle { grid-template-columns: 1fr; }
@@ -1073,6 +1145,11 @@ body.reading-dialog-open { overflow: hidden; }
   .text-toolbar .align-group { grid-column: auto; display: grid; grid-template-columns: repeat(3, 1fr); }
   .toggle-group { display: grid; grid-template-columns: repeat(3, 1fr); }
   .detail-grid { grid-template-columns: 1fr; }
+  .compact-editor-controls { flex-wrap: wrap; }
+  .compact-editor-menu { flex: 1 1 140px; }
+  .compact-editor-menu > summary { width: 100%; }
+  .print-settings-dialog { width: 100%; max-height: 100dvh; margin: 0; border-radius: 0; }
+  .print-settings-dialog-card { min-height: 100dvh; max-height: 100dvh; padding: 18px 12px; border-radius: 0; }
   .reading-section { padding: 20px 12px; }
   .reading-dialog { padding: 10px; }
   .reading-dialog-card { min-height: calc(100vh - 20px); padding: 68px 12px 22px; border-radius: 20px; }

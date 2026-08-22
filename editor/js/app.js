@@ -983,13 +983,168 @@ function beginDrag(event, element, node) {
   node.addEventListener('pointercancel', stop);
 }
 
+function setTextToolbarEnabled(enabled) {
+  dom.textToolbar.classList.toggle('inactive', !enabled);
+  dom.textToolbar.querySelectorAll('button, input, select').forEach((control) => {
+    control.disabled = !enabled;
+  });
+}
+
+function setupRoomyEditorLayout() {
+  const toolButtons = document.querySelector('.tool-buttons');
+  const imageTool = dom.addImageInput.closest('.image-tool-button');
+  if (toolButtons && imageTool && !document.getElementById('addContentMenu')) {
+    const addMenu = document.createElement('details');
+    addMenu.id = 'addContentMenu';
+    addMenu.className = 'add-content-menu compact-editor-menu';
+    const summary = document.createElement('summary');
+    summary.textContent = '내용 추가';
+    const content = document.createElement('div');
+    content.className = 'compact-editor-menu-content';
+    content.append(dom.addTextBtn, imageTool, dom.addOverlayTextBtn);
+    addMenu.append(summary, content);
+    toolButtons.prepend(addMenu);
+
+    [dom.addTextBtn, dom.addOverlayTextBtn].forEach((button) => {
+      button.addEventListener('click', () => { addMenu.open = false; });
+    });
+    dom.addImageInput.addEventListener('change', () => { addMenu.open = false; });
+    document.addEventListener('click', (event) => {
+      if (addMenu.open && !addMenu.contains(event.target)) addMenu.open = false;
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && addMenu.open) {
+        addMenu.open = false;
+        summary.focus();
+      }
+    });
+  }
+
+  const workPanel = document.querySelector('.work-panel');
+  const detailPanel = document.querySelector('.detail-panel');
+  const pageDetailBox = document.querySelector('.page-detail-box');
+  if (workPanel && detailPanel && pageDetailBox && !document.getElementById('compactEditorControls')) {
+    const compactControls = document.createElement('div');
+    compactControls.id = 'compactEditorControls';
+    compactControls.className = 'compact-editor-controls';
+
+    const elementMenu = document.createElement('details');
+    elementMenu.id = 'elementDetailsMenu';
+    elementMenu.className = 'compact-editor-menu element-details-menu';
+    const elementSummary = document.createElement('summary');
+    elementSummary.textContent = '자세히 조절';
+    elementMenu.append(elementSummary, dom.elementDetails);
+    elementMenu.hidden = dom.elementDetails.hidden;
+    dom.elementDetailsMenu = elementMenu;
+
+    const pageMenu = document.createElement('details');
+    pageMenu.className = 'compact-editor-menu page-style-menu';
+    const pageSummary = document.createElement('summary');
+    pageSummary.textContent = '페이지 꾸미기';
+    pageMenu.append(pageSummary, pageDetailBox);
+
+    compactControls.append(elementMenu, pageMenu);
+    dom.textToolbar.after(compactControls);
+    dom.nothingSelected.remove();
+  }
+
+  const printNotice = document.getElementById('printNotice');
+  if (printNotice && !document.getElementById('printSettingsDialog')) {
+    const printDialog = document.createElement('dialog');
+    printDialog.id = 'printSettingsDialog';
+    printDialog.className = 'print-settings-dialog';
+    printDialog.setAttribute('aria-labelledby', 'printSettingsDialogTitle');
+
+    const card = document.createElement('div');
+    card.className = 'print-settings-dialog-card';
+    const heading = document.createElement('div');
+    heading.className = 'print-settings-dialog-heading';
+    heading.innerHTML = '<div><span>인쇄하기</span><h2 id="printSettingsDialogTitle">인쇄할 종이와 방법을 골라요</h2></div>';
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'print-settings-dialog-close';
+    closeButton.textContent = '닫기';
+    heading.append(closeButton);
+
+    const sizeGuide = document.createElement('div');
+    sizeGuide.className = 'print-size-guide';
+    sizeGuide.innerHTML = '<strong>책 크기와 인쇄할 종이는 달라요</strong><p id="bookOutputSizeHint"></p>';
+    card.append(heading, sizeGuide, printNotice);
+    printDialog.append(card);
+    document.body.append(printDialog);
+
+    const paperLabel = dom.printPaperSizeInput.closest('label')?.querySelector('span');
+    if (paperLabel) paperLabel.textContent = '인쇄할 종이';
+
+    const updateBookOutputSizeHint = () => {
+      const paper = dom.printPaperSizeInput.value;
+      const mode = dom.printModeInput.value;
+      const standard = dom.printPaperStandardInput.value;
+      const foldedSize = paper === 'A4' ? 'A5' : paper === 'A3' ? 'A4' : standard === 'JIS' ? 'B5' : 'B5에 가까운 크기';
+      const hint = document.getElementById('bookOutputSizeHint');
+      if (!hint) return;
+      hint.textContent = mode === 'booklet'
+        ? `${paper} 종이를 반으로 접으면 완성된 책 한 페이지는 ${foldedSize} 크기가 돼요.`
+        : `현재는 ${paper} 종이 한 면을 책 한 페이지로 사용해요.`;
+    };
+
+    const clearPrintHash = () => {
+      if (location.hash === '#printNotice') history.replaceState(null, '', `${location.pathname}${location.search}`);
+    };
+    const closePrintSettings = () => {
+      if (printDialog.open) printDialog.close();
+      clearPrintHash();
+    };
+    const openPrintSettings = () => {
+      updateBookOutputSizeHint();
+      if (!printDialog.open) printDialog.showModal();
+    };
+
+    closeButton.addEventListener('click', closePrintSettings);
+    printDialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closePrintSettings();
+    });
+    printDialog.addEventListener('click', (event) => {
+      if (event.target === printDialog) closePrintSettings();
+    });
+    [dom.printPaperSizeInput, dom.printPaperStandardInput, dom.printModeInput]
+      .forEach((input) => input.addEventListener('change', updateBookOutputSizeHint));
+    dom.openPrintPreviewBtn.addEventListener('click', () => {
+      if (printDialog.open) printDialog.close();
+    });
+    window.addEventListener('hashchange', () => {
+      if (location.hash === '#printNotice') openPrintSettings();
+    });
+    customElements.whenDefined('book-editor-shell').then(() => {
+      const printLink = document.getElementById('commonEditorShell')?.shadowRoot?.querySelector('[data-view="print"]');
+      printLink?.addEventListener('click', (event) => {
+        event.preventDefault();
+        openPrintSettings();
+      });
+    });
+    if (location.hash === '#printNotice') openPrintSettings();
+  }
+
+  detailPanel?.remove();
+  dom.textToolbar.hidden = false;
+  setTextToolbarEnabled(getSelectedElement()?.type === 'text');
+}
+
+queueMicrotask(setupRoomyEditorLayout);
+
 function renderDetails() {
   const element = getSelectedElement();
   const isText = element?.type === 'text';
   const isImage = element?.type === 'image';
   dom.nothingSelected.hidden = !!element;
   dom.elementDetails.hidden = !element;
-  dom.textToolbar.hidden = !isText;
+  dom.textToolbar.hidden = false;
+  setTextToolbarEnabled(isText);
+  if (dom.elementDetailsMenu) {
+    dom.elementDetailsMenu.hidden = !element;
+    if (!element) dom.elementDetailsMenu.open = false;
+  }
   if (!element) return;
 
   dom.elementOpacityInput.value = String(Math.round(clamp(Number(element.frame.opacity ?? 1), 0.1, 1) * 100));

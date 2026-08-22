@@ -1105,6 +1105,12 @@ function setupRoomyEditorLayout() {
       event.preventDefault();
       closePrintSettings();
     });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !printDialog.open) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closePrintSettings();
+    }, true);
     printDialog.addEventListener('click', (event) => {
       if (event.target === printDialog) closePrintSettings();
     });

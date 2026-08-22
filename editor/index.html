@@ -109,6 +109,10 @@
                 <span aria-hidden="true">가</span>
                 글 넣기
               </button>
+              <button id="addOverlayTextBtn" class="main-tool-button overlay-text-button" type="button" hidden>
+                <span aria-hidden="true">가+</span>
+                그림 위에 글쓰기
+              </button>
               <label class="main-tool-button image-tool-button">
                 <span aria-hidden="true">▧</span>
                 그림 넣기
@@ -164,6 +168,14 @@
           <label class="color-field">
             <span>글자색</span>
             <input id="fontColorInput" type="color" value="#1f2937">
+          </label>
+
+          <label class="color-field text-background-field">
+            <span>글자 배경</span>
+            <span class="color-with-clear">
+              <input id="textBackgroundColorInput" type="color" value="#ffffff">
+              <button id="clearTextBackgroundBtn" type="button">배경 없음</button>
+            </span>
           </label>
 
           <div class="align-group" aria-label="글자 정렬">
@@ -236,6 +248,11 @@
               <input id="elementHeightInput" type="range" min="5" max="100" step="1">
             </label>
           </div>
+
+          <label class="detail-field">
+            <span>투명도</span>
+            <input id="elementOpacityInput" type="range" min="10" max="100" step="5" value="100">
+          </label>
 
           <button id="deleteElementBtn" class="wide-danger-button" type="button">선택한 내용 삭제</button>
         </div>

@@ -159,7 +159,7 @@ function renderElement(element, scale = 1) {
     return `
       <div class="book-element text-element" style="${frameStyle}
         font-family:'${escapeHtml(style.fontFamily || 'Noto Sans KR')}', 'Malgun Gothic', sans-serif;
-        font-size:${clamp(style.fontSize, 6, 120, 18) * scale}px;
+        font-size:${clamp(style.fontSize, 6, 120, 16) * scale}px;
         font-weight:${escapeHtml(style.fontWeight || '400')};
         font-style:${style.italic ? 'italic' : 'normal'};
         text-decoration:${style.underline ? 'underline' : 'none'};

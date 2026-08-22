@@ -57,6 +57,7 @@ const dom = {
   cancelDeleteSpreadBtn: document.getElementById('cancelDeleteSpreadBtn'),
   confirmDeleteSpreadBtn: document.getElementById('confirmDeleteSpreadBtn'),
   addTextBtn: document.getElementById('addTextBtn'),
+  addOverlayTextBtn: document.getElementById('addOverlayTextBtn'),
   addImageInput: document.getElementById('addImageInput'),
   swapSpreadBtn: document.getElementById('swapSpreadBtn'),
   undoBtn: document.getElementById('undoBtn'),
@@ -79,6 +80,8 @@ const dom = {
   italicBtn: document.getElementById('italicBtn'),
   underlineBtn: document.getElementById('underlineBtn'),
   fontColorInput: document.getElementById('fontColorInput'),
+  textBackgroundColorInput: document.getElementById('textBackgroundColorInput'),
+  clearTextBackgroundBtn: document.getElementById('clearTextBackgroundBtn'),
   alignButtons: Array.from(document.querySelectorAll('[data-align]')),
   nothingSelected: document.getElementById('nothingSelected'),
   elementDetails: document.getElementById('elementDetails'),
@@ -90,6 +93,7 @@ const dom = {
   elementYInput: document.getElementById('elementYInput'),
   elementWidthInput: document.getElementById('elementWidthInput'),
   elementHeightInput: document.getElementById('elementHeightInput'),
+  elementOpacityInput: document.getElementById('elementOpacityInput'),
   deleteElementBtn: document.getElementById('deleteElementBtn'),
   pageColorInput: document.getElementById('pageColorInput'),
   printPaperSizeInput: document.getElementById('printPaperSizeInput'),
@@ -770,7 +774,99 @@ function renderPageCanvas(page, side) {
     canvas.appendChild(object);
   });
 
-  const isImagePage = getPageContentKind(page, side) === 'image';
+  const contentKind = getPageContentKind(page, side);
+  const hasVisibleText = page.elements.some((element) => element.type === 'text' && !element.hidden);
+  const startWriting = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    addElement(createTextElement());
+  };
+
+  const addBackCoverStarter = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const introduction = createTextElement();
+    introduction.text = '이 책을 소개해 보세요';
+    introduction.frame = { ...introduction.frame, x: 10, y: 14, width: 80, height: 46 };
+
+    const author = createTextElement();
+    author.text = '만든 사람: 이름';
+    author.frame = { ...author.frame, x: 10, y: 72, width: 80, height: 12 };
+    author.style = { ...author.style, align: 'center' };
+
+    page.elements.push(introduction, author);
+    state.selectedElementId = introduction.id;
+    renderAll();
+    markChanged();
+
+    requestAnimationFrame(() => {
+      const editor = dom.spreadCanvas
+        .querySelector(`[data-element-id="${introduction.id}"] .inline-text-editor`);
+      if (!editor) return;
+      editor.focus();
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+  };
+
+  const hasVisibleElements = page.elements.some((element) => !element.hidden);
+  const isEmptyBackCover = isActive
+    && page.role === PAGE_ROLES.BACK_COVER
+    && !hasVisibleElements;
+
+  if (isEmptyBackCover) {
+    const prompt = document.createElement('div');
+    prompt.className = 'image-page-prompt cover-page-prompt';
+
+    const title = document.createElement('strong');
+    title.textContent = '뒷표지에 무엇을 넣을까요?';
+    const description = document.createElement('p');
+    description.textContent = '책 소개와 만든 사람을 간단하게 넣을 수 있어요.';
+    const templateButton = document.createElement('button');
+    templateButton.type = 'button';
+    templateButton.textContent = '책 소개와 저자 넣기';
+    templateButton.addEventListener('click', addBackCoverStarter);
+    const textButton = document.createElement('button');
+    textButton.type = 'button';
+    textButton.textContent = '글만 넣기';
+    textButton.addEventListener('click', startWriting);
+    const imageButton = document.createElement('button');
+    imageButton.type = 'button';
+    imageButton.textContent = '그림 파일 불러오기';
+    imageButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      dom.addImageInput.click();
+    });
+
+    prompt.append(title, description, templateButton, textButton, imageButton);
+    canvas.appendChild(prompt);
+  }
+
+  if (isActive && contentKind === 'text' && !hasVisibleText && !isEmptyBackCover) {
+    const prompt = document.createElement('div');
+    prompt.className = 'image-page-prompt text-page-prompt';
+    prompt.tabIndex = 0;
+    prompt.setAttribute('role', 'button');
+    prompt.setAttribute('aria-label', '이 페이지에 글쓰기 시작');
+
+    const title = document.createElement('strong');
+    title.textContent = '여기를 눌러 글을 써 보세요';
+    const description = document.createElement('p');
+    description.textContent = '누르면 글 상자가 생기고 바로 입력할 수 있어요.';
+
+    prompt.append(title, description);
+    prompt.addEventListener('click', startWriting);
+    prompt.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') startWriting(event);
+    });
+    canvas.appendChild(prompt);
+  }
+
+  const isImagePage = contentKind === 'image';
   const hasVisibleImage = page.elements.some((element) => element.type === 'image' && !element.hidden);
   if (isActive && isImagePage && !hasVisibleImage) {
     const prompt = document.createElement('div');
@@ -798,6 +894,10 @@ function renderPageCanvas(page, side) {
       return;
     }
     if (event.target !== canvas) return;
+    if (contentKind === 'text' && !hasVisibleText) {
+      startWriting(event);
+      return;
+    }
     state.selectedElementId = '';
     renderCanvas();
     renderDetails();
@@ -810,6 +910,9 @@ function renderCanvas() {
   renderPageCanvas(opening?.leftPage || null, 'left');
   renderPageCanvas(opening?.rightPage || null, 'right');
   const activePage = getActivePage();
+  const activeSide = opening?.leftPage?.id === activePage?.id ? 'left' : 'right';
+  dom.addOverlayTextBtn.hidden = !activePage
+    || getPageContentKind(activePage, activeSide) !== 'image';
   if (activePage) dom.pageColorInput.value = safeColor(activePage.background, '#ffffff');
   dom.swapSpreadBtn.disabled = !opening
     || opening.kind !== 'content'
@@ -823,9 +926,12 @@ function applyFrame(node, frame) {
   node.style.width = `${frame.width}%`;
   node.style.height = `${frame.height}%`;
   node.style.transform = `rotate(${frame.rotation || 0}deg)`;
+  node.style.opacity = String(clamp(Number(frame.opacity ?? 1), 0.1, 1));
 }
 
 function applyTextStyle(node, style = {}) {
+  node.style.backgroundColor = style.backgroundColor || 'transparent';
+  node.style.textShadow = style.textShadow || 'none';
   node.style.fontFamily = `'${style.fontFamily || 'Noto Sans KR'}', 'Malgun Gothic', sans-serif`;
   node.style.fontSize = `${clamp(style.fontSize || 18, 8, 96)}px`;
   node.style.fontWeight = style.fontWeight || '400';
@@ -883,6 +989,8 @@ function renderDetails() {
   dom.textToolbar.hidden = !isText;
   if (!element) return;
 
+  dom.elementOpacityInput.value = String(Math.round(clamp(Number(element.frame.opacity ?? 1), 0.1, 1) * 100));
+
   dom.textContentField.hidden = true;
   dom.imageAltField.hidden = !isImage;
   if (isText) dom.textContentInput.value = element.text || '';
@@ -897,6 +1005,7 @@ function renderDetails() {
     setPressed(dom.italicBtn, !!style.italic);
     setPressed(dom.underlineBtn, !!style.underline);
     dom.fontColorInput.value = safeColor(style.color);
+    dom.textBackgroundColorInput.value = safeColor(style.backgroundColor, '#ffffff');
     dom.alignButtons.forEach((button) => setPressed(button, button.dataset.align === (style.align || 'left')));
   }
 }
@@ -1382,6 +1491,19 @@ dom.deleteSpreadDialog.addEventListener('click', (event) => {
 });
 
 dom.addTextBtn.addEventListener('click', () => addElement(createTextElement()));
+dom.addOverlayTextBtn.addEventListener('click', () => {
+  const element = createTextElement();
+  element.text = '그림 위에 글을 써 보세요';
+  element.frame = { ...element.frame, x: 12, y: 66, width: 76, height: 18 };
+  element.style = {
+    ...element.style,
+    color: '#ffffff',
+    backgroundColor: 'transparent',
+    textShadow: '0 2px 5px rgba(0, 0, 0, 0.9)',
+    align: 'center'
+  };
+  addElement(element);
+});
 dom.undoBtn.addEventListener('click', () => applyHistory('undo'));
 dom.redoBtn.addEventListener('click', () => applyHistory('redo'));
 
@@ -1441,6 +1563,10 @@ dom.imageAltInput.addEventListener('input', () => updateSelected((element) => {
     if (key === 'y') element.frame.y = Math.min(element.frame.y, 100 - element.frame.height);
   }, { details: false }));
 });
+
+dom.elementOpacityInput.addEventListener('input', () => updateSelected((element) => {
+  element.frame.opacity = clamp(Number(dom.elementOpacityInput.value) / 100, 0.1, 1);
+}, { details: false }));
 
 dom.deleteElementBtn.addEventListener('click', () => {
   const page = getActivePage();
@@ -1537,6 +1663,12 @@ dom.underlineBtn.addEventListener('click', () => updateSelected((element) => {
 }));
 dom.fontColorInput.addEventListener('input', () => updateSelected((element) => {
   element.style.color = safeColor(dom.fontColorInput.value);
+}));
+dom.textBackgroundColorInput.addEventListener('input', () => updateSelected((element) => {
+  element.style.backgroundColor = safeColor(dom.textBackgroundColorInput.value, '#ffffff');
+}));
+dom.clearTextBackgroundBtn.addEventListener('click', () => updateSelected((element) => {
+  element.style.backgroundColor = 'transparent';
 }));
 dom.alignButtons.forEach((button) => button.addEventListener('click', () => updateSelected((element) => {
   element.style.align = button.dataset.align;
